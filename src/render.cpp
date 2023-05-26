@@ -15,7 +15,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(get_surface() == NVE_SUCCESS, "surface created");
     log_cond(get_physical_device() == NVE_SUCCESS, "found physical device");
     log_cond(create_device() == NVE_SUCCESS, "logical device created");
-    log_cond(create_swapchain(config.width, config.height) == NVE_SUCCESS, "swapchain created");
+    log_cond(create_swapchain() == NVE_SUCCESS, "swapchain created");
+    log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
     
     return NVE_SUCCESS;
 }
@@ -143,7 +144,7 @@ NVE_RESULT Renderer::get_surface()
 
     return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::create_swapchain(int width, int height)
+NVE_RESULT Renderer::create_swapchain()
 {
     SwapChainSupportDetails swapChainSupport = query_swap_chain_support(m_physicalDevice, m_surface);
 
@@ -198,8 +199,31 @@ NVE_RESULT Renderer::create_swapchain(int width, int height)
 
     return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::create_image_views()
+NVE_RESULT Renderer::create_swapchain_image_views()
 {
+    m_swapchainImageViews.resize(m_swapchainImages.size());
+
+    for (size_t i = 0; i < m_swapchainImages.size(); i++)
+    {
+        VkImageViewCreateInfo imageViewCI = {};
+        imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        imageViewCI.image = m_swapchainImages[i];
+        imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        imageViewCI.format = swapChainImageFormat;
+        imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCI.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageViewCI.subresourceRange.baseMipLevel = 0;
+        imageViewCI.subresourceRange.levelCount = 1;
+        imageViewCI.subresourceRange.baseArrayLayer = 0;
+        imageViewCI.subresourceRange.layerCount = 1;
+
+        auto res = vkCreateImageView(m_device, &imageViewCI, nullptr, &m_swapchainImageViews[i]);
+        log_cond_err(res == VK_SUCCESS, "failed to create image view no " + i);
+    }
+
     return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::create_pipeline()
@@ -219,6 +243,8 @@ NVE_RESULT Renderer::render()
 }
 void Renderer::clean_up()
 {
+    for (auto imageView : m_swapchainImageViews)
+        vkDestroyImageView(m_device, imageView, nullptr);
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);

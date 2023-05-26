@@ -38,6 +38,7 @@ private:
 
 	VkSwapchainKHR m_swapchain;
 	std::vector<VkImage> m_swapchainImages;
+	std::vector<VkImageView> m_swapchainImageViews;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 
@@ -53,8 +54,8 @@ private:
 	NVE_RESULT create_device();
 	NVE_RESULT create_window(int width, int height, std::string title);
 	NVE_RESULT get_surface();
-	NVE_RESULT create_swapchain(int width, int height);
-	NVE_RESULT create_image_views();
+	NVE_RESULT create_swapchain();
+	NVE_RESULT create_swapchain_image_views();
 	NVE_RESULT create_pipeline();
 
 	// rendering
