@@ -7,30 +7,46 @@
 #include "logger.h"
 #include "vulkan_helpers.h"
 
-#define RATE_PHYSICAL_DEVICES
-
 NVE_RESULT Renderer::init(RenderConfig config)
 {
-    NVE_RESULT res;
-    
-    res = create_instance();
-    res = get_physical_device();
+    glfwInit();
+    log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
+    log_cond(create_instance() == NVE_SUCCESS, "instance created");
+    log_cond(get_surface() == NVE_SUCCESS, "surface created");
+    log_cond(get_physical_device() == NVE_SUCCESS, "found physical device");
+    log_cond(create_device() == NVE_SUCCESS, "logical device created");
+    log_cond(create_swapchain(config.width, config.height) == NVE_SUCCESS, "swapchain created");
     
     return NVE_SUCCESS;
 }
 
 NVE_RESULT Renderer::create_instance()
 {
+    VkApplicationInfo appInfo{};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = "New Vulkan Engine Dev App";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pEngineName = "New Vulkan Engine";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion = VK_API_VERSION_1_3;
+
     VkInstanceCreateInfo instanceCI = {};
     instanceCI.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instanceCI.pApplicationInfo = &appInfo;
+    
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions;
+
+    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+    instanceCI.enabledExtensionCount = glfwExtensionCount;
+    instanceCI.ppEnabledExtensionNames = glfwExtensions;
     
     VkResult res = vkCreateInstance(&instanceCI, nullptr, &m_instance);
     log_cond_err(res == VK_SUCCESS, "instance creation failed");
-    log("instance created");
     
     return NVE_SUCCESS;
 }
-
 NVE_RESULT Renderer::get_physical_device()
 {
     // get all available physical devices
@@ -45,7 +61,7 @@ NVE_RESULT Renderer::get_physical_device()
     std::multimap<uint32_t, VkPhysicalDevice> ratedDevices;
     for (const auto& device : availableDevices)
     {
-        uint32_t score = rate_device_suitability(device);
+        uint32_t score = rate_device_suitability(device, m_surface);
         ratedDevices.insert(std::make_pair(score, device));
     }
 
@@ -55,23 +71,21 @@ NVE_RESULT Renderer::get_physical_device()
 
 #else
     
-    physicalDevice = VK_NULL_HANDLE;
+    m_physicalDevice = VK_NULL_HANDLE;
     for (const auto& device : availableDevices) 
     {
-        if (is_device_suitable(device))
+        if (is_device_suitable(device, m_surface))
         {
-            physicalDevice = device;
+            m_physicalDevice = device;
             break;
         }
     }
-    log_cond_err(physicalDevice != VK_NULL_HANDLE, "no acceptable physical device found");
+    log_cond_err(m_physicalDevice != VK_NULL_HANDLE, "no acceptable physical device found");
     
 #endif
     
-    log("physical device found");
     return NVE_SUCCESS;
 }
-
 NVE_RESULT Renderer::create_device()
 {
     QueueFamilyIndices queueFamilyIndices = find_queue_families(m_physicalDevice, m_surface);
@@ -101,13 +115,13 @@ NVE_RESULT Renderer::create_device()
     deviceCI.queueCreateInfoCount = static_cast<uint32_t>(deviceQueueCIs.size());
     deviceCI.pQueueCreateInfos = deviceQueueCIs.data();
     deviceCI.pEnabledFeatures = &physicalDeviceFeatures;
+    deviceCI.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+    deviceCI.ppEnabledExtensionNames = deviceExtensions.data();
 
     // TODO validation layers
-    deviceCI.enabledExtensionCount = 0;
 
     auto res = vkCreateDevice(m_physicalDevice, &deviceCI, nullptr, &m_device);
     log_cond_err(res == VK_SUCCESS, "physical device creation failed");
-    log("physical device created");
 
     vkGetDeviceQueue(m_device, queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
     vkGetDeviceQueue(m_device, queueFamilyIndices.presentationFamily.value(), 0, &m_presentationQueue);
@@ -119,22 +133,78 @@ NVE_RESULT Renderer::create_window(int width, int height, std::string title)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     m_window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
+
+    return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::get_surface()
 {
-    glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface);
+    auto res = glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface);
+    log_cond_err(res == VK_SUCCESS, "creation of window surface failed");
+
+    return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::create_swapchain(int height, int width)
+NVE_RESULT Renderer::create_swapchain(int width, int height)
 {
-    
+    SwapChainSupportDetails swapChainSupport = query_swap_chain_support(m_physicalDevice, m_surface);
+
+    VkSurfaceFormatKHR surfaceFormat = choose_swap_surface_format(swapChainSupport.formats);
+    VkPresentModeKHR presentMode = choose_swap_present_mode(swapChainSupport.presentModes);
+    VkExtent2D extent = choose_swap_extent(swapChainSupport.capabilities, m_window);
+
+    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+    if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+        imageCount = swapChainSupport.capabilities.maxImageCount;
+    }
+    VkSwapchainCreateInfoKHR swapchainCI = {};
+    swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchainCI.surface = m_surface;
+    swapchainCI.minImageCount = imageCount;
+    swapchainCI.imageFormat = surfaceFormat.format;
+    swapchainCI.imageColorSpace = surfaceFormat.colorSpace;
+    swapchainCI.imageExtent = extent;
+    swapchainCI.imageArrayLayers = 1;
+    swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    QueueFamilyIndices indices = find_queue_families(m_physicalDevice, m_surface);
+    uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentationFamily.value() };
+
+    if (indices.graphicsFamily != indices.presentationFamily) {
+        swapchainCI.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchainCI.queueFamilyIndexCount = 2;
+        swapchainCI.pQueueFamilyIndices = queueFamilyIndices;
+    }
+    else {
+        swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapchainCI.queueFamilyIndexCount = 0; // Optional
+        swapchainCI.pQueueFamilyIndices = nullptr; // Optional
+    }
+
+    swapchainCI.preTransform = swapChainSupport.capabilities.currentTransform;
+    swapchainCI.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchainCI.presentMode = presentMode;
+    swapchainCI.clipped = VK_TRUE;
+    swapchainCI.oldSwapchain = VK_NULL_HANDLE;
+
+    auto res = vkCreateSwapchainKHR(m_device, &swapchainCI, nullptr, &m_swapchain);
+
+    log_cond_err(res == VK_SUCCESS, "creation of swapchain failed");
+
+    vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, nullptr);
+    m_swapchainImages.resize(imageCount);
+    vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, m_swapchainImages.data());
+
+    swapChainImageFormat = surfaceFormat.format;
+    swapChainExtent = extent;
+
+    return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::create_image_views()
 {
-
+    return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::create_pipeline()
 {
-
+    return NVE_SUCCESS;
 }
 
 NVE_RESULT Renderer::render()
@@ -142,13 +212,14 @@ NVE_RESULT Renderer::render()
     if (glfwWindowShouldClose(m_window))
     {
         clean_up();
-        return;
+        return NVE_SUCCESS;
     }
 
     glfwPollEvents();
 }
 void Renderer::clean_up()
 {
+    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyInstance(m_instance, nullptr);
