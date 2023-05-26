@@ -4,7 +4,7 @@
 
 bool is_device_suitable(VkPhysicalDevice device)
 {
-    // query for the device's properties and features
+    // query for the m_device's properties and features
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -17,12 +17,12 @@ bool is_device_suitable(VkPhysicalDevice device)
     auto indices = find_queue_families(device);
     suitable &= indices.is_complete();
 
-    // the physical device needs to support geometry shaders and be a discrete gpu
+    // the physical m_device needs to support geometry shaders and be a discrete gpu
     return suitable;
 }
 uint32_t rate_device_suitability(VkPhysicalDevice device)
 {
-    // query for the device's properties and features
+    // query for the m_device's properties and features
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -44,7 +44,7 @@ uint32_t rate_device_suitability(VkPhysicalDevice device)
 
     return score;
 }
-QueueFamilyIndices find_queue_families(VkPhysicalDevice device)
+QueueFamilyIndices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;
 
@@ -61,6 +61,14 @@ QueueFamilyIndices find_queue_families(VkPhysicalDevice device)
         {
             indices.graphicsFamily = i;
         }
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+        if (presentSupport)
+        {
+            indices.presentationFamily = i;
+        }
+
+
         if (indices.is_complete())
         {
             break;
@@ -73,5 +81,5 @@ QueueFamilyIndices find_queue_families(VkPhysicalDevice device)
 
 bool QueueFamilyIndices::is_complete()
 {
-    return graphicsFamily.has_value();
+    return graphicsFamily.has_value() && presentationFamily.has_value();
 }
