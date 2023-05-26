@@ -6,3 +6,5 @@ void log(std::string str);
 void log(int i);
 void log(uint32_t i);
 void log_now(std::string str);
+
+void log_cond_err(bool cond, std::string err);
