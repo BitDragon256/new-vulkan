@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include <vector>
 
 #include <vulkan/vulkan.h>
@@ -34,3 +35,6 @@ SwapChainSupportDetails query_swap_chain_support(VkPhysicalDevice device, VkSurf
 VkSurfaceFormatKHR choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 VkPresentModeKHR choose_swap_present_mode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window);
+
+std::vector<char> read_file(const std::string& filename);
+VkShaderModule create_shader_module(const std::vector<char>& code, VkDevice device);

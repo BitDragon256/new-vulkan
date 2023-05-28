@@ -45,6 +45,16 @@ private:
 	VkQueue m_graphicsQueue;
 	VkQueue m_presentationQueue;
 
+	VkRenderPass m_renderPass;
+
+	VkPipelineLayout m_pipelineLayout;
+	VkPipeline m_graphicsPipeline;
+
+	std::vector<VkFramebuffer> m_swapchainFramebuffers;
+
+	VkCommandPool m_commandPool;
+	VkCommandBuffer m_commandBuffer;
+
 	// GLFW objects
 	GLFWwindow* m_window;
 	
@@ -56,7 +66,13 @@ private:
 	NVE_RESULT get_surface();
 	NVE_RESULT create_swapchain();
 	NVE_RESULT create_swapchain_image_views();
-	NVE_RESULT create_pipeline();
+	NVE_RESULT create_render_pass();
+	NVE_RESULT create_graphics_pipeline();
+	NVE_RESULT create_framebuffers();
+	NVE_RESULT create_commandpool();
+	NVE_RESULT create_commandbuffer();
+
 
 	// rendering
+	NVE_RESULT record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 };
