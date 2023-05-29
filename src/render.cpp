@@ -196,8 +196,8 @@ NVE_RESULT Renderer::create_swapchain()
     m_swapchainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, m_swapchainImages.data());
 
-    swapChainImageFormat = surfaceFormat.format;
-    swapChainExtent = extent;
+    m_swapchainImageFormat = surfaceFormat.format;
+    m_swapchainExtent = extent;
 
     return NVE_SUCCESS;
 }
@@ -211,7 +211,7 @@ NVE_RESULT Renderer::create_swapchain_image_views()
         imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         imageViewCI.image = m_swapchainImages[i];
         imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        imageViewCI.format = swapChainImageFormat;
+        imageViewCI.format = m_swapchainImageFormat;
         imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -343,7 +343,7 @@ NVE_RESULT Renderer::create_graphics_pipeline()
 NVE_RESULT Renderer::create_render_pass()
 {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapChainImageFormat;
+    colorAttachment.format = m_swapchainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -387,8 +387,8 @@ NVE_RESULT Renderer::create_framebuffers()
         framebufferInfo.renderPass = m_renderPass;
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = swapChainExtent.width;
-        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.width = m_swapchainExtent.width;
+        framebufferInfo.height = m_swapchainExtent.height;
         framebufferInfo.layers = 1;
 
         auto res = vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapchainFramebuffers[i]);
@@ -424,13 +424,63 @@ NVE_RESULT Renderer::create_commandbuffer()
 
 NVE_RESULT Renderer::record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
 {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0; // Optional
-    beginInfo.pInheritanceInfo = nullptr; // Optional
+    VkCommandBufferBeginInfo commandBufferBI = {};
+    commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    commandBufferBI.flags = 0; // Optional
+    commandBufferBI.pInheritanceInfo = nullptr; // Optional
 
-    auto res = vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording");
+    {
+        auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
+        log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording");
+    }
+
+    // -------------------------------------------
+
+    VkRenderPassBeginInfo renderPassBI = {};
+    renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBI.renderPass = m_renderPass;
+    renderPassBI.framebuffer = m_swapchainFramebuffers[imageIndex];
+    renderPassBI.renderArea.offset = { 0, 0 };
+    renderPassBI.renderArea.extent = m_swapchainExtent;
+
+    VkClearValue clearValue = { {{ 0.f, 0.f, 0.f, 1.f }} };
+    renderPassBI.clearValueCount = 1;
+    renderPassBI.pClearValues = &clearValue;
+
+    vkCmdBeginRenderPass(m_commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+
+    // -------------------------------------------
+
+    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+
+    // -------------------------------------------
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(m_swapchainExtent.width);
+    viewport.height = static_cast<float>(m_swapchainExtent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = m_swapchainExtent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    // -------------------------------------------
+
+    vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
+
+    // -------------------------------------------
+
+    vkCmdEndRenderPass(m_commandBuffer);
+
+    {
+        auto res = vkEndCommandBuffer(m_commandBuffer);
+        log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording");
+    }
 }
 
 NVE_RESULT Renderer::render()

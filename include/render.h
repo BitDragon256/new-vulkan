@@ -39,8 +39,8 @@ private:
 	VkSwapchainKHR m_swapchain;
 	std::vector<VkImage> m_swapchainImages;
 	std::vector<VkImageView> m_swapchainImageViews;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
+	VkFormat m_swapchainImageFormat;
+	VkExtent2D m_swapchainExtent;
 
 	VkQueue m_graphicsQueue;
 	VkQueue m_presentationQueue;
