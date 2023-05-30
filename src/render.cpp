@@ -19,6 +19,10 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
     log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
     log_cond(create_graphics_pipeline() == NVE_SUCCESS, "graphics pipeline created");
+    log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
+    log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
+    log_cond(create_commandbuffer() == NVE_SUCCESS, "command buffer created");
+    log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
     
     return NVE_SUCCESS;
 }
@@ -361,12 +365,23 @@ NVE_RESULT Renderer::create_render_pass()
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
 
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
+
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
 
     auto res = vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
     log_cond_err(res == VK_SUCCESS, "failed to create render pass");
@@ -409,6 +424,8 @@ NVE_RESULT Renderer::create_commandpool()
     auto res = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
 
     log_cond_err(res == VK_SUCCESS, "failed to create command pool");
+
+    return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::create_commandbuffer()
 {
@@ -420,6 +437,30 @@ NVE_RESULT Renderer::create_commandbuffer()
 
     auto res = vkAllocateCommandBuffers(m_device, &allocInfo, &m_commandBuffer);
     log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer");
+
+    return NVE_SUCCESS;
+}
+NVE_RESULT Renderer::create_sync_objects()
+{
+    VkSemaphoreCreateInfo semCI = {};
+    semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceCI = {};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    auto res = VK_SUCCESS;
+
+    res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_imageAvailableSemaphore);
+    log_cond_err(res == VK_SUCCESS, "failed to create imageAvailable semaphore");
+
+    res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_renderFinishedSemaphore);
+    log_cond_err(res == VK_SUCCESS, "failed to create renderFinished semaphore");
+
+    res = vkCreateFence(m_device, &fenceCI, nullptr, &m_inFlightFence);
+    log_cond_err(res == VK_SUCCESS, "failed to create inFlight fence");
+
+    return NVE_SUCCESS;
 }
 
 NVE_RESULT Renderer::record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
@@ -481,6 +522,61 @@ NVE_RESULT Renderer::record_command_buffer(VkCommandBuffer commandBuffer, uint32
         auto res = vkEndCommandBuffer(m_commandBuffer);
         log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording");
     }
+
+    // -------------------------------------------
+
+    return NVE_SUCCESS;
+}
+
+NVE_RESULT Renderer::draw_frame()
+{
+    // Wait for the previous frame to finish
+    vkWaitForFences(m_device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(m_device, 1, &m_inFlightFence);
+
+    // Acquire an image from the swap chain
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+    // Record a command buffer which draws the scene onto that image
+    vkResetCommandBuffer(m_commandBuffer, 0);
+    record_command_buffer(m_commandBuffer, imageIndex);
+
+    // Submit the recorded command buffer
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphore };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_commandBuffer;
+
+    VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphore };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    auto res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFence);
+    log_cond_err(res == VK_SUCCESS, "failed to submit command buffer to graphics queue");
+
+    // Present the swap chain image
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = { m_swapchain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+
+    vkQueuePresentKHR(m_presentationQueue, &presentInfo);
+
+    return NVE_SUCCESS;
 }
 
 NVE_RESULT Renderer::render()
@@ -488,13 +584,21 @@ NVE_RESULT Renderer::render()
     if (glfwWindowShouldClose(m_window))
     {
         clean_up();
-        return NVE_SUCCESS;
+        return NVE_RENDER_EXIT_SUCCESS;
     }
 
     glfwPollEvents();
+
+    draw_frame();
+
+    return NVE_SUCCESS;
 }
 void Renderer::clean_up()
 {
+    vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
+    vkDestroyFence(m_device, m_inFlightFence, nullptr);
+
     vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 
     for (auto framebuffer : m_swapchainFramebuffers) {

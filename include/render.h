@@ -10,7 +10,12 @@
 #include "models.h"
 
 typedef int NVE_RESULT;
+
+// success codes
 #define NVE_SUCCESS 0
+#define NVE_RENDER_EXIT_SUCCESS 100
+
+// error codes
 #define NVE_FAILURE -1
 
 struct RenderConfig
@@ -55,6 +60,10 @@ private:
 	VkCommandPool m_commandPool;
 	VkCommandBuffer m_commandBuffer;
 
+	VkSemaphore m_imageAvailableSemaphore;
+	VkSemaphore m_renderFinishedSemaphore;
+	VkFence m_inFlightFence;
+
 	// GLFW objects
 	GLFWwindow* m_window;
 	
@@ -71,8 +80,10 @@ private:
 	NVE_RESULT create_framebuffers();
 	NVE_RESULT create_commandpool();
 	NVE_RESULT create_commandbuffer();
+	NVE_RESULT create_sync_objects();
 
 
 	// rendering
 	NVE_RESULT record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	NVE_RESULT draw_frame();
 };

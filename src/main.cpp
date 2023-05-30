@@ -11,7 +11,14 @@ int main(int argc, char** argv)
     renderConfig.title = "Vulkan";
 
     renderer.init(renderConfig);
-    renderer.clean_up();
+
+    bool running = true;
+    while (running)
+    {
+        NVE_RESULT res = renderer.render();
+        if (res == NVE_RENDER_EXIT_SUCCESS)
+            running = false;
+    }
 
     return 0;
 }
