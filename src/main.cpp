@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "render.h"
+#include "vulkan_types.h"
 
 int main(int argc, char** argv)
 {
