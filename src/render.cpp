@@ -519,6 +519,17 @@ NVE_RESULT Renderer::create_sync_objects()
 
     return NVE_SUCCESS;
 }
+NVE_RESULT Renderer::create_vertex_buffer()
+{
+    VkBufferCreateInfo bufferCI{};
+    bufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCI.size = sizeof(m_vertices[0]) * m_vertices.size();
+    bufferCI.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    auto res = vkCreateBuffer(m_device, &bufferCI, nullptr, &m_vertexBuffer);
+    log_cond_err(res == VK_SUCCESS, "failed to create vertex buffer");
+}
 
 NVE_RESULT Renderer::record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
 {
@@ -639,6 +650,8 @@ NVE_RESULT Renderer::draw_frame()
 void Renderer::clean_up()
 {
     vkDeviceWaitIdle(m_device);
+
+    vkDestroyBuffer(m_device, m_vertexBuffer, nullptr);
 
     vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
     vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);

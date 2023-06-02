@@ -80,6 +80,7 @@ private:
 	VkFence m_inFlightFence;
 
 	std::vector<Vertex> m_vertices;
+	VkBuffer m_vertexBuffer;
 
 	// GLFW objects
 	GLFWwindow* m_window;
@@ -98,6 +99,7 @@ private:
 	NVE_RESULT create_commandpool();
 	NVE_RESULT create_commandbuffer();
 	NVE_RESULT create_sync_objects();
+	NVE_RESULT create_vertex_buffer();
 
 	// rendering
 	NVE_RESULT record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
