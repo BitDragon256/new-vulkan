@@ -7,8 +7,16 @@
 #include "logger.h"
 #include "vulkan_helpers.h"
 
+// ---------------------------------------
+// RENDERER
+// ---------------------------------------
+
+// PUBLIC METHODS
+
 NVE_RESULT Renderer::init(RenderConfig config)
 {
+    m_config = config;
+
     glfwInit();
     log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
     log_cond(create_instance() == NVE_SUCCESS, "instance created");
@@ -26,6 +34,29 @@ NVE_RESULT Renderer::init(RenderConfig config)
     
     return NVE_SUCCESS;
 }
+NVE_RESULT Renderer::render()
+{
+    if (glfwWindowShouldClose(m_window))
+    {
+        clean_up();
+        return NVE_RENDER_EXIT_SUCCESS;
+    }
+
+    glfwPollEvents();
+
+    draw_frame();
+
+    return NVE_SUCCESS;
+}
+NVE_RESULT Renderer::set_vertices(const std::vector<Vertex>& vertices)
+{
+    if (m_config.vertexMode)
+    {
+        m_vertices = vertices;
+    }
+}
+
+// PRIVATE METHODS
 
 NVE_RESULT Renderer::create_instance()
 {
@@ -258,8 +289,14 @@ NVE_RESULT Renderer::create_graphics_pipeline()
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+    auto bindingDescription = Vertex::getBindingDescription();
+    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     // -------------------------------------------
 
@@ -599,20 +636,6 @@ NVE_RESULT Renderer::draw_frame()
     return NVE_SUCCESS;
 }
 
-NVE_RESULT Renderer::render()
-{
-    if (glfwWindowShouldClose(m_window))
-    {
-        clean_up();
-        return NVE_RENDER_EXIT_SUCCESS;
-    }
-
-    glfwPollEvents();
-
-    draw_frame();
-
-    return NVE_SUCCESS;
-}
 void Renderer::clean_up()
 {
     vkDeviceWaitIdle(m_device);
@@ -640,4 +663,33 @@ void Renderer::clean_up()
 
     glfwDestroyWindow(m_window);
     glfwTerminate();
+}
+
+// ---------------------------------------
+// VERTEX
+// ---------------------------------------
+
+VkVertexInputBindingDescription Vertex::getBindingDescription() {
+    VkVertexInputBindingDescription bindingDescription = {};
+
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    return bindingDescription;
+}
+std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+    return attributeDescriptions;
 }

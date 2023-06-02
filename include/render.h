@@ -1,11 +1,13 @@
 #pragma once
 
+#include <array>
 #include <string>
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
 
 #include "models.h"
 
@@ -18,11 +20,21 @@ typedef int NVE_RESULT;
 // error codes
 #define NVE_FAILURE -1
 
+typedef struct Vertex {
+	glm::vec2 pos;
+	glm::vec3 color;
+
+	static VkVertexInputBindingDescription getBindingDescription();
+	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
+} Vertex;
+
 struct RenderConfig
 {
 	int width;
 	int height;
 	std::string title;
+
+	bool vertexMode;
 };
 
 class Renderer
@@ -31,10 +43,13 @@ public:
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
 	NVE_RESULT bind_model_handler(ModelHandler* handler);
+	NVE_RESULT set_vertices(const std::vector<Vertex>& vertices);
 
 	void clean_up();
 
 private:
+	RenderConfig m_config;
+
 	// vulkan objects
 	VkInstance m_instance;
 	VkPhysicalDevice m_physicalDevice;
@@ -64,6 +79,8 @@ private:
 	VkSemaphore m_renderFinishedSemaphore;
 	VkFence m_inFlightFence;
 
+	std::vector<Vertex> m_vertices;
+
 	// GLFW objects
 	GLFWwindow* m_window;
 	
@@ -81,7 +98,6 @@ private:
 	NVE_RESULT create_commandpool();
 	NVE_RESULT create_commandbuffer();
 	NVE_RESULT create_sync_objects();
-
 
 	// rendering
 	NVE_RESULT record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
