@@ -6,31 +6,48 @@
 
 #include "nve_types.h"
 #include "vulkan_helpers.h"
+#include "logger.h"
 
 template<class T>
 class Buffer
 {
 public:
-    NVE_RESULT create(const std::vector<T>& data, VkDevice device, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags flags, VkBufferUsageFlags usage)
+    Buffer() :
+        m_created{ false }, m_initialized{ false }, m_data(), m_realSize{ 0 }  {}
+
+    void initialize(VkDevice device, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags flags, VkBufferUsageFlags usage)
     {
-        set(data);
-        create(device, flags, usage);
-    }
-	NVE_RESULT create(VkDevice device, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags flags, VkBufferUsageFlags usage)
-	{
         m_device = device;
         m_physicalDevice = physicalDevice;
         m_memoryFlags = flags;
         m_usage = usage;
 
-        if (m_data.size() == 0)
+        m_initialized = true;
+    }
+    NVE_RESULT create(const std::vector<T>& data, VkDevice device, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags flags, VkBufferUsageFlags usage)
+    {
+        set(data);
+        initialize(device, physicalDevice, flags, usage);
+        recreate();
+        reload_data();
+    }
+	NVE_RESULT create(VkDevice device, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags flags, VkBufferUsageFlags usage)
+	{
+        initialize(device, physicalDevice, flags, usage);
+        recreate();
+
+        return NVE_SUCCESS;
+	}
+    NVE_RESULT recreate()
+    {
+        if (m_data.size() == 0 || !m_initialized)
             return NVE_FAILURE;
 
         destroy();
 
         m_realSize = sizeof(T) * m_data.size();
 
-		VkBufferCreateInfo bufferCI = {};
+        VkBufferCreateInfo bufferCI = {};
         bufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferCI.size = m_realSize;
         bufferCI.usage = m_usage;
@@ -47,7 +64,7 @@ public:
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = find_memory_type(m_physicalDevice, memRequirements.memoryTypeBits, flags);
+        allocInfo.memoryTypeIndex = find_memory_type(m_physicalDevice, memRequirements.memoryTypeBits, m_memoryFlags);
 
         {
             auto res = vkAllocateMemory(m_device, &allocInfo, nullptr, &m_memory);
@@ -56,16 +73,19 @@ public:
 
         vkBindBufferMemory(m_device, m_buffer, m_memory, 0);
 
-        reload_data();
-
         m_created = true;
-	}
+    }
     NVE_RESULT reload_data()
     {
+        if (!m_created)
+            return NVE_FAILURE;
+
         void* data;
         vkMapMemory(m_device, m_memory, 0, m_realSize, 0, &data);
         memcpy(data, m_data.data(), (size_t) m_realSize);
         vkUnmapMemory(m_device, m_memory);
+
+        return NVE_SUCCESS;
     }
     NVE_RESULT set(const std::vector<T>& data)
     {
@@ -73,7 +93,12 @@ public:
         m_data = data;
 
         if (reload)
+        {
+            recreate();
             reload_data();
+        }
+
+        return NVE_SUCCESS;
     }
     NVE_RESULT destroy()
     {
@@ -82,12 +107,16 @@ public:
             vkDestroyBuffer(m_device, m_buffer, nullptr);
             vkFreeMemory(m_device, m_memory, nullptr);
         }
+
+        return NVE_SUCCESS;
     }
 
-private:
 	VkBuffer m_buffer;
-	VkDeviceMemory m_memory;
+private:
 	bool m_created;
+    bool m_initialized;
+
+	VkDeviceMemory m_memory;
     VkDeviceSize m_realSize;
 
 	VkDevice m_device;

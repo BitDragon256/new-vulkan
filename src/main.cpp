@@ -9,18 +9,21 @@ int main(int argc, char** argv)
     renderConfig.width = 800;
     renderConfig.height = 500;
     renderConfig.title = "Vulkan";
-    renderConfig.vertexIndexMode = true;
+    renderConfig.dataMode = RenderConfig::Indexed;
+
+    renderConfig.enabledValidationLayers.push_back("VK_LAYER_KHRONOS_validation");
 
     renderer.init(renderConfig);
     renderer.set_vertices(std::vector<Vertex>
     {
-        { {0.5f, -0.5f}, { 1.0f, 0.0f, 0.0f }},
-        { {0.5f, 0.5f}, {0.0f, 1.0f, 0.0f} },
-        { {-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f} },
-
-        { {-0.5f, -0.5f}, {0.0f, 1.0f, 0.0f} },
-        { {0.5f, -0.5f}, { 1.0f, 0.0f, 0.0f } },
-        { {-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f} }
+        { {-0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f } },
+        { { 0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+        { { 0.5f,  0.5f }, { 0.0f, 1.0f, 0.0f } },
+        { {-0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f } },
+    });
+    renderer.set_indices({
+        0, 1, 2,
+        2, 3, 0
     });
 
     bool running = true;

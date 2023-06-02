@@ -21,6 +21,7 @@ typedef struct Vertex {
 	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
 } Vertex;
 typedef uint32_t Index;
+#define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
 struct RenderConfig
 {
@@ -28,8 +29,10 @@ struct RenderConfig
 	int height;
 	std::string title;
 
-	bool vertexOnlyMode;
-	bool vertexIndexMode;
+	enum DataMode { TestTri = 0, VertexOnly = 1, Indexed = 2 };
+	DataMode dataMode;
+
+	std::vector<const char*> enabledValidationLayers;
 };
 
 class Renderer
@@ -76,14 +79,10 @@ private:
 	VkFence m_inFlightFence;
 
 	std::vector<Vertex> m_vertices;
-	VkBuffer m_vertexBuffer;
-	VkDeviceMemory m_vertexBufferMemory;
-	bool m_vertexBufferCreated;
+	Buffer<Vertex> m_vertexBuffer;
 
 	std::vector<Index> m_indices;
-	VkBuffer m_indexBuffer;
-	VkDeviceMemory m_indexBufferMemory;
-	bool m_indexBufferCreated;
+	Buffer<Index> m_indexBuffer;
 
 	// GLFW objects
 	GLFWwindow* m_window;
@@ -102,7 +101,8 @@ private:
 	NVE_RESULT create_commandpool();
 	NVE_RESULT create_commandbuffer();
 	NVE_RESULT create_sync_objects();
-	NVE_RESULT create_vertex_buffer(uint32_t size);
+	NVE_RESULT init_vertex_buffer();
+	NVE_RESULT init_index_buffer();
 
 	// rendering
 	NVE_RESULT record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
