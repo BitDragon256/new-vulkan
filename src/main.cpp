@@ -9,13 +9,17 @@ int main(int argc, char** argv)
     renderConfig.width = 800;
     renderConfig.height = 500;
     renderConfig.title = "Vulkan";
-    renderConfig.vertexMode = true;
+    renderConfig.vertexIndexMode = true;
 
     renderer.init(renderConfig);
     renderer.set_vertices(std::vector<Vertex>
     {
-        { {0.0f, -0.5f}, { 1.0f, 0.0f, 0.0f }},
+        { {0.5f, -0.5f}, { 1.0f, 0.0f, 0.0f }},
         { {0.5f, 0.5f}, {0.0f, 1.0f, 0.0f} },
+        { {-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f} },
+
+        { {-0.5f, -0.5f}, {0.0f, 1.0f, 0.0f} },
+        { {0.5f, -0.5f}, { 1.0f, 0.0f, 0.0f } },
         { {-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f} }
     });
 

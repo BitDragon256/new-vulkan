@@ -9,16 +9,9 @@
 #include <vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
 
+#include "buffer.h"
 #include "models.h"
-
-typedef int NVE_RESULT;
-
-// success codes
-#define NVE_SUCCESS 0
-#define NVE_RENDER_EXIT_SUCCESS 100
-
-// error codes
-#define NVE_FAILURE -1
+#include "nve_types.h"
 
 typedef struct Vertex {
 	glm::vec2 pos;
@@ -27,6 +20,7 @@ typedef struct Vertex {
 	static VkVertexInputBindingDescription getBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
 } Vertex;
+typedef uint32_t Index;
 
 struct RenderConfig
 {
@@ -34,7 +28,8 @@ struct RenderConfig
 	int height;
 	std::string title;
 
-	bool vertexMode;
+	bool vertexOnlyMode;
+	bool vertexIndexMode;
 };
 
 class Renderer
@@ -44,6 +39,7 @@ public:
 	NVE_RESULT init(RenderConfig config);
 	NVE_RESULT bind_model_handler(ModelHandler* handler);
 	NVE_RESULT set_vertices(const std::vector<Vertex>& vertices);
+	NVE_RESULT set_indices(const std::vector<Index>& indices);
 
 	void clean_up();
 
@@ -81,6 +77,13 @@ private:
 
 	std::vector<Vertex> m_vertices;
 	VkBuffer m_vertexBuffer;
+	VkDeviceMemory m_vertexBufferMemory;
+	bool m_vertexBufferCreated;
+
+	std::vector<Index> m_indices;
+	VkBuffer m_indexBuffer;
+	VkDeviceMemory m_indexBufferMemory;
+	bool m_indexBufferCreated;
 
 	// GLFW objects
 	GLFWwindow* m_window;
@@ -99,7 +102,7 @@ private:
 	NVE_RESULT create_commandpool();
 	NVE_RESULT create_commandbuffer();
 	NVE_RESULT create_sync_objects();
-	NVE_RESULT create_vertex_buffer();
+	NVE_RESULT create_vertex_buffer(uint32_t size);
 
 	// rendering
 	NVE_RESULT record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);

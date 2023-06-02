@@ -17,6 +17,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
 {
     m_config = config;
 
+    m_vertexBufferCreated = false;
+
     glfwInit();
     log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
     log_cond(create_instance() == NVE_SUCCESS, "instance created");
@@ -50,9 +52,19 @@ NVE_RESULT Renderer::render()
 }
 NVE_RESULT Renderer::set_vertices(const std::vector<Vertex>& vertices)
 {
-    if (m_config.vertexMode)
+    if (m_config.vertexOnlyMode || m_config.vertexIndexMode)
     {
         m_vertices = vertices;
+        log_cond(create_vertex_buffer(m_vertices.size()) == NVE_SUCCESS, "vertex buffer created");
+    }
+
+    return NVE_SUCCESS;
+}
+NVE_RESULT Renderer::set_indices(const std::vector<Index>& indices)
+{
+    if (m_config.vertexIndexMode)
+    {
+        m_indices = indices;
     }
 }
 
@@ -519,16 +531,51 @@ NVE_RESULT Renderer::create_sync_objects()
 
     return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::create_vertex_buffer()
+NVE_RESULT Renderer::create_vertex_buffer(uint32_t size)
 {
+    if (m_vertices.size() == 0)
+        return NVE_FAILURE;
+
+    if (m_vertexBufferCreated)
+    {
+        vkDestroyBuffer(m_device, m_vertexBuffer, nullptr);
+        vkFreeMemory(m_device, m_vertexBufferMemory, nullptr);
+    }
+
     VkBufferCreateInfo bufferCI{};
     bufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCI.size = sizeof(m_vertices[0]) * m_vertices.size();
+    bufferCI.size = sizeof(m_vertices[0]) * size;
     bufferCI.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    auto res = vkCreateBuffer(m_device, &bufferCI, nullptr, &m_vertexBuffer);
-    log_cond_err(res == VK_SUCCESS, "failed to create vertex buffer");
+    {
+        auto res = vkCreateBuffer(m_device, &bufferCI, nullptr, &m_vertexBuffer);
+        log_cond_err(res == VK_SUCCESS, "failed to create vertex buffer");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(m_device, m_vertexBuffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = find_memory_type(m_physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    {
+        auto res = vkAllocateMemory(m_device, &allocInfo, nullptr, &m_vertexBufferMemory);
+        log_cond_err(res == VK_SUCCESS, "failed to allocate vertex buffer memory");
+    }
+
+    vkBindBufferMemory(m_device, m_vertexBuffer, m_vertexBufferMemory, 0);
+
+    void* data;
+    vkMapMemory(m_device, m_vertexBufferMemory, 0, bufferCI.size, 0, &data);
+    memcpy(data, m_vertices.data(), (size_t)bufferCI.size);
+    vkUnmapMemory(m_device, m_vertexBufferMemory);
+
+    m_vertexBufferCreated = true;
+
+    return NVE_SUCCESS;
 }
 
 NVE_RESULT Renderer::record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
@@ -579,8 +626,14 @@ NVE_RESULT Renderer::record_command_buffer(VkCommandBuffer commandBuffer, uint32
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // -------------------------------------------
+    
+    VkBuffer vertexBuffers[] = { m_vertexBuffer };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
+    // -------------------------------------------
+
+    vkCmdDraw(m_commandBuffer, static_cast<uint32_t>(m_vertices.size()), 1, 0, 0);
 
     // -------------------------------------------
 
@@ -595,7 +648,6 @@ NVE_RESULT Renderer::record_command_buffer(VkCommandBuffer commandBuffer, uint32
 
     return NVE_SUCCESS;
 }
-
 NVE_RESULT Renderer::draw_frame()
 {
     // Wait for the previous frame to finish
@@ -652,6 +704,7 @@ void Renderer::clean_up()
     vkDeviceWaitIdle(m_device);
 
     vkDestroyBuffer(m_device, m_vertexBuffer, nullptr);
+    vkFreeMemory(m_device, m_vertexBufferMemory, nullptr);
 
     vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
     vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
