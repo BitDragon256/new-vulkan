@@ -540,13 +540,27 @@ NVE_RESULT Renderer::create_sync_objects()
 }
 NVE_RESULT Renderer::init_vertex_buffer()
 {
-    m_vertexBuffer.initialize(m_device, m_physicalDevice, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    BufferConfig config;
+    config.device = m_device;
+    config.physicalDevice = m_physicalDevice;
+    config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    config.useStagedBuffer = true;
+
+    m_vertexBuffer.initialize(config);
     
     return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::init_index_buffer()
 {
-    m_indexBuffer.initialize(m_device, m_physicalDevice, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    BufferConfig config;
+    config.device = m_device;
+    config.physicalDevice = m_physicalDevice;
+    config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    config.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    config.useStagedBuffer = true;
+
+    m_indexBuffer.initialize(config);
     
     return NVE_SUCCESS;
 }

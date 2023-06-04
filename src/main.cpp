@@ -14,8 +14,7 @@ int main(int argc, char** argv)
     renderConfig.enabledValidationLayers.push_back("VK_LAYER_KHRONOS_validation");
 
     renderer.init(renderConfig);
-    renderer.set_vertices(std::vector<Vertex>
-    {
+    renderer.set_vertices({
         { {-0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f } },
         { { 0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
         { { 0.5f,  0.5f }, { 0.0f, 1.0f, 0.0f } },
