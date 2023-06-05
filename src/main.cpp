@@ -6,8 +6,8 @@ int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 800;
-    renderConfig.height = 500;
+    renderConfig.width = 1400;
+    renderConfig.height = 1000;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
 

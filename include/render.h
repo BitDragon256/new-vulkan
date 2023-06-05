@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <string>
 
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -33,6 +34,9 @@ struct RenderConfig
 	DataMode dataMode;
 
 	std::vector<const char*> enabledValidationLayers;
+
+	// gui
+	std::function<void(void)> guiDraw;
 };
 
 class Renderer
@@ -64,6 +68,8 @@ private:
 	VkQueue m_graphicsQueue;
 	VkQueue m_presentationQueue;
 
+	QueueFamilyIndices m_queueFamilyIndices;
+
 	VkRenderPass m_renderPass;
 
 	VkPipelineLayout m_pipelineLayout;
@@ -83,6 +89,28 @@ private:
 
 	std::vector<Index> m_indices;
 	Buffer<Index> m_indexBuffer;
+
+	// imgui vulkan objects
+	VkDescriptorPool m_imgui_descriptorPool;
+	VkRenderPass m_imgui_renderPass;
+	std::vector<VkFramebuffer> m_imgui_framebuffers;
+	VkCommandPool m_imgui_commandPool;
+	std::vector<VkCommandBuffer> m_imgui_commandBuffers;
+
+	const VkClearValue m_imgui_clearColor = { {{ 0.45f, 0.55f, 0.60f, 1.00f }} };
+
+	// imgui methods
+	NVE_RESULT imgui_init();
+	NVE_RESULT imgui_create_render_pass();
+	NVE_RESULT imgui_create_framebuffers();
+	NVE_RESULT imgui_create_descriptor_pool();
+	NVE_RESULT imgui_upload_fonts();
+	NVE_RESULT imgui_create_command_pool();
+	NVE_RESULT imgui_create_command_buffers();
+
+	void imgui_cleanup();
+	
+	void imgui_demo_draws(uint32_t imageIndex);
 
 	// GLFW objects
 	GLFWwindow* m_window;
@@ -104,7 +132,15 @@ private:
 	NVE_RESULT init_vertex_buffer();
 	NVE_RESULT init_index_buffer();
 
+	// additional creation
+	VkCommandBuffer begin_single_time_cmd_buffer(VkCommandPool cmdPool);
+	void end_single_time_cmd_buffer(VkCommandBuffer commandBuffer, VkCommandPool cmdPool);
+
 	// rendering
-	NVE_RESULT record_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	NVE_RESULT record_main_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	NVE_RESULT submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems);
+	void present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageIndex, std::vector<VkSemaphore> signalSems);
 	NVE_RESULT draw_frame();
 };
+
+void imgui_error_handle(VkResult err);

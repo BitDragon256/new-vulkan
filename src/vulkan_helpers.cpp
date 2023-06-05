@@ -213,4 +213,5 @@ uint32_t find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, 
     }
 
     log_err("failed to find suitable memory type");
+    return 0;
 }
