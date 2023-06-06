@@ -40,3 +40,6 @@ std::vector<char> read_file(const std::string& filename);
 VkShaderModule create_shader_module(const std::vector<char>& code, VkDevice device);
 
 uint32_t find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+VkCommandBuffer begin_single_time_cmd_buffer(VkCommandPool cmdPool, VkDevice device);
+void end_single_time_cmd_buffer(VkCommandBuffer commandBuffer, VkCommandPool cmdPool, VkDevice device, VkQueue queue);

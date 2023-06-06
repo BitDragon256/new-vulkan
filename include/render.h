@@ -44,7 +44,7 @@ class Renderer
 public:
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
-	NVE_RESULT bind_model_handler(ModelHandler* handler);
+	//NVE_RESULT bind_model_handler(ModelHandler* handler);
 	NVE_RESULT set_vertices(const std::vector<Vertex>& vertices);
 	NVE_RESULT set_indices(const std::vector<Index>& indices);
 
@@ -132,10 +132,6 @@ private:
 	NVE_RESULT init_vertex_buffer();
 	NVE_RESULT init_index_buffer();
 
-	// additional creation
-	VkCommandBuffer begin_single_time_cmd_buffer(VkCommandPool cmdPool);
-	void end_single_time_cmd_buffer(VkCommandBuffer commandBuffer, VkCommandPool cmdPool);
-
 	// rendering
 	NVE_RESULT record_main_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	NVE_RESULT submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems);
@@ -144,3 +140,9 @@ private:
 };
 
 void imgui_error_handle(VkResult err);
+
+class Texture
+{
+public:
+	VkImage m_tex;
+};

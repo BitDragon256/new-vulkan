@@ -549,6 +549,8 @@ NVE_RESULT Renderer::init_vertex_buffer()
     config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     config.useStagedBuffer = true;
+    config.stagedBufferTransferQueue = m_graphicsQueue;
+    config.stagedBufferTransferCommandPool = m_commandPool;
 
     m_vertexBuffer.initialize(config);
     
@@ -562,6 +564,8 @@ NVE_RESULT Renderer::init_index_buffer()
     config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     config.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     config.useStagedBuffer = true;
+    config.stagedBufferTransferQueue = m_graphicsQueue;
+    config.stagedBufferTransferCommandPool = m_commandPool;
 
     m_indexBuffer.initialize(config);
     
@@ -715,40 +719,6 @@ NVE_RESULT Renderer::draw_frame()
     present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
 
     return NVE_SUCCESS;
-}
-
-VkCommandBuffer Renderer::begin_single_time_cmd_buffer(VkCommandPool cmdPool)
-{
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = cmdPool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(m_device, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    return commandBuffer;
-}
-void Renderer::end_single_time_cmd_buffer(VkCommandBuffer commandBuffer, VkCommandPool cmdPool)
-{
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(m_graphicsQueue);
-
-    vkFreeCommandBuffers(m_device, cmdPool, 1, &commandBuffer);
 }
 
 void Renderer::clean_up()
@@ -938,9 +908,9 @@ NVE_RESULT Renderer::imgui_create_descriptor_pool()
 }
 NVE_RESULT Renderer::imgui_upload_fonts()
 {
-    VkCommandBuffer commandBuffer = begin_single_time_cmd_buffer(m_imgui_commandPool);
+    VkCommandBuffer commandBuffer = begin_single_time_cmd_buffer(m_imgui_commandPool, m_device);
     ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-    end_single_time_cmd_buffer(commandBuffer, m_imgui_commandPool);
+    end_single_time_cmd_buffer(commandBuffer, m_imgui_commandPool, m_device, m_graphicsQueue);
 
     return NVE_SUCCESS;
 }
