@@ -10,8 +10,7 @@ int main(int argc, char** argv)
     renderConfig.height = 1000;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
-
-    renderConfig.enabledValidationLayers.push_back("VK_LAYER_KHRONOS_validation");
+    renderConfig.enableValidationLayers = true;
 
     renderer.init(renderConfig);
     renderer.set_vertices({

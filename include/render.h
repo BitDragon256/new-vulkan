@@ -4,10 +4,10 @@
 #include <functional>
 #include <string>
 
-#define VK_USE_PLATFORM_WIN32_KHR
+// #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
 #include "buffer.h"
@@ -33,7 +33,8 @@ struct RenderConfig
 	enum DataMode { TestTri = 0, VertexOnly = 1, Indexed = 2 };
 	DataMode dataMode;
 
-	std::vector<const char*> enabledValidationLayers;
+	bool enableValidationLayers;
+	std::vector<const char*> enabledInstanceLayers;
 
 	// gui
 	std::function<void(void)> guiDraw;
@@ -42,6 +43,7 @@ struct RenderConfig
 class Renderer
 {
 public:
+	Renderer();
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
 	//NVE_RESULT bind_model_handler(ModelHandler* handler);
@@ -89,6 +91,8 @@ private:
 
 	std::vector<Index> m_indices;
 	Buffer<Index> m_indexBuffer;
+	
+	VkDebugUtilsMessengerEXT m_debugMessenger;
 
 	// imgui vulkan objects
 	VkDescriptorPool m_imgui_descriptorPool;
@@ -117,6 +121,7 @@ private:
 	
 	// vulkan object creation
 	NVE_RESULT create_instance();
+	NVE_RESULT create_debug_messenger();
 	NVE_RESULT get_physical_device();
 	NVE_RESULT create_device();
 	NVE_RESULT create_window(int width, int height, std::string title);
@@ -131,6 +136,9 @@ private:
 	NVE_RESULT create_sync_objects();
 	NVE_RESULT init_vertex_buffer();
 	NVE_RESULT init_index_buffer();
+	
+	// vulkan destruction
+	void destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 	// rendering
 	NVE_RESULT record_main_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
