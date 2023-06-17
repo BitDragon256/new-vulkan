@@ -1,7 +1,8 @@
 #version 460
 
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
+//layout(location = 1) in vec3 inColor;
+//layout(location = 2) in vec2 uv;
 
 layout(location = 0) out vec3 fragColor;
 
@@ -14,19 +15,19 @@ struct Transform
 
 // Quaternion Inverse
 vec4 quatInv(const vec4 q) {
- // assume it's a unit quaternion, so just Conjugate
- return vec4( -q.xyz, q.w );
+    // assume it's a unit quaternion, so just Conjugate
+    return vec4( -q.xyz, q.w );
 }
 // Quaternion multiplication
 vec4 quatDot(const vec4 q1, const vec4 q2) {
- float scalar = q1.w * q2.w - dot(q1.xyz, q2.xyz);
- vec3 v = cross(q1.xyz, q2.xyz) + q1.w * q2.xyz + q2.w * q1.xyz;
- return vec4(v, scalar);
+    float scalar = q1.w * q2.w - dot(q1.xyz, q2.xyz);
+    vec3 v = cross(q1.xyz, q2.xyz) + q1.w * q2.xyz + q2.w * q1.xyz;
+    return vec4(v, scalar);
 }
 // Apply unit quaternion to vector (rotate vector)
 vec3 quatMul(const vec4 q, const vec3 v) {
- vec4 r = quatDot(q, quatDot(vec4(v, 0), quatInv(q)));
- return r.xyz;
+    vec4 r = quatDot(q, quatDot(vec4(v, 0), quatInv(q)));
+    return r.xyz;
 }
 
 vec3 mul(const Transform t, const vec3 v)
@@ -46,8 +47,10 @@ layout( push_constant ) uniform constants
 } CameraPushConstant;
 
 void main() {
-    Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
-    mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
-    gl_Position = cameraMatrix * vec4(mul(transform, inPosition), 1.0);
-    fragColor = inColor;
+    //Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
+    //mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
+    //gl_Position = cameraMatrix * vec4(mul(transform, inPosition), 1.0);
+    gl_Position = vec4(inPosition.xy, 0.0, 1.0);
+    //fragColor = inColor;
+    fragColor = vec3(1.0, 1.0, 1.0);
 }

@@ -46,6 +46,7 @@ public:
 
 	static Mesh create_simple_mesh(std::vector<Vertex> vertices, std::vector<Index> indices);
 	static Mesh create_cube();
+	static Mesh create_triangle();
 };
 
 struct Transform
@@ -87,6 +88,8 @@ public:
 	VkBuffer vertex_buffer();
 	VkBuffer index_buffer();
 	VkBuffer model_buffer();
+	uint32_t vertex_count();
+	uint32_t index_count();
 
 private:
 	void reset();

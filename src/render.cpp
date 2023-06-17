@@ -39,7 +39,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(create_commandbuffer() == NVE_SUCCESS, "command buffer created");
     log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
-    if (m_config.useModelHandler)
+    if (!m_config.useModelHandler)
     {
         log_cond(init_vertex_buffer() == NVE_SUCCESS, "vertex buffer initialized");
         log_cond(init_index_buffer() == NVE_SUCCESS, "index buffer initialized");
@@ -98,6 +98,8 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
     if (!camera)
         return NVE_FAILURE;
     m_activeCamera = camera;
+    m_activeCamera->m_extent.x = m_swapchainExtent.width;
+    m_activeCamera->m_extent.y = m_swapchainExtent.height;
     return NVE_SUCCESS;
 }
 
@@ -649,6 +651,7 @@ NVE_RESULT Renderer::init_vertex_buffer()
     config.stagedBufferTransferCommandPool = m_commandPool;
 
     m_vertexBuffer.initialize(config);
+    m_vertexBuffer.recreate();
     
     return NVE_SUCCESS;
 }
@@ -664,6 +667,7 @@ NVE_RESULT Renderer::init_index_buffer()
     config.stagedBufferTransferCommandPool = m_commandPool;
 
     m_indexBuffer.initialize(config);
+    m_indexBuffer.recreate();
     
     return NVE_SUCCESS;
 }
@@ -717,15 +721,18 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
 
     // -------------------------------------------
     
-    VkDeviceSize offsets[] = { 0 };
-    VkBuffer vertexBuffers[1];
+    if (m_config.dataMode != RenderConfig::TestTri)
+    {
+        VkDeviceSize offsets[] = { 0 };
+        VkBuffer vertexBuffers[1];
 
-    if (m_config.useModelHandler)
-        vertexBuffers[0] = m_pModelHandler->vertex_buffer();
-    else    
-        vertexBuffers[0] = m_vertexBuffer.m_buffer;
+        if (m_config.useModelHandler)
+            vertexBuffers[0] = m_pModelHandler->vertex_buffer();
+        else
+            vertexBuffers[0] = m_vertexBuffer.m_buffer;
 
-    vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
+    }
 
     // -------------------------------------------
 
@@ -761,14 +768,28 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
 
     // -------------------------------------------
 
+    uint32_t vertexCount { 0 };
+    uint32_t indexCount { 0 };
+
+    if (m_config.useModelHandler)
+    {
+        vertexCount = m_pModelHandler->vertex_count();
+        indexCount = m_pModelHandler->index_count();
+    }
+    else
+    {
+        vertexCount = static_cast<uint32_t>(m_vertices.size());
+        indexCount = static_cast<uint32_t>(m_indices.size());
+    }
+
     switch (m_config.dataMode)
     {
     case RenderConfig::TestTri:
         vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
     case RenderConfig::VertexOnly:
-        vkCmdDraw(m_commandBuffer, static_cast<uint32_t>(m_vertices.size()), 1, 0, 0);
+        vkCmdDraw(m_commandBuffer, vertexCount, 1, 0, 0);
     case RenderConfig::Indexed:
-        vkCmdDrawIndexed(m_commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, 0);
     }
 
     // -------------------------------------------
@@ -1180,18 +1201,25 @@ VkVertexInputBindingDescription Vertex::getBindingDescription() {
 
     return bindingDescription;
 }
-std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> Vertex::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> attributeDescriptions = {};
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
+    /*
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+    attributeDescriptions[2].binding = 0;
+    attributeDescriptions[2].location = 2;
+    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[2].offset = offsetof(Vertex, uv);
+    */
 
     return attributeDescriptions;
 }
@@ -1200,11 +1228,11 @@ std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescription
 // CAMERA
 // ---------------------------------------
 Camera::Camera() :
-    m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(0.01f), m_extent(1080, 1920), renderer(nullptr)
+    m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(10.f), m_extent(1080, 1920), renderer(nullptr)
 {}
 glm::mat4 Camera::view_matrix()
 {
-    return glm::lookAt(m_position, glm::rotate(glm::qua(glm::radians(m_rotation)), VECTOR_FORWARD), VECTOR_UP);
+    return glm::lookAt(m_position, m_position + glm::rotate(glm::qua(glm::radians(m_rotation)), VECTOR_FORWARD), VECTOR_UP);
 }
 glm::mat4 Camera::projection_matrix()
 {

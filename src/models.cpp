@@ -51,8 +51,8 @@ void ModelHandler::upload_data()
 	BufferConfig config = {};
 	config.device = m_device;
 	config.physicalDevice = m_physicalDevice;
-	config.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	config.useStagedBuffer = true;
+	config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;//VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	config.useStagedBuffer = false;//true;
 	config.stagedBufferTransferCommandPool = m_commandPool;
 	config.stagedBufferTransferQueue = m_transferQueue;
 
@@ -106,6 +106,14 @@ VkBuffer ModelHandler::index_buffer()
 VkBuffer ModelHandler::model_buffer()
 {
 	return m_modelBuffer.m_buffer;
+}
+uint32_t ModelHandler::vertex_count()
+{
+	return static_cast<uint32_t>(m_vertexCount);
+}
+uint32_t ModelHandler::index_count()
+{
+	return static_cast<uint32_t>(m_indexCount);
 }
 
 // ----------------------------------
@@ -205,14 +213,14 @@ Mesh Mesh::create_cube()
 
 	return create_simple_mesh(
 		{
-			{ glm::vec3( 0.5, -0.5,  0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // A 0
-			{ glm::vec3(-0.5, -0.5,  0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // B 1
-			{ glm::vec3(-0.5,  0.5,  0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // C 2
-			{ glm::vec3( 0.5,  0.5,  0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // D 3
-			{ glm::vec3( 0.5, -0.5, -0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // E 4
-			{ glm::vec3(-0.5, -0.5, -0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // F 5
-			{ glm::vec3(-0.5,  0.5, -0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // G 6
-			{ glm::vec3( 0.5,  0.5, -0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // H 7
+			{ glm::vec3( 0.5, -0.5,  0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // A 0
+			{ glm::vec3(-0.5, -0.5,  0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // B 1
+			{ glm::vec3(-0.5,  0.5,  0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // C 2
+			{ glm::vec3( 0.5,  0.5,  0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // D 3
+			{ glm::vec3( 0.5, -0.5, -0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // E 4
+			{ glm::vec3(-0.5, -0.5, -0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // F 5
+			{ glm::vec3(-0.5,  0.5, -0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // G 6
+			{ glm::vec3( 0.5,  0.5, -0.5)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // H 7
 		},
 		{
 			// top
@@ -232,7 +240,21 @@ Mesh Mesh::create_cube()
 			2, 5, 6,
 			// left
 			1, 0, 4,
-			1, 4, 5
+			1, 4, 5,
+		}
+	);
+}
+Mesh Mesh::create_triangle()
+{
+	return create_simple_mesh(
+		{
+			{ glm::vec3( 0.0, -0.5, 0.0)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) },
+			{ glm::vec3( 0.5,  0.5, 0.0)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) },
+			{ glm::vec3(-0.5,  0.5, 0.0)},// glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) },
+		},
+		{
+			0, 1, 2,
+			0, 2, 1,
 		}
 	);
 }
