@@ -867,6 +867,9 @@ void Renderer::clean_up()
     if (m_config.useModelHandler)
         m_pModelHandler->destroy_buffers();
 
+    vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
+    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+
     vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
     vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
     vkDestroyFence(m_device, m_inFlightFence, nullptr);
