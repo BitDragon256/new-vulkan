@@ -7,6 +7,8 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_glfw.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "logger.h"
 #include "vulkan_helpers.h"
 
@@ -75,6 +77,22 @@ NVE_RESULT Renderer::set_indices(const std::vector<Index>& indices)
         m_indexBuffer.set(m_indices);
     }
 
+    return NVE_SUCCESS;
+}
+NVE_RESULT Renderer::bind_model_handler(ModelHandler* pHandler)
+{
+    if (!pHandler)
+        return NVE_FAILURE;
+
+    m_pModelHandler = pHandler;
+    m_pModelHandler->init(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue);
+    return NVE_SUCCESS;
+}
+NVE_RESULT Renderer::set_active_camera(Camera* camera)
+{
+    if (!camera)
+        return NVE_FAILURE;
+    m_activeCamera = camera;
     return NVE_SUCCESS;
 }
 
@@ -385,14 +403,34 @@ NVE_RESULT Renderer::create_graphics_pipeline()
 
     // -------------------------------------------
 
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-
+    if (!m_config.cameraEnabled)
     {
-        auto res = vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
-        log_cond_err(res == VK_SUCCESS, "failed to create pipeline layout");
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 0;
+        pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+        auto res = vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_basicPipelineLayout);
+        log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
+    }
+    else
+    {
+        VkPushConstantRange pushConstantRange;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(CameraPushConstant);
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkPipelineLayoutCreateInfo meshPipelineLayoutCI = {};
+        meshPipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        meshPipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+        meshPipelineLayoutCI.pushConstantRangeCount = 1;
+
+        auto res = vkCreatePipelineLayout(m_device, &meshPipelineLayoutCI, nullptr, &m_meshPipelineLayout);
+        log_cond_err(res == VK_SUCCESS, "failed to create mesh pipeline layout");
+
+
+        
+        VkDescriptorSet descriptorSet;
     }
 
     // -------------------------------------------
@@ -408,7 +446,12 @@ NVE_RESULT Renderer::create_graphics_pipeline()
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = m_pipelineLayout;
+
+    if (m_config.cameraEnabled)
+        pipelineInfo.layout = m_meshPipelineLayout;
+    else
+        pipelineInfo.layout = m_basicPipelineLayout;
+
     pipelineInfo.renderPass = m_renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -543,7 +586,7 @@ NVE_RESULT Renderer::create_sync_objects()
 }
 NVE_RESULT Renderer::init_vertex_buffer()
 {
-    BufferConfig config;
+    BufferConfig config = {};
     config.device = m_device;
     config.physicalDevice = m_physicalDevice;
     config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -558,7 +601,7 @@ NVE_RESULT Renderer::init_vertex_buffer()
 }
 NVE_RESULT Renderer::init_index_buffer()
 {
-    BufferConfig config;
+    BufferConfig config = {};
     config.device = m_device;
     config.physicalDevice = m_physicalDevice;
     config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -741,7 +784,12 @@ void Renderer::clean_up()
     }
 
     vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+
+    if (m_config.cameraEnabled)
+        vkDestroyPipelineLayout(m_device, m_meshPipelineLayout, nullptr);
+    else
+        vkDestroyPipelineLayout(m_device, m_basicPipelineLayout, nullptr);
+
     vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 
     for (auto imageView : m_swapchainImageViews)
@@ -858,7 +906,7 @@ NVE_RESULT Renderer::imgui_create_framebuffers()
 {
     m_imgui_framebuffers.resize(m_swapchainImages.size());
 
-    VkImageView attachment[1];
+    VkImageView attachment[1] = {};
     VkFramebufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     info.renderPass = m_imgui_renderPass;
@@ -1019,4 +1067,19 @@ std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescription
     attributeDescriptions[1].offset = offsetof(Vertex, color);
 
     return attributeDescriptions;
+}
+
+// ---------------------------------------
+// CAMERA
+// ---------------------------------------
+Camera::Camera() :
+    m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(0.01f), m_extent(1080, 1920), renderer(nullptr)
+{}
+glm::mat4 Camera::view_matrix()
+{
+    return glm::lookAt(m_position, glm::rotate(glm::qua(glm::radians(m_rotation)), VECTOR_FORWARD), VECTOR_UP);
+}
+glm::mat4 Camera::projection_matrix()
+{
+    return glm::perspective(glm::radians(m_fov), m_extent.x / m_extent.y, m_nearPlane, m_farPlane);
 }

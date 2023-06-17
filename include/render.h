@@ -8,21 +8,13 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.hpp>
+
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
 #include "buffer.h"
 #include "models.h"
 #include "nve_types.h"
-
-typedef struct Vertex {
-	glm::vec2 pos;
-	glm::vec3 color;
-
-	static VkVertexInputBindingDescription getBindingDescription();
-	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
-} Vertex;
-typedef uint32_t Index;
-#define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
 struct RenderConfig
 {
@@ -33,20 +25,25 @@ struct RenderConfig
 	enum DataMode { TestTri = 0, VertexOnly = 1, Indexed = 2 };
 	DataMode dataMode;
 
+	bool cameraEnabled;
+
 	std::vector<const char*> enabledValidationLayers;
 
 	// gui
 	std::function<void(void)> guiDraw;
 };
 
+class Camera;
+
 class Renderer
 {
 public:
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
-	//NVE_RESULT bind_model_handler(ModelHandler* handler);
+	NVE_RESULT bind_model_handler(ModelHandler* pHandler);
 	NVE_RESULT set_vertices(const std::vector<Vertex>& vertices);
 	NVE_RESULT set_indices(const std::vector<Index>& indices);
+	NVE_RESULT set_active_camera(Camera* camera);
 
 	void clean_up();
 
@@ -72,7 +69,8 @@ private:
 
 	VkRenderPass m_renderPass;
 
-	VkPipelineLayout m_pipelineLayout;
+	VkPipelineLayout m_basicPipelineLayout;
+	VkPipelineLayout m_meshPipelineLayout;
 	VkPipeline m_graphicsPipeline;
 
 	std::vector<VkFramebuffer> m_swapchainFramebuffers;
@@ -89,6 +87,14 @@ private:
 
 	std::vector<Index> m_indices;
 	Buffer<Index> m_indexBuffer;
+
+	// model handling
+	ModelHandler* m_pModelHandler;
+
+	VkDescriptorPool m_modelDescriptorPool;
+
+	// camera stuff
+	Camera* m_activeCamera;
 
 	// imgui vulkan objects
 	VkDescriptorPool m_imgui_descriptorPool;
@@ -145,4 +151,28 @@ class Texture
 {
 public:
 	VkImage m_tex;
+};
+
+class Camera
+{
+public:
+	Camera();
+	glm::mat4 projection_matrix();
+	glm::mat4 view_matrix();
+
+	glm::vec3 m_position;
+	glm::vec3 m_rotation;
+	float m_fov;
+	glm::vec2 m_extent;
+	float m_nearPlane;
+	float m_farPlane;
+
+private:
+	Renderer* renderer;
+};
+
+struct CameraPushConstant
+{
+	glm::mat4 view;
+	glm::mat4 proj;
 };

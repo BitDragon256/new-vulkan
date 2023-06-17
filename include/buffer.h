@@ -151,6 +151,10 @@ class Buffer
 public:
     Buffer() :
         m_created{ false }, m_initialized{ false }, m_data(), m_realSize{ 0 }  {}
+    ~Buffer()
+    {
+        destroy();
+    }
 
     void initialize(BufferConfig config)
     {
@@ -239,6 +243,8 @@ public:
         {
             vkDestroyBuffer(m_config.device, m_buffer, nullptr);
             vkFreeMemory(m_config.device, m_memory, nullptr);
+
+            m_created = false;
         }
 
         return NVE_SUCCESS;
