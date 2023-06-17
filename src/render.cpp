@@ -368,8 +368,15 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 }
 NVE_RESULT Renderer::create_graphics_pipeline()
 {
-    auto vertShaderCode = read_file("../shaders/vert.spv");
-    auto fragShaderCode = read_file("../shaders/frag.spv");
+    std::string prefix = "";
+#ifdef _MSC_BUILD
+    prefix = "X:/Dev/new-vulkan-engine";
+#elif
+    prefix = "..";
+#endif
+
+    auto vertShaderCode = read_file(prefix + "/shaders/vert.spv");
+    auto fragShaderCode = read_file(prefix + "/shaders/frag.spv");
 
     VkShaderModule vertShaderModule = create_shader_module(vertShaderCode, m_device);
     VkShaderModule fragShaderModule = create_shader_module(fragShaderCode, m_device);
