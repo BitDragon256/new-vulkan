@@ -22,6 +22,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
 {
     m_config = config;
 
+    add_descriptors();
+
     glfwInit();
     log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
     log_cond(create_instance() == NVE_SUCCESS, "instance created");
@@ -37,8 +39,11 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(create_commandbuffer() == NVE_SUCCESS, "command buffer created");
     log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
-    log_cond(init_vertex_buffer() == NVE_SUCCESS, "vertex buffer initialized");
-    log_cond(init_index_buffer() == NVE_SUCCESS, "index buffer initialized");
+    if (m_config.useModelHandler)
+    {
+        log_cond(init_vertex_buffer() == NVE_SUCCESS, "vertex buffer initialized");
+        log_cond(init_index_buffer() == NVE_SUCCESS, "index buffer initialized");
+    }
 
     // imgui
     imgui_init();
@@ -199,7 +204,12 @@ NVE_RESULT Renderer::create_device()
     deviceCI.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCI.ppEnabledExtensionNames = deviceExtensions.data();
 
-    // TODO validation layers
+    VkPhysicalDeviceShaderDrawParametersFeatures shaderDrawParametersFeatures = {};
+    shaderDrawParametersFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+    shaderDrawParametersFeatures.pNext = nullptr;
+    shaderDrawParametersFeatures.shaderDrawParameters = VK_TRUE;
+
+    deviceCI.pNext = &shaderDrawParametersFeatures;
 
     auto res = vkCreateDevice(m_physicalDevice, &deviceCI, nullptr, &m_device);
     log_cond_err(res == VK_SUCCESS, "physical device creation failed");
@@ -403,35 +413,83 @@ NVE_RESULT Renderer::create_graphics_pipeline()
 
     // -------------------------------------------
 
-    if (!m_config.cameraEnabled)
+    VkDescriptorPoolSize poolSizes[] =
     {
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0;
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
 
-        auto res = vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_basicPipelineLayout);
-        log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
+    VkDescriptorPoolCreateInfo descPoolCI = {};
+    descPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descPoolCI.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    descPoolCI.maxSets = 1000 * IM_ARRAYSIZE(poolSizes);
+    descPoolCI.poolSizeCount = static_cast<uint32_t>(IM_ARRAYSIZE(poolSizes));
+    descPoolCI.pPoolSizes = poolSizes;
+
+    {
+        auto res = vkCreateDescriptorPool(m_device, &descPoolCI, nullptr, &m_descriptorPool);
+        log_cond_err(res == VK_SUCCESS, "failed to create descriptor pool");
     }
-    else
+
+    // -------------------------------------------
+
+    VkDescriptorSetAllocateInfo descriptorSetAI = {};
+    descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorSetAI.descriptorPool = m_descriptorPool;
+
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
+    descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorSetLayoutCI.bindingCount = m_descriptors.size();
+    descriptorSetLayoutCI.pBindings = m_descriptors.data();
+    descriptorSetLayoutCI.flags = 0;
+    {
+        auto res = vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayout);
+        log_cond_err(res == VK_SUCCESS, "failed to create descriptor set layout");
+    }
+
+    descriptorSetAI.descriptorSetCount = 1;
+    descriptorSetAI.pSetLayouts = &m_descriptorSetLayout;
+
+    {
+        auto res = vkAllocateDescriptorSets(m_device, &descriptorSetAI, &m_descriptorSet);
+        log_cond_err(res == VK_SUCCESS, "failed to create descriptor set");
+    }
+
+    // -------------------------------------------
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
+    pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    if (m_config.cameraEnabled)
     {
         VkPushConstantRange pushConstantRange;
         pushConstantRange.offset = 0;
         pushConstantRange.size = sizeof(CameraPushConstant);
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-        VkPipelineLayoutCreateInfo meshPipelineLayoutCI = {};
-        meshPipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        meshPipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
-        meshPipelineLayoutCI.pushConstantRangeCount = 1;
+        pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+        pipelineLayoutCI.pushConstantRangeCount = 1;
 
-        auto res = vkCreatePipelineLayout(m_device, &meshPipelineLayoutCI, nullptr, &m_meshPipelineLayout);
-        log_cond_err(res == VK_SUCCESS, "failed to create mesh pipeline layout");
-
-
-        
-        VkDescriptorSet descriptorSet;
+        pipelineLayoutCI.setLayoutCount = 1;
+        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayout;
     }
+    else
+    {
+        pipelineLayoutCI.setLayoutCount = 0;
+        pipelineLayoutCI.pushConstantRangeCount = 0;
+    }
+
+    auto res = vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_mainPipelineLayout);
+    log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
 
     // -------------------------------------------
 
@@ -446,12 +504,7 @@ NVE_RESULT Renderer::create_graphics_pipeline()
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-
-    if (m_config.cameraEnabled)
-        pipelineInfo.layout = m_meshPipelineLayout;
-    else
-        pipelineInfo.layout = m_basicPipelineLayout;
-
+    pipelineInfo.layout = m_mainPipelineLayout;
     pipelineInfo.renderPass = m_renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -615,7 +668,7 @@ NVE_RESULT Renderer::init_index_buffer()
     return NVE_SUCCESS;
 }
 
-NVE_RESULT Renderer::record_main_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo commandBufferBI = {};
     commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -623,7 +676,7 @@ NVE_RESULT Renderer::record_main_command_buffer(VkCommandBuffer commandBuffer, u
     commandBufferBI.pInheritanceInfo = nullptr; // Optional
 
     {
-        auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
+        auto res = vkBeginCommandBuffer(m_commandBuffer, &commandBufferBI);
         log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording");
     }
 
@@ -636,7 +689,7 @@ NVE_RESULT Renderer::record_main_command_buffer(VkCommandBuffer commandBuffer, u
     renderPassBI.renderArea.offset = { 0, 0 };
     renderPassBI.renderArea.extent = m_swapchainExtent;
 
-    VkClearValue clearValue = { {{ 0.f, 0.f, 0.f, 1.f }} };
+    VkClearValue clearValue = { {{ m_config.clearColor.x / 255.f, m_config.clearColor.y / 255.f, m_config.clearColor.z / 255.f, 1.f }} };
     renderPassBI.clearValueCount = 1;
     renderPassBI.pClearValues = &clearValue;
 
@@ -655,24 +708,56 @@ NVE_RESULT Renderer::record_main_command_buffer(VkCommandBuffer commandBuffer, u
     viewport.height = static_cast<float>(m_swapchainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
     scissor.extent = m_swapchainExtent;
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(m_commandBuffer, 0, 1, &scissor);
 
     // -------------------------------------------
     
     VkDeviceSize offsets[] = { 0 };
-    VkBuffer vertexBuffers[] = { m_vertexBuffer.m_buffer };
+    VkBuffer vertexBuffers[1];
+
+    if (m_config.useModelHandler)
+        vertexBuffers[0] = m_pModelHandler->vertex_buffer();
+    else    
+        vertexBuffers[0] = m_vertexBuffer.m_buffer;
 
     vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
 
     // -------------------------------------------
 
     if (m_config.dataMode == RenderConfig::Indexed)
-    vkCmdBindIndexBuffer(m_commandBuffer, m_indexBuffer.m_buffer, 0, NVE_INDEX_TYPE);
+    {
+        VkBuffer indexBuffer;
+
+        if (m_config.useModelHandler)
+            indexBuffer = m_pModelHandler->index_buffer();
+        else
+            indexBuffer = m_indexBuffer.m_buffer;
+
+        vkCmdBindIndexBuffer(m_commandBuffer, indexBuffer, 0, NVE_INDEX_TYPE);
+    }
+
+    // ------------------------------------------
+
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_mainPipelineLayout, 0, 1, &m_descriptorSet, 0, nullptr);
+
+    // ------------------------------------------
+
+    if (m_config.cameraEnabled)
+    {
+        CameraPushConstant cameraData;
+        cameraData.proj = m_activeCamera->projection_matrix();
+        cameraData.view = m_activeCamera->view_matrix();
+
+        uint32_t pushConstantOffset = 0;
+        uint32_t pushConstantSize = sizeof(cameraData);
+
+        vkCmdPushConstants(m_commandBuffer, m_mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, pushConstantOffset, pushConstantSize, &cameraData);
+    }
 
     // -------------------------------------------
 
@@ -741,13 +826,19 @@ NVE_RESULT Renderer::draw_frame()
     vkWaitForFences(m_device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
     vkResetFences(m_device, 1, &m_inFlightFence);
 
+    if (m_config.useModelHandler)
+    {
+        m_pModelHandler->upload_data();
+        update_model_info_descriptor_set();
+    }
+
     // Acquire an image from the swap chain
     uint32_t imageIndex;
     vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
     // Record a command buffer which draws the scene onto that image
     vkResetCommandBuffer(m_commandBuffer, 0);
-    record_main_command_buffer(m_commandBuffer, imageIndex);
+    record_main_command_buffer(imageIndex);
 
     imgui_demo_draws(imageIndex);
 
@@ -773,6 +864,9 @@ void Renderer::clean_up()
     m_vertexBuffer.destroy();
     m_indexBuffer.destroy();
 
+    if (m_config.useModelHandler)
+        m_pModelHandler->destroy_buffers();
+
     vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
     vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
     vkDestroyFence(m_device, m_inFlightFence, nullptr);
@@ -785,10 +879,7 @@ void Renderer::clean_up()
 
     vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
 
-    if (m_config.cameraEnabled)
-        vkDestroyPipelineLayout(m_device, m_meshPipelineLayout, nullptr);
-    else
-        vkDestroyPipelineLayout(m_device, m_basicPipelineLayout, nullptr);
+    vkDestroyPipelineLayout(m_device, m_mainPipelineLayout, nullptr);
 
     vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 
@@ -801,6 +892,39 @@ void Renderer::clean_up()
 
     glfwDestroyWindow(m_window);
     glfwTerminate();
+}
+
+void Renderer::add_descriptors()
+{
+    if (m_config.useModelHandler)
+    {
+        VkDescriptorSetLayoutBinding binding = {};
+        binding.binding = NVE_MODEL_INFO_BUFFER_BINDING;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        binding.descriptorCount = NVE_MAX_MODEL_INFO_COUNT;
+
+        m_descriptors.push_back(binding);
+    }
+}
+void Renderer::update_model_info_descriptor_set()
+{
+    VkWriteDescriptorSet write = {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = m_descriptorSet;
+    write.dstBinding = NVE_MODEL_INFO_BUFFER_BINDING;
+    write.dstArrayElement = 0;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+    VkDescriptorBufferInfo bufferInfo = {};
+    bufferInfo.buffer = m_pModelHandler->model_buffer();
+    bufferInfo.offset = 0;
+    bufferInfo.range = VK_WHOLE_SIZE;
+
+    write.pBufferInfo = &bufferInfo;
+
+    vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
 }
 
 // ---------------------------------------

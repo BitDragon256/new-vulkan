@@ -16,6 +16,9 @@
 #include "models.h"
 #include "nve_types.h"
 
+#define NVE_MODEL_INFO_BUFFER_BINDING 0
+#define NVE_MAX_MODEL_INFO_COUNT 1
+
 struct RenderConfig
 {
 	int width;
@@ -26,6 +29,9 @@ struct RenderConfig
 	DataMode dataMode;
 
 	bool cameraEnabled;
+	bool useModelHandler;
+
+	glm::vec3 clearColor;
 
 	std::vector<const char*> enabledValidationLayers;
 
@@ -69,8 +75,7 @@ private:
 
 	VkRenderPass m_renderPass;
 
-	VkPipelineLayout m_basicPipelineLayout;
-	VkPipelineLayout m_meshPipelineLayout;
+	VkPipelineLayout m_mainPipelineLayout;
 	VkPipeline m_graphicsPipeline;
 
 	std::vector<VkFramebuffer> m_swapchainFramebuffers;
@@ -91,7 +96,13 @@ private:
 	// model handling
 	ModelHandler* m_pModelHandler;
 
-	VkDescriptorPool m_modelDescriptorPool;
+	VkDescriptorPool m_descriptorPool;
+	std::vector<VkDescriptorSetLayoutBinding> m_descriptors;
+	VkDescriptorSet m_descriptorSet;
+	VkDescriptorSetLayout m_descriptorSetLayout;
+
+	void add_descriptors();
+	void update_model_info_descriptor_set();
 
 	// camera stuff
 	Camera* m_activeCamera;
@@ -139,7 +150,7 @@ private:
 	NVE_RESULT init_index_buffer();
 
 	// rendering
-	NVE_RESULT record_main_command_buffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	NVE_RESULT record_main_command_buffer(uint32_t imageIndex);
 	NVE_RESULT submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems);
 	void present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageIndex, std::vector<VkSemaphore> signalSems);
 	NVE_RESULT draw_frame();

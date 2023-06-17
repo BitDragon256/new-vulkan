@@ -22,12 +22,19 @@ void ModelHandler::init(VkDevice device, VkPhysicalDevice physicalDevice, VkComm
 
 	m_initialized = true;
 }
+void ModelHandler::destroy_buffers()
+{
+	m_vertexBuffer.destroy();
+	m_indexBuffer.destroy();
+	m_modelBuffer.destroy();
+}
 void ModelHandler::reset()
 {
 	m_vertexCount = 0;
 	m_indexCount = 0;
 
 	m_initialized = false;
+	m_dataChanged = true;
 
 	m_models.clear();
 }
@@ -38,11 +45,12 @@ void ModelHandler::upload_data()
 		log("model handler must be initialized before uploading data");
 		return;
 	}
+	if (!m_dataChanged)
+		return;
 
 	BufferConfig config = {};
 	config.device = m_device;
 	config.physicalDevice = m_physicalDevice;
-	config.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	config.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	config.useStagedBuffer = true;
 	config.stagedBufferTransferCommandPool = m_commandPool;
@@ -65,9 +73,16 @@ void ModelHandler::upload_data()
 		modelDataLast++;
 	}
 
+	config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	m_vertexBuffer.create(vertexData, config);
+
+	config.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	m_indexBuffer.create(indexData, config);
+
+	config.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	m_modelBuffer.create(modelData, config);
+
+	m_dataChanged = false;
 }
 
 void ModelHandler::add_model(Model* pModel)
@@ -76,6 +91,21 @@ void ModelHandler::add_model(Model* pModel)
 
 	m_vertexCount += pModel->vertex_count();
 	m_indexCount += pModel->index_count();
+
+	m_dataChanged = true;
+}
+
+VkBuffer ModelHandler::vertex_buffer()
+{
+	return m_vertexBuffer.m_buffer;
+}
+VkBuffer ModelHandler::index_buffer()
+{
+	return m_indexBuffer.m_buffer;
+}
+VkBuffer ModelHandler::model_buffer()
+{
+	return m_modelBuffer.m_buffer;
 }
 
 // ----------------------------------
@@ -109,7 +139,7 @@ void Model::write_indices_to(std::vector<Index>::iterator dst)
 Model Model::create_model(Mesh mesh)
 {
 	Model model;
-	model.m_info = Transform { glm::vec3(0, 0, 0), glm::quat(1.0, 0.0, 0.0, 0.0) };
+	model.m_info = Transform { glm::vec3(0, 0, 0), glm::vec3(1, 1, 1), glm::quat(1.0, 0.0, 0.0, 0.0) };
 	model.m_meshes = std::vector<Mesh>(1);
 	model.m_meshes[0] = mesh;
 	return model;

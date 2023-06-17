@@ -34,7 +34,7 @@ vec3 mul(const Transform t, const vec3 v)
     return t.position.xyz + quatMul(t.rotation, v * t.scale.xyz);
 }
 
-layout(std140,set = 1, binding = 0) readonly buffer ObjectBuffer
+layout(std140,set = 0, binding = 0) readonly buffer ObjectBuffer
 {
     Transform objects[];
 } ObjectInfoBuffer;

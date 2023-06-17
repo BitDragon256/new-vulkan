@@ -81,8 +81,12 @@ public:
 
 	ModelHandler();
 	void init(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool cmdPool, VkQueue queue);
+	void destroy_buffers();
 	void upload_data();
 	void add_model(Model* pModel);
+	VkBuffer vertex_buffer();
+	VkBuffer index_buffer();
+	VkBuffer model_buffer();
 
 private:
 	void reset();
@@ -96,4 +100,5 @@ private:
 	size_t m_indexCount;
 
 	bool m_initialized;
+	bool m_dataChanged;
 };
