@@ -14,12 +14,12 @@ typedef int NVE_RESULT;
 typedef uint32_t Index;
 #define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
-#define VERTEX_ATTRIBUTE_COUNT 1
+#define VERTEX_ATTRIBUTE_COUNT 3
 
 typedef struct Vertex {
 	glm::vec3 pos;
-	//glm::vec3 color;
-	//glm::vec2 uv;
+	glm::vec3 color;
+	glm::vec2 uv;
 
 	static VkVertexInputBindingDescription getBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> getAttributeDescriptions();

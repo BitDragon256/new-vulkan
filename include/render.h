@@ -32,8 +32,9 @@ struct RenderConfig
 	bool useModelHandler;
 
 	glm::vec3 clearColor;
-
-	std::vector<const char*> enabledValidationLayers;
+	
+	bool enableValidationLayers;
+	std::vector<const char*> enabledInstanceLayers;
 
 	// gui
 	std::function<void(void)> guiDraw;
@@ -51,6 +52,9 @@ public:
 	NVE_RESULT set_vertices(const std::vector<Vertex>& vertices);
 	NVE_RESULT set_indices(const std::vector<Index>& indices);
 	NVE_RESULT set_active_camera(Camera* camera);
+
+	// input
+	int get_key(int key);
 
 	void clean_up();
 
@@ -93,6 +97,8 @@ private:
 
 	std::vector<Index> m_indices;
 	Buffer<Index> m_indexBuffer;
+
+	VkDebugUtilsMessengerEXT m_debugMessenger;
 
 	// model handling
 	ModelHandler* m_pModelHandler;

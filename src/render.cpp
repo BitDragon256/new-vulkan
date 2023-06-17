@@ -110,6 +110,11 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
     return NVE_SUCCESS;
 }
 
+int Renderer::get_key(int key)
+{
+    return glfwGetKey(m_window, key);
+}
+
 // PRIVATE METHODS
 
 NVE_RESULT Renderer::create_instance()
@@ -431,7 +436,7 @@ NVE_RESULT Renderer::create_graphics_pipeline()
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
     // -------------------------------------------
@@ -536,15 +541,14 @@ NVE_RESULT Renderer::create_graphics_pipeline()
 
         pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
         pipelineLayoutCI.pushConstantRangeCount = 1;
-
-        pipelineLayoutCI.setLayoutCount = 1;
-        pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayout;
     }
     else
     {
-        pipelineLayoutCI.setLayoutCount = 0;
         pipelineLayoutCI.pushConstantRangeCount = 0;
     }
+
+    pipelineLayoutCI.setLayoutCount = 1;
+    pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayout;
 
     auto res = vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_mainPipelineLayout);
     log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
@@ -1269,7 +1273,6 @@ std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> Vertex::ge
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
-    /*
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -1279,7 +1282,6 @@ std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> Vertex::ge
     attributeDescriptions[2].location = 2;
     attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
     attributeDescriptions[2].offset = offsetof(Vertex, uv);
-    */
 
     return attributeDescriptions;
 }
