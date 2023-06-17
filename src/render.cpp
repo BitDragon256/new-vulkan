@@ -1,8 +1,9 @@
 #include "render.h"
 
-#include <vector>
 #include <map>
 #include <set>
+#include <stdexcept>
+#include <vector>
 
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_glfw.h>
@@ -18,6 +19,11 @@
 
 // PUBLIC METHODS
 
+Renderer::Renderer()
+{
+
+}
+
 NVE_RESULT Renderer::init(RenderConfig config)
 {
     m_config = config;
@@ -27,6 +33,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     glfwInit();
     log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
     log_cond(create_instance() == NVE_SUCCESS, "instance created");
+    // log_cond(create_debug_messenger() == NVE_SUCCESS, "debug messenger created");
     log_cond(get_surface() == NVE_SUCCESS, "surface created");
     log_cond(get_physical_device() == NVE_SUCCESS, "found physical device");
     log_cond(create_device() == NVE_SUCCESS, "logical device created");
@@ -107,31 +114,53 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
 
 NVE_RESULT Renderer::create_instance()
 {
-    VkApplicationInfo appInfo{};
+    VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "New Vulkan Engine Dev App";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "New Vulkan Engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_3;
+    appInfo.pNext = nullptr;
 
     VkInstanceCreateInfo instanceCI = {};
     instanceCI.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCI.pApplicationInfo = &appInfo;
+    
+    if (m_config.enableValidationLayers)
+        m_config.enabledInstanceLayers.push_back("VK_LAYER_KHRONOS_validation");
 
-    instanceCI.enabledLayerCount = static_cast<uint32_t>(m_config.enabledValidationLayers.size());
-    instanceCI.ppEnabledLayerNames = m_config.enabledValidationLayers.data();
+    instanceCI.enabledLayerCount = static_cast<uint32_t>(m_config.enabledInstanceLayers.size());
+    instanceCI.ppEnabledLayerNames = m_config.enabledInstanceLayers.data();
+    
+    //VkDebugUtilsMessengerCreateInfoEXT debugMessengerCI = {};
+    //populate_debug_messenger_create_info(debugMessengerCI);
+    instanceCI.pNext = nullptr;//&debugMessengerCI;
     
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions;
 
+    log("acquiring GLFW extensions...");
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    instanceCI.enabledExtensionCount = glfwExtensionCount;
-    instanceCI.ppEnabledExtensionNames = glfwExtensions;
+    log("acquired GLFW extensions");
     
+    std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    //std::vector<const char*> extensions{ "VK_KHR_surface" };
+
+    if (m_config.enableValidationLayers)
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+    instanceCI.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    instanceCI.ppEnabledExtensionNames = extensions.data();
+    instanceCI.flags = 0;
+    
+    log("creating instance...");
     VkResult res = vkCreateInstance(&instanceCI, nullptr, &m_instance);
-    log_cond_err(res == VK_SUCCESS, "instance creation failed");
+    if (res != VK_SUCCESS)
+    {
+        log("instance creation failed: " + res);
+        return NVE_FAILURE;
+    }
     
     return NVE_SUCCESS;
 }
@@ -173,6 +202,26 @@ NVE_RESULT Renderer::get_physical_device()
 #endif
     
     return NVE_SUCCESS;
+}
+NVE_RESULT Renderer::create_debug_messenger()
+{
+    if (!m_config.enableValidationLayers)
+        return NVE_SUCCESS;
+        
+    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCI = {};
+    populate_debug_messenger_create_info(debugMessengerCI);
+    
+    auto res = vkCreateDebugUtilsMessengerEXT(m_instance, &debugMessengerCI, nullptr, &m_debugMessenger);
+    log_cond_err(res == VK_SUCCESS, "failed to create debug messenger");
+    
+    return NVE_SUCCESS;
+}
+void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+{
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(instance, debugMessenger, pAllocator);
+    }
 }
 NVE_RESULT Renderer::create_device()
 {
@@ -319,8 +368,8 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 }
 NVE_RESULT Renderer::create_graphics_pipeline()
 {
-    auto vertShaderCode = read_file("X:/Dev/new-vulkan-engine/shaders/vert.spv");
-    auto fragShaderCode = read_file("X:/Dev/new-vulkan-engine/shaders/frag.spv");
+    auto vertShaderCode = read_file("../shaders/vert.spv");
+    auto fragShaderCode = read_file("../shaders/frag.spv");
 
     VkShaderModule vertShaderModule = create_shader_module(vertShaderCode, m_device);
     VkShaderModule fragShaderModule = create_shader_module(fragShaderCode, m_device);
@@ -912,6 +961,10 @@ void Renderer::clean_up()
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+    
+    // if (m_config.enableValidationLayers)
+    //     destroy_debug_messenger(m_instance, m_debugMessenger, nullptr);
+    
     vkDestroyInstance(m_instance, nullptr);
 
     glfwDestroyWindow(m_window);

@@ -9,12 +9,9 @@ int main(int argc, char** argv)
     renderConfig.width = 1400;
     renderConfig.height = 1000;
     renderConfig.title = "Vulkan";
-    renderConfig.dataMode = RenderConfig::DataMode::Indexed;
-    renderConfig.cameraEnabled = true;
-    renderConfig.useModelHandler = false;
+    renderConfig.dataMode = RenderConfig::Indexed;
+    renderConfig.enableValidationLayers = true;
     renderConfig.clearColor = glm::vec3(0, 187, 233);
-
-    renderConfig.enabledValidationLayers.push_back("VK_LAYER_KHRONOS_validation");
 
     renderer.init(renderConfig);
 

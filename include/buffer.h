@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <vector>
 
 #include <vulkan/vulkan.h>
@@ -70,7 +71,7 @@ public:
 
         void* data;
         vkMapMemory(m_config.device, m_memory, 0, m_realSize, 0, &data);
-        memcpy(data, m_data.data(), (size_t)m_realSize);
+        std::memcpy(data, m_data.data(), (size_t)m_realSize);
         vkUnmapMemory(m_config.device, m_memory);
 
         return NVE_SUCCESS;

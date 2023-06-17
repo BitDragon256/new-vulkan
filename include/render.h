@@ -44,6 +44,7 @@ class Camera;
 class Renderer
 {
 public:
+	Renderer();
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
 	NVE_RESULT bind_model_handler(ModelHandler* pHandler);
@@ -134,6 +135,7 @@ private:
 	
 	// vulkan object creation
 	NVE_RESULT create_instance();
+	NVE_RESULT create_debug_messenger();
 	NVE_RESULT get_physical_device();
 	NVE_RESULT create_device();
 	NVE_RESULT create_window(int width, int height, std::string title);
@@ -148,6 +150,9 @@ private:
 	NVE_RESULT create_sync_objects();
 	NVE_RESULT init_vertex_buffer();
 	NVE_RESULT init_index_buffer();
+	
+	// vulkan destruction
+	void destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 	// rendering
 	NVE_RESULT record_main_command_buffer(uint32_t imageIndex);
