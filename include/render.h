@@ -56,6 +56,9 @@ public:
 	// input
 	int get_key(int key);
 
+	// gui
+	void gui_begin();
+
 	void clean_up();
 
 private:
@@ -134,7 +137,8 @@ private:
 
 	void imgui_cleanup();
 	
-	void imgui_demo_draws(uint32_t imageIndex);
+	bool m_imguiDraw;
+	void imgui_draw(uint32_t imageIndex);
 
 	// GLFW objects
 	GLFWwindow* m_window;

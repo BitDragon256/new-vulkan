@@ -233,8 +233,8 @@ public:
         if (reload)
         {
             recreate();
-            reload_data();
         }
+        reload_data();
 
         return NVE_SUCCESS;
     }

@@ -910,6 +910,7 @@ NVE_RESULT Renderer::draw_frame()
     if (m_config.useModelHandler)
     {
         m_pModelHandler->upload_data();
+        m_pModelHandler->upload_model_info();
         update_model_info_descriptor_set();
     }
 
@@ -921,7 +922,11 @@ NVE_RESULT Renderer::draw_frame()
     vkResetCommandBuffer(m_commandBuffer, 0);
     record_main_command_buffer(imageIndex);
 
-    imgui_demo_draws(imageIndex);
+    if (m_imguiDraw)
+    {
+        imgui_draw(imageIndex);
+        m_imguiDraw = false;
+    }
 
     std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphore };
     std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphore };
@@ -1059,6 +1064,7 @@ NVE_RESULT Renderer::imgui_init()
     ImGui_ImplVulkan_Init(&initInfo, m_imgui_renderPass);
 
     imgui_upload_fonts();
+    m_imguiDraw = false;
 
     log("imgui initialized");
 
@@ -1202,12 +1208,18 @@ NVE_RESULT Renderer::imgui_create_command_buffers()
     return NVE_SUCCESS;
 }
 
-void Renderer::imgui_demo_draws(uint32_t imageIndex)
+void Renderer::gui_begin()
 {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
+
+    m_imguiDraw = true;
+}
+void Renderer::imgui_draw(uint32_t imageIndex)
+{
+    //ImGui::ShowDemoWindow();
+
     ImGui::Render();
 
     {

@@ -38,6 +38,19 @@ void ModelHandler::reset()
 
 	m_models.clear();
 }
+void ModelHandler::upload_model_info()
+{
+	std::vector<Transform> modelData(m_models.size());
+	auto modelDataLast = modelData.begin();
+
+	for (Model* model : m_models)
+	{
+		*modelDataLast = model->m_info;
+		modelDataLast++;
+	}
+
+	m_modelBuffer.set(modelData);
+}
 void ModelHandler::upload_data()
 {
 	if (!m_initialized)

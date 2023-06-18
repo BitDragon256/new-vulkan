@@ -25,9 +25,19 @@ vec4 quatDot(const vec4 q1, const vec4 q2) {
     return vec4(v, scalar);
 }
 // Apply unit quaternion to vector (rotate vector)
-vec3 quatMul(const vec4 q, const vec3 v) {
-    vec4 r = quatDot(q, quatDot(vec4(v, 0), quatInv(q)));
-    return r.xyz;
+vec3 quatMul(const vec4 q, const vec3 p) {
+    // p’ = (v*v.dot(p) + v.cross(p)*(w))*2 + p*(w*w – v.dot(v))
+    // vec3 v = q.xyz;
+    // float w = q.w;
+    // vec3 p_new = (v * dot(v, p) + cross(v, p) * w) * 2 + p * (w * w - dot(v, v));
+    // return p_new;
+
+    vec3 t = 2 * cross(q.xyz, p);
+    vec3 p_new = p + q.w * 2 * cross(q.xyz, p) + cross(q.xyz, t);
+    return p_new;
+
+    //vec4 r = quatDot(q, quatDot(vec4(v, 0), quatInv(q)));
+    //return r.xyz;
 }
 
 vec3 mul(const Transform t, const vec3 v)
@@ -46,9 +56,21 @@ layout( push_constant ) uniform constants
     mat4 proj;
 } CameraPushConstant;
 
+#define PI 3.14159265
+
 void main() {
     Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
+
+    /*
+    // change for glm quaternion
+    float w = transform.rotation.x;
+    transform.rotation.x = transform.rotation.y / PI;
+    transform.rotation.y = transform.rotation.z / PI;
+    transform.rotation.z = transform.rotation.w / PI;
+    transform.rotation.w = -w;
+    */
+
     mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
-    gl_Position = cameraMatrix * vec4(inPosition, 1);//vec4(mul(transform, inPosition), 1.0);
+    gl_Position = cameraMatrix * vec4(mul(transform, inPosition), 1.0);
     fragColor = inColor;
 }

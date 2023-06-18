@@ -1,13 +1,17 @@
 #include <stdio.h>
 
+#include <sstream>
+
+#include <imgui.h>
+
 #include "render.h"
 
 int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1400;
-    renderConfig.height = 1000;
+    renderConfig.width = 1920;
+    renderConfig.height = 1080;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
@@ -26,6 +30,7 @@ int main(int argc, char** argv)
     triangle.m_info.position = glm::vec3(0, 0, 0);
 
     Model cube = Model::create_model(Mesh::create_cube());
+    cube.m_info.scale = { 1, 1, 1 };
 
     modelHandler.add_model(&cube);
 
@@ -38,6 +43,10 @@ int main(int argc, char** argv)
 
     float turningSpeed = 0.2f;
     float moveSpeed = 0.01f;
+
+    float cubePosition[3] { 0, 0, 0 };
+    float cubeRotation[4] { 1, 0, 0, 0 };
+    float cubeEulerRotation[3] { 0, 0, 0 };
 
     bool running = true;
     while (running)
@@ -66,6 +75,41 @@ int main(int argc, char** argv)
             camera.m_rotation.z += turningSpeed;
         if (renderer.get_key(GLFW_KEY_RIGHT) == GLFW_PRESS)
             camera.m_rotation.z -= turningSpeed;
+
+        renderer.gui_begin();
+
+        ImGui::Begin("Cube Transform");
+
+        ImGui::SliderFloat3("position", cubePosition, -1, 1);
+        //ImGui::SliderFloat4("quat rotation", cubeRotation, -1, 1);
+        ImGui::SliderFloat3("euler rotation", cubeEulerRotation, -PI, PI);
+
+        cube.m_info.position.x = cubePosition[0];
+        cube.m_info.position.y = cubePosition[1];
+        cube.m_info.position.z = cubePosition[2];
+
+        typedef glm::quat Quaternion;
+        typedef glm::vec3 Vector3;
+
+        Vector3 EulerAngle(cubeEulerRotation[0], cubeEulerRotation[1], cubeEulerRotation[2]);
+
+        Quaternion QuatAroundX = Quaternion(EulerAngle.x, Vector3(1.0, 0.0, 0.0));
+        Quaternion QuatAroundY = Quaternion(EulerAngle.y, Vector3(0.0, 1.0, 0.0));
+        Quaternion QuatAroundZ = Quaternion(EulerAngle.z, Vector3(0.0, 0.0, 1.0));
+        Quaternion finalOrientation = QuatAroundX * QuatAroundY * QuatAroundZ;
+
+        cube.m_info.rotation = finalOrientation;
+
+        /*cube.m_info.rotation.x = cubeRotation[0];
+        cube.m_info.rotation.y = cubeRotation[1];
+        cube.m_info.rotation.z = cubeRotation[2];
+        cube.m_info.rotation.w = cubeRotation[3];*/
+
+        std::stringstream quatDisplay;
+        quatDisplay << finalOrientation.x << " " << finalOrientation.y << " " << finalOrientation.z << " " << finalOrientation.w;
+        ImGui::Text(quatDisplay.str().c_str());
+
+        ImGui::End();
 
         NVE_RESULT res = renderer.render();
         if (res == NVE_RENDER_EXIT_SUCCESS)

@@ -32,3 +32,5 @@ typedef struct Vertex {
 #define VECTOR_DOWN glm::vec3(0, 0, -1)
 #define VECTOR_BACK glm::vec3(-1, 0, 0)
 #define VECTOR_LEFT glm::vec3(0, -1, 0)
+
+#define PI 3.14159265
