@@ -71,6 +71,7 @@ vec4 conj(vec4 q)
 vec3 rotate(vec3 v, vec4 q)
 {
     normalize(q);
+    normalize(v);
     vec4 t = vec4(v, 0);
     return mul(mul(q, t), conj(q)).xyz;
 }
