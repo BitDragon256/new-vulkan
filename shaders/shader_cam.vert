@@ -70,6 +70,8 @@ void main() {
     transform.rotation.w = -w;
     */
 
+    transform.rotation = normalize(transform.rotation);
+
     mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
     gl_Position = cameraMatrix * vec4(mul(transform, inPosition), 1.0);
     fragColor = inColor;

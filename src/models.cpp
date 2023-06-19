@@ -160,7 +160,7 @@ void Model::write_indices_to(std::vector<Index>::iterator dst)
 Model Model::create_model(Mesh mesh)
 {
 	Model model;
-	model.m_info = Transform { glm::vec3(0, 0, 0), glm::vec3(1, 1, 1), glm::quat(1.0, 0.0, 0.0, 0.0) };
+	model.m_info = Transform { Vector3(0, 0, 0), Vector3(1, 1, 1), glm::quat(1.0, 0.0, 0.0, 0.0) };
 	model.m_meshes = std::vector<Mesh>(1);
 	model.m_meshes[0] = mesh;
 	return model;
@@ -226,14 +226,14 @@ Mesh Mesh::create_cube()
 
 	return create_simple_mesh(
 		{
-			{ glm::vec3( 0.5, -0.5,  0.5), glm::vec3(1.0, 0.0, 0.0), glm::vec2(0.0, 0.0) }, // A 0
-			{ glm::vec3(-0.5, -0.5,  0.5), glm::vec3(0.0, 1.0, 0.0), glm::vec2(0.0, 0.0) }, // B 1
-			{ glm::vec3(-0.5,  0.5,  0.5), glm::vec3(0.0, 0.0, 1.0), glm::vec2(0.0, 0.0) }, // C 2
-			{ glm::vec3( 0.5,  0.5,  0.5), glm::vec3(1.0, 1.0, 0.0), glm::vec2(0.0, 0.0) }, // D 3
-			{ glm::vec3( 0.5, -0.5, -0.5), glm::vec3(1.0, 0.0, 1.0), glm::vec2(0.0, 0.0) }, // E 4
-			{ glm::vec3(-0.5, -0.5, -0.5), glm::vec3(0.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // F 5
-			{ glm::vec3(-0.5,  0.5, -0.5), glm::vec3(1.0, 1.0, 1.0), glm::vec2(0.0, 0.0) }, // G 6
-			{ glm::vec3( 0.5,  0.5, -0.5), glm::vec3(0.0, 0.0, 0.0), glm::vec2(0.0, 0.0) }, // H 7
+			{ Vector3( 0.5, -0.5,  0.5), Vector3(1.0, 0.0, 0.0), Vector2(0.0, 0.0) }, // A 0
+			{ Vector3(-0.5, -0.5,  0.5), Vector3(0.0, 1.0, 0.0), Vector2(0.0, 0.0) }, // B 1
+			{ Vector3(-0.5,  0.5,  0.5), Vector3(0.0, 0.0, 1.0), Vector2(0.0, 0.0) }, // C 2
+			{ Vector3( 0.5,  0.5,  0.5), Vector3(1.0, 1.0, 0.0), Vector2(0.0, 0.0) }, // D 3
+			{ Vector3( 0.5, -0.5, -0.5), Vector3(1.0, 0.0, 1.0), Vector2(0.0, 0.0) }, // E 4
+			{ Vector3(-0.5, -0.5, -0.5), Vector3(0.0, 1.0, 1.0), Vector2(0.0, 0.0) }, // F 5
+			{ Vector3(-0.5,  0.5, -0.5), Vector3(1.0, 1.0, 1.0), Vector2(0.0, 0.0) }, // G 6
+			{ Vector3( 0.5,  0.5, -0.5), Vector3(0.0, 0.0, 0.0), Vector2(0.0, 0.0) }, // H 7
 		},
 		{
 			// top

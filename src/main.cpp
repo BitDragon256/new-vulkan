@@ -15,7 +15,7 @@ int main(int argc, char** argv)
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
-    renderConfig.clearColor = glm::vec3(0, 187, 233);
+    renderConfig.clearColor = Vector3(0, 187, 233);
     renderConfig.useModelHandler = true;
     renderConfig.cameraEnabled = true;
 
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     renderer.bind_model_handler(&modelHandler);
 
     Model triangle = Model::create_model(Mesh::create_triangle());
-    triangle.m_info.position = glm::vec3(0, 0, 0);
+    triangle.m_info.position = Vector3(0, 0, 0);
 
     Model cube = Model::create_model(Mesh::create_cube());
     cube.m_info.scale = { 1, 1, 1 };
@@ -37,8 +37,8 @@ int main(int argc, char** argv)
     // Camera
 
     Camera camera;
-    camera.m_position = glm::vec3(-1, 0, -1);
-    camera.m_rotation = glm::vec3(0, 0, 0);
+    camera.m_position = Vector3(-1, 0, -1);
+    camera.m_rotation = Vector3(0, 0, 0);
     renderer.set_active_camera(&camera);
 
     float turningSpeed = 0.2f;
@@ -87,9 +87,6 @@ int main(int argc, char** argv)
         cube.m_info.position.x = cubePosition[0];
         cube.m_info.position.y = cubePosition[1];
         cube.m_info.position.z = cubePosition[2];
-
-        typedef glm::quat Quaternion;
-        typedef glm::vec3 Vector3;
 
         Vector3 EulerAngle(cubeEulerRotation[0], cubeEulerRotation[1], cubeEulerRotation[2]);
 
