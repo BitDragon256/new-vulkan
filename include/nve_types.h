@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 
+#include "vulkan_helpers.h"
+
 typedef int NVE_RESULT;
 
 // success codes

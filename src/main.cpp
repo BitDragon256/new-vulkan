@@ -90,10 +90,7 @@ int main(int argc, char** argv)
 
         Vector3 EulerAngle(cubeEulerRotation[0], cubeEulerRotation[1], cubeEulerRotation[2]);
 
-        Quaternion QuatAroundX = Quaternion(EulerAngle.x, Vector3(1.0, 0.0, 0.0));
-        Quaternion QuatAroundY = Quaternion(EulerAngle.y, Vector3(0.0, 1.0, 0.0));
-        Quaternion QuatAroundZ = Quaternion(EulerAngle.z, Vector3(0.0, 0.0, 1.0));
-        Quaternion finalOrientation = QuatAroundX * QuatAroundY * QuatAroundZ;
+        Quaternion finalOrientation(EulerAngle);
 
         cube.m_info.rotation = finalOrientation;
 
@@ -105,6 +102,16 @@ int main(int argc, char** argv)
         std::stringstream quatDisplay;
         quatDisplay << finalOrientation.x << " " << finalOrientation.y << " " << finalOrientation.z << " " << finalOrientation.w;
         ImGui::Text(quatDisplay.str().c_str());
+
+        std::stringstream cubeVerts;
+        std::vector<Vertex> verts(8);
+        cube.write_vertíces_to(verts.begin());
+        for (Vertex v : verts)
+        {
+            v.pos = Quaternion::rotate(v.pos, finalOrientation);
+            cubeVerts << v.pos.x << " " << v.pos.y << " " << v.pos.z << "\n";
+        }
+        ImGui::Text(cubeVerts.str().c_str());
 
         ImGui::End();
 

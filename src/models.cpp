@@ -160,7 +160,7 @@ void Model::write_indices_to(std::vector<Index>::iterator dst)
 Model Model::create_model(Mesh mesh)
 {
 	Model model;
-	model.m_info = Transform { Vector3(0, 0, 0), Vector3(1, 1, 1), glm::quat(1.0, 0.0, 0.0, 0.0) };
+	model.m_info = Transform { Vector3(0, 0, 0), Vector3(1, 1, 1), Quaternion(1.0, 0.0, 0.0, 0.0) };
 	model.m_meshes = std::vector<Mesh>(1);
 	model.m_meshes[0] = mesh;
 	return model;
