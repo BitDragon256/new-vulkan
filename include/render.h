@@ -55,6 +55,7 @@ public:
 	NVE_RESULT set_vertices(const std::vector<Vertex>& vertices);
 	NVE_RESULT set_indices(const std::vector<Index>& indices);
 	NVE_RESULT set_active_camera(Camera* camera);
+	void reload_models();
 
 	// input
 	int get_key(int key);

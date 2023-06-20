@@ -109,6 +109,10 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
     m_activeCamera->m_extent.y = m_swapchainExtent.height;
     return NVE_SUCCESS;
 }
+void Renderer::reload_models()
+{
+    m_pModelHandler->upload_mesh_data();
+}
 
 int Renderer::get_key(int key)
 {
@@ -909,7 +913,7 @@ NVE_RESULT Renderer::draw_frame()
 
     if (m_config.useModelHandler)
     {
-        m_pModelHandler->upload_data();
+        m_pModelHandler->upload_mesh_data();
         m_pModelHandler->upload_model_info();
         update_model_info_descriptor_set();
     }

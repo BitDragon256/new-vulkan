@@ -17,6 +17,7 @@ typedef struct {
 
     // staged buffer
     bool useStagedBuffer;
+    bool singleUseStagedBuffer;
     VkCommandPool stagedBufferTransferCommandPool;
     VkQueue stagedBufferTransferQueue;
 } BufferConfig;
@@ -42,10 +43,8 @@ public:
     }
     NVE_RESULT create(const std::vector<T>& data, StagingBufferConfig config)
     {
-        set(data);
         initialize(config);
-        recreate();
-        reload_data();
+        set(data);
 
         return NVE_SUCCESS;
     }
@@ -84,8 +83,8 @@ public:
         if (reload)
         {
             recreate();
-            reload_data();
         }
+        reload_data();
 
         return NVE_SUCCESS;
     }
@@ -95,9 +94,15 @@ public:
         {
             vkDestroyBuffer(m_config.device, m_buffer, nullptr);
             vkFreeMemory(m_config.device, m_memory, nullptr);
+
+            m_created = false;
         }
 
         return NVE_SUCCESS;
+    }
+    bool created()
+    {
+        return m_created;
     }
 
     VkBuffer m_buffer;
@@ -211,9 +216,11 @@ public:
 
         if (m_config.useStagedBuffer)
         {
-            m_stagingBuffer.create(m_data, m_stagingBufferConfig);
+            if (!m_stagingBuffer.created())
+                m_stagingBuffer.create(m_data, m_stagingBufferConfig);
             copy_buffer(m_stagingBuffer.m_buffer, m_buffer, m_realSize);
-            m_stagingBuffer.destroy();
+            if (m_config.singleUseStagedBuffer)
+                m_stagingBuffer.destroy();
         }
         else
         {
@@ -230,7 +237,7 @@ public:
         bool reload = data.size() != m_data.size();
         m_data = data;
 
-        if (reload)
+        if (reload || !m_created)
         {
             recreate();
         }
@@ -245,10 +252,17 @@ public:
             vkDestroyBuffer(m_config.device, m_buffer, nullptr);
             vkFreeMemory(m_config.device, m_memory, nullptr);
 
+            if (m_stagingBuffer.created())
+                m_stagingBuffer.destroy();
+
             m_created = false;
         }
 
         return NVE_SUCCESS;
+    }
+    bool created()
+    {
+        return m_created;
     }
 
 	VkBuffer m_buffer;

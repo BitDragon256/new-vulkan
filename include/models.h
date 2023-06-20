@@ -84,7 +84,7 @@ public:
 	ModelHandler();
 	void init(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool cmdPool, VkQueue queue);
 	void destroy_buffers();
-	void upload_data();
+	void upload_mesh_data();
 	void upload_model_info();
 	void add_model(Model* pModel);
 	VkBuffer vertex_buffer();
@@ -95,6 +95,11 @@ public:
 
 private:
 	void reset();
+	void init_buffers();
+	void create_buffers();
+	void assert_buffer_creation();
+
+	bool m_buffersCreated;
 
 	VkDevice m_device;
 	VkPhysicalDevice m_physicalDevice;

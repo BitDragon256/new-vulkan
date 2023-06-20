@@ -20,6 +20,8 @@ void ModelHandler::init(VkDevice device, VkPhysicalDevice physicalDevice, VkComm
 	m_commandPool = cmdPool;
 	m_transferQueue = transferQueue;
 
+	init_buffers();
+
 	m_initialized = true;
 }
 void ModelHandler::destroy_buffers()
@@ -35,6 +37,7 @@ void ModelHandler::reset()
 
 	m_initialized = false;
 	m_dataChanged = true;
+	m_buffersCreated = false;
 
 	m_models.clear();
 }
@@ -51,7 +54,7 @@ void ModelHandler::upload_model_info()
 
 	m_modelBuffer.set(modelData);
 }
-void ModelHandler::upload_data()
+void ModelHandler::upload_mesh_data()
 {
 	if (!m_initialized)
 	{
@@ -61,41 +64,49 @@ void ModelHandler::upload_data()
 	if (!m_dataChanged)
 		return;
 
-	BufferConfig config = {};
-	config.device = m_device;
-	config.physicalDevice = m_physicalDevice;
-	config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;//VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	config.useStagedBuffer = false;//true;
-	config.stagedBufferTransferCommandPool = m_commandPool;
-	config.stagedBufferTransferQueue = m_transferQueue;
-
 	std::vector<Vertex> vertexData(m_vertexCount);
 	std::vector<Index> indexData(m_indexCount);
-	std::vector<Transform> modelData(m_models.size());
 
 	auto vertexDataLast = vertexData.begin();
 	auto indexDataLast = indexData.begin();
-	auto modelDataLast = modelData.begin();
 
 	for (Model* model : m_models)
 	{
 		model->write_vertices_to(vertexDataLast);
 		model->write_indices_to(indexDataLast);
-
-		*modelDataLast = model->m_info;
-		modelDataLast++;
 	}
 
-	config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	m_vertexBuffer.create(vertexData, config);
-
-	config.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	m_indexBuffer.create(indexData, config);
-
-	config.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	m_modelBuffer.create(modelData, config);
+	m_vertexBuffer.set(vertexData);
+	m_indexBuffer.set(indexData);
 
 	m_dataChanged = false;
+}
+void ModelHandler::init_buffers()
+{
+	BufferConfig config = {};
+	config.device = m_device;
+	config.physicalDevice = m_physicalDevice;
+	config.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;//
+	config.useStagedBuffer = true;
+	config.stagedBufferTransferCommandPool = m_commandPool;
+	config.stagedBufferTransferQueue = m_transferQueue;
+
+	config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	m_vertexBuffer.initialize(config);
+
+	config.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	m_indexBuffer.initialize(config);
+
+	config.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	m_modelBuffer.initialize(config);
+}
+void ModelHandler::create_buffers()
+{
+	m_vertexBuffer.recreate();
+	m_indexBuffer.recreate();
+	m_modelBuffer.recreate();
+
+	m_buffersCreated = true;
 }
 
 void ModelHandler::add_model(Model* pModel)
@@ -110,14 +121,17 @@ void ModelHandler::add_model(Model* pModel)
 
 VkBuffer ModelHandler::vertex_buffer()
 {
+	assert_buffer_creation();
 	return m_vertexBuffer.m_buffer;
 }
 VkBuffer ModelHandler::index_buffer()
 {
+	assert_buffer_creation();
 	return m_indexBuffer.m_buffer;
 }
 VkBuffer ModelHandler::model_buffer()
 {
+	assert_buffer_creation();
 	return m_modelBuffer.m_buffer;
 }
 uint32_t ModelHandler::vertex_count()
@@ -127,6 +141,12 @@ uint32_t ModelHandler::vertex_count()
 uint32_t ModelHandler::index_count()
 {
 	return static_cast<uint32_t>(m_indexCount);
+}
+
+void ModelHandler::assert_buffer_creation()
+{
+	if (!m_buffersCreated)
+		create_buffers();
 }
 
 // ----------------------------------

@@ -48,6 +48,9 @@ int main(int argc, char** argv)
     float cubeRotation[4] { 1, 0, 0, 0 };
     float cubeEulerRotation[3] { 0, 0, 0 };
 
+    std::vector<Vertex> verts(8);
+    cube.write_vertices_to(verts.begin());
+
     bool running = true;
     while (running)
     {
@@ -104,14 +107,16 @@ int main(int argc, char** argv)
         ImGui::Text(quatDisplay.str().c_str());
 
         std::stringstream cubeVerts;
-        std::vector<Vertex> verts(8);
-        cube.write_vertices_to(verts.begin());
-        for (Vertex v : verts)
+        std::vector<Vertex> rotatedVerts(verts);
+        for (Vertex v : rotatedVerts)
         {
             v.pos = Quaternion::rotate(v.pos, finalOrientation);
             cubeVerts << v.pos.x << " " << v.pos.y << " " << v.pos.z << "\n";
         }
         ImGui::Text(cubeVerts.str().c_str());
+
+        cube.m_meshes[0].m_submeshes[0].vertices = rotatedVerts;
+        renderer.reload_models();
 
         ImGui::End();
 
