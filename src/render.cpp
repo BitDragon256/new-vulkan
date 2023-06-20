@@ -376,7 +376,7 @@ NVE_RESULT Renderer::create_graphics_pipeline()
     std::string prefix = "";
 #ifdef _MSC_BUILD
     prefix = "X:/Dev/new-vulkan-engine";
-#elif
+#else
     prefix = "..";
 #endif
 
