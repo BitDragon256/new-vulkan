@@ -10,6 +10,7 @@
 
 #include "nve_types.h"
 #include "buffer.h"
+#include "math-core.h"
 
 class Texture;
 
@@ -20,7 +21,7 @@ public:
 	Texture* m_pNormalTexture;
 	VkShaderModule* m_pShader;
 	glm::vec4 m_diffuseColor;
-	glm::vec3 m_ambientColor;
+	Vector3 m_ambientColor;
 	float m_alphaTest;
 };
 
@@ -51,9 +52,9 @@ public:
 
 struct Transform
 {
-	glm::vec3 position;
-	glm::vec3 scale;
-	glm::quat rotation;
+	Vector3 position;
+	Vector3 scale;
+	Quaternion rotation;
 };
 
 class Model

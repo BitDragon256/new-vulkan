@@ -4,6 +4,8 @@
 
 #include <glm/glm.hpp>
 
+#include "vulkan_helpers.h"
+
 typedef int NVE_RESULT;
 
 // success codes
@@ -18,21 +20,31 @@ typedef uint32_t Index;
 
 #define VERTEX_ATTRIBUTE_COUNT 3
 
+namespace math
+{
+	class quaternion;
+} // namespace math
+
+typedef glm::vec2 Vector2;
+typedef glm::vec3 Vector3;
+typedef glm::vec4 Vector4;
+typedef math::quaternion Quaternion;
+
 typedef struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 uv;
+	Vector3 pos;
+	Vector3 color;
+	Vector2 uv;
 
 	static VkVertexInputBindingDescription getBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> getAttributeDescriptions();
 } Vertex;
 
-#define VECTOR_UP glm::vec3(0, 0, 1)
-#define VECTOR_FORWARD glm::vec3(1, 0, 0)
-#define VECTOR_RIGHT glm::vec3(0, 1, 0)
+#define VECTOR_UP Vector3(0, 0, 1)
+#define VECTOR_FORWARD Vector3(1, 0, 0)
+#define VECTOR_RIGHT Vector3(0, 1, 0)
 
-#define VECTOR_DOWN glm::vec3(0, 0, -1)
-#define VECTOR_BACK glm::vec3(-1, 0, 0)
-#define VECTOR_LEFT glm::vec3(0, -1, 0)
+#define VECTOR_DOWN Vector3(0, 0, -1)
+#define VECTOR_BACK Vector3(-1, 0, 0)
+#define VECTOR_LEFT Vector3(0, -1, 0)
 
 #define PI 3.14159265

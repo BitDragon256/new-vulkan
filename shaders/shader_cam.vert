@@ -13,6 +13,19 @@ struct Transform
     vec4 rotation;
 };
 
+layout(std140,set = 0, binding = 0) readonly buffer ObjectBuffer
+{
+    Transform objects[];
+} ObjectInfoBuffer;
+
+layout( push_constant ) uniform constants
+{
+    mat4 view;
+    mat4 proj;
+} CameraPushConstant;
+
+#define PI 3.14159265
+
 // Quaternion Inverse
 vec4 quatInv(const vec4 q) {
     // assume it's a unit quaternion, so just Conjugate
@@ -40,37 +53,35 @@ vec3 quatMul(const vec4 q, const vec3 p) {
     //return r.xyz;
 }
 
-vec3 mul(const Transform t, const vec3 v)
+vec4 mul(vec4 q1, vec4 q2)
 {
-    return t.position + quatMul(t.rotation, v * t.scale);
+    vec4 ret;
+    ret.x = (q1.w*q2.x + q1.x*q2.w + q1.y*q2.z - q1.z*q2.y);
+    ret.y = (q1.w*q2.y - q1.x*q2.z + q1.y*q2.w + q1.z*q2.x);
+    ret.z = (q1.w*q2.z + q1.x*q2.y - q1.y*q2.x + q1.z*q2.w);
+    ret.w = (q1.w*q2.w - q1.x*q2.x - q1.y*q2.y - q1.z*q2.z);
+    return ret;
 }
 
-layout(std140,set = 0, binding = 0) readonly buffer ObjectBuffer
+vec4 conj(vec4 q)
 {
-    Transform objects[];
-} ObjectInfoBuffer;
+    return vec4(-q.xyz, q.w);
+}
 
-layout( push_constant ) uniform constants
+vec3 rotate(vec3 v, vec4 q)
 {
-    mat4 view;
-    mat4 proj;
-} CameraPushConstant;
-
-#define PI 3.14159265
+    normalize(q);
+    normalize(v);
+    vec4 t = vec4(v, 0);
+    return mul(mul(q, t), conj(q)).xyz;
+}
 
 void main() {
     Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
-
-    /*
-    // change for glm quaternion
-    float w = transform.rotation.x;
-    transform.rotation.x = transform.rotation.y / PI;
-    transform.rotation.y = transform.rotation.z / PI;
-    transform.rotation.z = transform.rotation.w / PI;
-    transform.rotation.w = -w;
-    */
-
     mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
-    gl_Position = cameraMatrix * vec4(mul(transform, inPosition), 1.0);
+    
+    vec3 vertexPos = rotate(inPosition, transform.rotation) + transform.position;
+
+    gl_Position = cameraMatrix * vec4(vertexPos, 1.0);
     fragColor = inColor;
 }

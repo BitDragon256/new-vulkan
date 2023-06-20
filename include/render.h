@@ -34,7 +34,7 @@ struct RenderConfig
 	bool cameraEnabled;
 	bool useModelHandler;
 
-	glm::vec3 clearColor;
+	Vector3 clearColor;
 	
 	bool enableValidationLayers;
 	std::vector<const char*> enabledInstanceLayers;
@@ -189,10 +189,10 @@ public:
 	glm::mat4 projection_matrix();
 	glm::mat4 view_matrix();
 
-	glm::vec3 m_position;
-	glm::vec3 m_rotation;
+	Vector3 m_position;
+	Vector3 m_rotation;
 	float m_fov;
-	glm::vec2 m_extent;
+	Vector2 m_extent;
 	float m_nearPlane;
 	float m_farPlane;
 
