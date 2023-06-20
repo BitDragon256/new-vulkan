@@ -26,33 +26,6 @@ layout( push_constant ) uniform constants
 
 #define PI 3.14159265
 
-// Quaternion Inverse
-vec4 quatInv(const vec4 q) {
-    // assume it's a unit quaternion, so just Conjugate
-    return vec4( -q.xyz, q.w );
-}
-// Quaternion multiplication
-vec4 quatDot(const vec4 q1, const vec4 q2) {
-    float scalar = q1.w * q2.w - dot(q1.xyz, q2.xyz);
-    vec3 v = cross(q1.xyz, q2.xyz) + q1.w * q2.xyz + q2.w * q1.xyz;
-    return vec4(v, scalar);
-}
-// Apply unit quaternion to vector (rotate vector)
-vec3 quatMul(const vec4 q, const vec3 p) {
-    // p’ = (v*v.dot(p) + v.cross(p)*(w))*2 + p*(w*w – v.dot(v))
-    // vec3 v = q.xyz;
-    // float w = q.w;
-    // vec3 p_new = (v * dot(v, p) + cross(v, p) * w) * 2 + p * (w * w - dot(v, v));
-    // return p_new;
-
-    vec3 t = 2 * cross(q.xyz, p);
-    vec3 p_new = p + q.w * 2 * cross(q.xyz, p) + cross(q.xyz, t);
-    return p_new;
-
-    //vec4 r = quatDot(q, quatDot(vec4(v, 0), quatInv(q)));
-    //return r.xyz;
-}
-
 vec4 mul(vec4 q1, vec4 q2)
 {
     vec4 ret;

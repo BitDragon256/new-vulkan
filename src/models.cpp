@@ -79,7 +79,7 @@ void ModelHandler::upload_data()
 
 	for (Model* model : m_models)
 	{
-		model->write_vertíces_to(vertexDataLast);
+		model->write_vertices_to(vertexDataLast);
 		model->write_indices_to(indexDataLast);
 
 		*modelDataLast = model->m_info;
@@ -142,11 +142,11 @@ size_t Model::index_count()
 	return std::accumulate(m_meshes.begin(), m_meshes.end(), (size_t) 0, [](size_t acc, Mesh mesh) { return acc + mesh.index_count(); });
 }
 
-void Model::write_vertíces_to(std::vector<Vertex>::iterator dst)
+void Model::write_vertices_to(std::vector<Vertex>::iterator dst)
 {
 	for (Mesh mesh : m_meshes)
 	{
-		mesh.write_vertíces_to(dst);
+		mesh.write_vertices_to(dst);
 	}
 }
 void Model::write_indices_to(std::vector<Index>::iterator dst)
@@ -179,7 +179,7 @@ size_t Mesh::index_count()
 	return std::accumulate(m_submeshes.begin(), m_submeshes.end(), (size_t) 0, [](size_t acc, Submesh mesh) { return acc + mesh.indices.size(); });
 }
 
-void Mesh::write_vertíces_to(std::vector<Vertex>::iterator dst)
+void Mesh::write_vertices_to(std::vector<Vertex>::iterator dst)
 {
 	for (Submesh submesh : m_submeshes)
 	{

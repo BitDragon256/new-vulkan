@@ -39,7 +39,7 @@ class Mesh
 public:
 	std::vector<Submesh> m_submeshes;
 
-	void write_vertíces_to(std::vector<Vertex>::iterator dst);
+	void write_vertices_to(std::vector<Vertex>::iterator dst);
 	void write_indices_to(std::vector<Index>::iterator dst);
 
 	size_t vertex_count();
@@ -66,7 +66,7 @@ public:
 	size_t vertex_count();
 	size_t index_count();
 
-	void write_vertíces_to(std::vector<Vertex>::iterator dst);
+	void write_vertices_to(std::vector<Vertex>::iterator dst);
 	void write_indices_to(std::vector<Index>::iterator dst);
 
 	static Model create_model(Mesh mesh);
