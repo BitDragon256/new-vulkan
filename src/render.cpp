@@ -715,7 +715,6 @@ NVE_RESULT Renderer::init_vertex_buffer()
     config.stagedBufferTransferCommandPool = m_commandPool;
 
     m_vertexBuffer.initialize(config);
-    m_vertexBuffer.recreate();
     
     return NVE_SUCCESS;
 }
@@ -731,7 +730,6 @@ NVE_RESULT Renderer::init_index_buffer()
     config.stagedBufferTransferCommandPool = m_commandPool;
 
     m_indexBuffer.initialize(config);
-    m_indexBuffer.recreate();
     
     return NVE_SUCCESS;
 }

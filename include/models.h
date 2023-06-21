@@ -96,8 +96,6 @@ public:
 private:
 	void reset();
 	void init_buffers();
-	void create_buffers();
-	void assert_buffer_creation();
 
 	bool m_buffersCreated;
 

@@ -55,7 +55,7 @@ void main() {
     Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
     mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
     
-    vec3 vertexPos = inPosition;//rotate(inPosition, transform.rotation) + transform.position;
+    vec3 vertexPos = rotate(inPosition, transform.rotation) + transform.position;
 
     gl_Position = cameraMatrix * vec4(vertexPos, 1.0);
     fragColor = inColor;
