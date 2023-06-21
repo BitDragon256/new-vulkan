@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include <chrono>
 #include <sstream>
 
 #include <imgui.h>
@@ -51,6 +52,12 @@ int main(int argc, char** argv)
     std::vector<Vertex> verts(8);
     cube.write_vertices_to(verts.begin());
 
+    int fps = 0;
+    int avgFps = 0;
+    char fpsText[10];
+    float deltaTime;
+    auto lastTime = std::chrono::high_resolution_clock::now();
+
     bool running = true;
     while (running)
     {
@@ -81,11 +88,19 @@ int main(int argc, char** argv)
 
         renderer.gui_begin();
 
+        ImGui::Begin("FPS");
+
+        itoa(fps, fpsText, 10);
+        ImGui::Text(fpsText);
+        itoa(avgFps, fpsText, 10);
+        ImGui::Text(fpsText);
+
+        ImGui::End();
+
         ImGui::Begin("Cube Transform");
 
         ImGui::SliderFloat3("position", cubePosition, -1, 1);
         ImGui::SliderFloat3("scale", cubeScale, 0, 10);
-        //ImGui::SliderFloat4("quat rotation", cubeRotation, -1, 1);
         ImGui::SliderFloat3("euler rotation", cubeEulerRotation, -PI, PI);
 
         cube.m_info.position.x = cubePosition[0];
@@ -106,25 +121,19 @@ int main(int argc, char** argv)
         quatDisplay << finalOrientation.x << " " << finalOrientation.y << " " << finalOrientation.z << " " << finalOrientation.w;
         ImGui::Text(quatDisplay.str().c_str());
 
-        std::stringstream cubeVerts;
-        std::vector<Vertex> rotatedVerts(verts);
-        for (Vertex v : rotatedVerts)
-        {
-            v.pos = Quaternion::rotate(v.pos, finalOrientation);
-            cubeVerts << v.pos.x << " " << v.pos.y << " " << v.pos.z << "\n";
-        }
-        ImGui::Text(cubeVerts.str().c_str());
-
-        // cpu side rotation
-        // 
-        // cube.m_meshes[0].m_submeshes[0].vertices = rotatedVerts;
-        // renderer.reload_models();
-
         ImGui::End();
 
         NVE_RESULT res = renderer.render();
         if (res == NVE_RENDER_EXIT_SUCCESS)
             running = false;
+
+        // time
+        auto now = std::chrono::high_resolution_clock::now();
+        deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count();
+        fps = 1000 / deltaTime;
+        avgFps += fps;
+        avgFps /= 2;
+        lastTime = std::chrono::high_resolution_clock::now();
     }
 
     return 0;

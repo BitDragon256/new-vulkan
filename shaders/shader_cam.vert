@@ -43,9 +43,6 @@ vec4 conj(vec4 q)
 
 vec3 rotate(vec3 v, vec4 q)
 {
-    //normalize(q);
-    //normalize(v);
-
     vec4 t = vec4(v, 0);
     return
     mul(
@@ -54,11 +51,24 @@ vec3 rotate(vec3 v, vec4 q)
     ).xyz;
 }
 
+vec3 fast_rot(vec3 v, vec4 q)
+{
+    vec3 t = 2 * cross(q.xyz, v);
+    return v + q.w * t + cross(q.xyz, t);
+}
+
+vec3 even_faster_rot(vec3 v, vec4 q)
+{
+    vec3 p = q.xyz;
+    float w = q.w;
+    return (p * dot(p, v) + cross(p, v) * w) * 2 + v * (w * w - dot(p, p));
+}
+
 void main() {
     Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
     mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
     
-    vec3 vertexPos = rotate(inPosition * transform.scale, transform.rotation) + transform.position;
+    vec3 vertexPos = even_faster_rot(inPosition * transform.scale, transform.rotation) + transform.position;
 
     gl_Position = cameraMatrix * vec4(vertexPos, 1.0);
     fragColor = inColor;
