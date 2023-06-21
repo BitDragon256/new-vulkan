@@ -54,14 +54,14 @@ void ModelHandler::upload_model_info()
 
 	m_modelBuffer.set(modelData);
 }
-void ModelHandler::upload_mesh_data()
+void ModelHandler::upload_mesh_data(bool force)
 {
 	if (!m_initialized)
 	{
 		log("model handler must be initialized before uploading data");
 		return;
 	}
-	if (!m_dataChanged)
+	if (!m_dataChanged && !force)
 		return;
 
 	std::vector<Vertex> vertexData(m_vertexCount);
@@ -236,7 +236,7 @@ Mesh Mesh::create_cube()
 			{ Vector3( 0.5, -0.5, -0.5), Vector3(1.0, 0.0, 1.0), Vector2(0.0, 0.0) }, // E 4
 			{ Vector3(-0.5, -0.5, -0.5), Vector3(0.0, 1.0, 1.0), Vector2(0.0, 0.0) }, // F 5
 			{ Vector3(-0.5,  0.5, -0.5), Vector3(1.0, 1.0, 1.0), Vector2(0.0, 0.0) }, // G 6
-			{ Vector3( 0.5,  0.5, -0.5), Vector3(0.0, 0.0, 0.0), Vector2(0.0, 0.0) }, // H 7
+			{ Vector3( 0.5,  0.5, -0.5), Vector3(0.0, 0.0, 0.0), Vector2(0.0, 0.0) }  // H 7
 		},
 		{
 			// top

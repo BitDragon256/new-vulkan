@@ -43,6 +43,7 @@ public:
 
         bool recreate = data.size() > m_data.size() || !m_created;
         m_data = data;
+        m_realSize = sizeof(T) * m_data.size();
 
         if (recreate)
             create();
@@ -72,13 +73,11 @@ protected:
     {
         destroy();
 
-        m_realSize = sizeof(T) * m_data.size();
-
         create_buffer(m_realSize, m_config.usage, m_config.memoryFlags, m_buffer, m_memory);
 
         m_created = true;
     }
-    void reload_data()
+    virtual void reload_data()
     {
         void* data;
         vkMapMemory(m_config.device, m_memory, 0, m_realSize, 0, &data);
@@ -177,8 +176,8 @@ public:
         m_stagingBuffer.destroy();
         RawBuffer<T>::destroy();
     }
-private:
-    void reload_data()
+protected:
+    void reload_data() override
     {
         if (m_config.useStagedBuffer)
         {

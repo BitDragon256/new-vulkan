@@ -111,7 +111,7 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
 }
 void Renderer::reload_models()
 {
-    m_pModelHandler->upload_mesh_data();
+    m_pModelHandler->upload_mesh_data(true);
 }
 
 int Renderer::get_key(int key)
@@ -224,13 +224,6 @@ NVE_RESULT Renderer::create_debug_messenger()
     log_cond_err(res == VK_SUCCESS, "failed to create debug messenger");
     
     return NVE_SUCCESS;
-}
-void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
-{
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        func(instance, debugMessenger, pAllocator);
-    }
 }
 NVE_RESULT Renderer::create_device()
 {
@@ -703,6 +696,7 @@ NVE_RESULT Renderer::create_sync_objects()
 
     return NVE_SUCCESS;
 }
+
 NVE_RESULT Renderer::init_vertex_buffer()
 {
     BufferConfig config = {};
@@ -732,6 +726,14 @@ NVE_RESULT Renderer::init_index_buffer()
     m_indexBuffer.initialize(config);
     
     return NVE_SUCCESS;
+}
+
+void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+{
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(instance, debugMessenger, pAllocator);
+    }
 }
 
 NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
@@ -903,6 +905,7 @@ void Renderer::present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageI
 
     vkQueuePresentKHR(m_presentationQueue, &presentInfo);
 }
+
 NVE_RESULT Renderer::draw_frame()
 {
     // Wait for the previous frame to finish

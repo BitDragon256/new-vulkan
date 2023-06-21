@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 
         std::stringstream cubeVerts;
         std::vector<Vertex> rotatedVerts(verts);
-        for (Vertex v : rotatedVerts)
+        for (Vertex& v : rotatedVerts)
         {
             v.pos = Quaternion::rotate(v.pos, finalOrientation);
             cubeVerts << v.pos.x << " " << v.pos.y << " " << v.pos.z << "\n";
