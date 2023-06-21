@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     float moveSpeed = 0.01f;
 
     float cubePosition[3] { 0, 0, 0 };
-    float cubeRotation[4] { 1, 0, 0, 0 };
+    float cubeScale[3] { 1, 1, 1 };
     float cubeEulerRotation[3] { 0, 0, 0 };
 
     std::vector<Vertex> verts(8);
@@ -84,12 +84,17 @@ int main(int argc, char** argv)
         ImGui::Begin("Cube Transform");
 
         ImGui::SliderFloat3("position", cubePosition, -1, 1);
+        ImGui::SliderFloat3("scale", cubeScale, 0, 10);
         //ImGui::SliderFloat4("quat rotation", cubeRotation, -1, 1);
         ImGui::SliderFloat3("euler rotation", cubeEulerRotation, -PI, PI);
 
         cube.m_info.position.x = cubePosition[0];
         cube.m_info.position.y = cubePosition[1];
         cube.m_info.position.z = cubePosition[2];
+        
+        cube.m_info.scale.x = cubeScale[0];
+        cube.m_info.scale.y = cubeScale[1];
+        cube.m_info.scale.z = cubeScale[2];
 
         Vector3 EulerAngle(cubeEulerRotation[0], cubeEulerRotation[1], cubeEulerRotation[2]);
 
@@ -97,26 +102,23 @@ int main(int argc, char** argv)
 
         cube.m_info.rotation = finalOrientation;
 
-        /*cube.m_info.rotation.x = cubeRotation[0];
-        cube.m_info.rotation.y = cubeRotation[1];
-        cube.m_info.rotation.z = cubeRotation[2];
-        cube.m_info.rotation.w = cubeRotation[3];*/
-
         std::stringstream quatDisplay;
         quatDisplay << finalOrientation.x << " " << finalOrientation.y << " " << finalOrientation.z << " " << finalOrientation.w;
         ImGui::Text(quatDisplay.str().c_str());
 
         std::stringstream cubeVerts;
         std::vector<Vertex> rotatedVerts(verts);
-        for (Vertex& v : rotatedVerts)
+        for (Vertex v : rotatedVerts)
         {
             v.pos = Quaternion::rotate(v.pos, finalOrientation);
             cubeVerts << v.pos.x << " " << v.pos.y << " " << v.pos.z << "\n";
         }
         ImGui::Text(cubeVerts.str().c_str());
 
-        cube.m_meshes[0].m_submeshes[0].vertices = rotatedVerts;
-        renderer.reload_models();
+        // cpu side rotation
+        // 
+        // cube.m_meshes[0].m_submeshes[0].vertices = rotatedVerts;
+        // renderer.reload_models();
 
         ImGui::End();
 

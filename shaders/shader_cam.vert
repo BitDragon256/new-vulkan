@@ -43,19 +43,22 @@ vec4 conj(vec4 q)
 
 vec3 rotate(vec3 v, vec4 q)
 {
-    return v;
+    //normalize(q);
+    //normalize(v);
 
-    normalize(q);
-    normalize(v);
     vec4 t = vec4(v, 0);
-    return mul(mul(q, t), conj(q)).xyz;
+    return
+    mul(
+        mul(q, t),
+        conj(q)
+    ).xyz;
 }
 
 void main() {
     Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
     mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
     
-    vec3 vertexPos = rotate(inPosition, transform.rotation) + transform.position;
+    vec3 vertexPos = rotate(inPosition * transform.scale, transform.rotation) + transform.position;
 
     gl_Position = cameraMatrix * vec4(vertexPos, 1.0);
     fragColor = inColor;

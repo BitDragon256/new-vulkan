@@ -52,9 +52,9 @@ public:
 
 struct Transform
 {
-	Vector3 position;
-	Vector3 scale;
-	Quaternion rotation;
+	alignas(16) Vector3 position;
+	alignas(16) Vector3 scale;
+	alignas(16) Quaternion rotation;
 };
 
 class Model

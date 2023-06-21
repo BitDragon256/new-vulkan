@@ -27,6 +27,7 @@ namespace math
 		quaternion y = quaternion(euler.y, VECTOR_RIGHT);
 		quaternion z = quaternion(euler.z, VECTOR_UP);
 		*this = x * y * z;
+		normalize();
 	}
 	quaternion::quaternion(Vector4 v)
 	{
