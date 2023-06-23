@@ -1,3 +1,5 @@
+@echo off
+
 echo external dependencies...
 
 mkdir external
