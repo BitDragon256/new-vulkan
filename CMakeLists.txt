@@ -21,12 +21,35 @@ file(GLOB IMGUI_INCLUDE_FILES
 set(IMGUI_FILES ${IMGUI_SOURCE_FILES} ${IMGUI_INCLUDE_FILES})
 
 set(SOURCE_DIR src)
-file(GLOB SOURCE_FILES
-	${SOURCE_DIR}/*.cpp
-)
+#file(GLOB SOURCE_FILES
+#	${SOURCE_DIR}/*.cpp
+#)
 set(INCLUDE_DIR include)
-file(GLOB INCLUDE_FILES
-	${INCLUDE_DIR}/*.h
+#file(GLOB INCLUDE_FILES
+#	${INCLUDE_DIR}/*.h
+#)
+
+set(
+	SOURCE_FILES
+	${SOURCE_DIR}/buffer.cpp
+	${SOURCE_DIR}/logger.cpp
+	${SOURCE_DIR}/math-core.cpp
+	${SOURCE_DIR}/models.cpp
+	${SOURCE_DIR}/render.cpp
+	${SOURCE_DIR}/vulkan_helpers.cpp
+	${SOURCE_DIR}/main.cpp
+)
+
+set(
+	INCLUDE_FILES
+	${INCLUDE_DIR}/buffer.h
+	${INCLUDE_DIR}/ecs.h
+	${INCLUDE_DIR}/logger.h
+	${INCLUDE_DIR}/math-core.h
+	${INCLUDE_DIR}/models.h
+	${INCLUDE_DIR}/nve_types.h
+	${INCLUDE_DIR}/render.h
+	${INCLUDE_DIR}/vulkan_helpers.h
 )
 
 add_executable(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${IMGUI_FILES})

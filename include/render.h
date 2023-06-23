@@ -35,12 +35,17 @@ struct RenderConfig
 	bool useModelHandler;
 
 	Vector3 clearColor;
-	
+
 	bool enableValidationLayers;
 	std::vector<const char*> enabledInstanceLayers;
 
-	// gui
-	std::function<void(void)> guiDraw;
+	RenderConfig() :
+		width{ 600 }, height{ 400 }, title{ "DEFAULT TITLE" },
+		dataMode{ Indexed }, cameraEnabled{ true }, useModelHandler{ true },
+		clearColor{ 0, 0, 0 },
+		enableValidationLayers{ true },
+		enabledInstanceLayers {}
+	{}
 };
 
 class Camera;

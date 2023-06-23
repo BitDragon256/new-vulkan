@@ -72,6 +72,19 @@ public:
 	static Model create_model(Mesh mesh);
 };
 
+struct ModelHandle
+{
+
+};
+
+class ModelPool
+{
+public:
+	ModelHandle add_model(Model model, bool dynamic = false);
+private:
+	
+};
+
 class ModelHandler
 {
 public:
