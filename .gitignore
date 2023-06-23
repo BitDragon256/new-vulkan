@@ -2,3 +2,5 @@ build/
 make-build/
 external/
 .obsidian/
+.vscode/
+.VSCodeCounter/
