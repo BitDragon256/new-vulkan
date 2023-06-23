@@ -40,7 +40,7 @@ Folder *external* and in it the folders:
     - {imgui_source_files}.cpp
     - {imgui_include_files}.h
 
-For convenience, there is a script to automatically get the external dependencies and place them in the right folder. It is *init-dir.sh* for linux (make sure to *chmod +x* it before running (this is more of a note to myself to not forget it)) and *init-dir.bat* for windows. The script also generates the cmake stuff, so you can directly start with compiling. The script needs *wget* to work properly.
+For convenience, there is a script to automatically get the external dependencies and place them in the right folder. It is *init-dir.sh* for linux (make sure to *chmod +x* it before running (this is more of a note to myself to not forget it)) and *init-dir.bat* for windows. The script also generates the cmake stuff, so you can directly start with compiling. The script needs [wget](https://www.gnu.org/software/wget/) to work properly.
 
 # Some Trivia
 - x is forward/back, y is right/left and z is up/down
