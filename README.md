@@ -1,5 +1,5 @@
 # Overview
-This is my second try at making a simple render engine with vulkan in C++. The basic stuff is mostly aligned with the great tutorial from https://vulkan-tutorial.com/.
+This is my second try at making a simple render engine with [Vulkan](https://www.vulkan.org/) in C++. The basic stuff is mostly aligned with the great tutorial from https://vulkan-tutorial.com/.
 Planned is instanced rasterized rendering with a simple model handler and after that raytraced and raymarched rendering with partly custom shaders. A GUI is also provided with the [DearImGui Library](https://github.com/ocornut/imgui).
 In addition to the renderer, a simple entity-component-system is there for convenient control of the scene and objects (the binding-in with the renderer is currently in progress).
 
