@@ -200,6 +200,8 @@ protected:
         VkCommandBuffer cmdBuffer = begin_single_time_cmd_buffer(m_config.stagedBufferTransferCommandPool, m_config.device);
         VkBufferCopy copyRegion = {};
         copyRegion.size = RawBuffer<T>::m_realSize;
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
         vkCmdCopyBuffer(cmdBuffer, srcBuf, dstBuf, 1, &copyRegion);
         end_single_time_cmd_buffer(cmdBuffer, m_config.stagedBufferTransferCommandPool, m_config.device, m_config.stagedBufferTransferQueue);
     }

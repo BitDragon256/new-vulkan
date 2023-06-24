@@ -30,7 +30,8 @@ typedef glm::vec3 Vector3;
 typedef glm::vec4 Vector4;
 typedef math::quaternion Quaternion;
 
-typedef struct Vertex {
+typedef struct Vertex
+{
 	Vector3 pos;
 	Vector3 color;
 	Vector2 uv;
@@ -38,6 +39,13 @@ typedef struct Vertex {
 	static VkVertexInputBindingDescription getBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> getAttributeDescriptions();
 } Vertex;
+
+struct Transform
+{
+	alignas(16) Vector3 position;
+	alignas(16) Vector3 scale;
+	alignas(16) Quaternion rotation;
+};
 
 #define VECTOR_UP Vector3(0, 0, 1)
 #define VECTOR_FORWARD Vector3(1, 0, 0)

@@ -78,8 +78,12 @@ class ECSManager;
 class ISystem
 {
 public:
+	virtual void start(ECSManager& ecs) = 0;
+	virtual void awake(EntityId entity, ECSManager& ecs) = 0;
+	virtual void update(float dt, ECSManager& ecs) = 0;
 	virtual void update(float dt, EntityId entity, ECSManager& ecs) = 0;
 	constexpr virtual const std::vector<const char*>& component_types() const = 0;
+	std::vector<EntityId> m_entities;
 };
 
 template<typename... Types>
@@ -114,9 +118,11 @@ public:
 	void update_systems(float dt);
 private:
 	std::vector<ISystem*> m_systems;
-	std::vector<std::vector<EntityId>> m_systemEntities; // system buckets, in buckets are all entities affected by that system
 	std::vector<std::bitset<ECS_MAX_COMPONENTS>> m_systemComponents; // bitset for all systems for used components
 	std::unordered_map<const char*, ComponentTypeId> m_componentTypeToId;
+
+	std::vector<EntityId> m_newEntities;
+	void awake_entities();
 
 	std::queue<EntityId> m_availableEntities;
 	size_t m_maxEntities;

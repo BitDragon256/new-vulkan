@@ -127,7 +127,6 @@ template<typename S>
 void ECSManager::register_system()
 {
 	m_systems.push_back(new S());
-	m_systemEntities.push_back(std::vector<EntityId>());
 	m_systemComponents.push_back(std::bitset<ECS_MAX_COMPONENTS>());
 
 	const auto& systemTypeNames = m_systems.back()->component_types();
@@ -137,6 +136,8 @@ void ECSManager::register_system()
 		ensure_component(typeName);
 		m_systemComponents.back().set(m_componentTypeToId[typeName], true);
 	}
+
+	m_systems.back()->start(*this);
 }
 EntityId ECSManager::create_entity()
 {
@@ -146,16 +147,19 @@ EntityId ECSManager::create_entity()
 	EntityId entity = m_availableEntities.front();
 	m_availableEntities.pop();
 
+	m_newEntities.push_back(entity);
+
 	return entity;
 }
 void ECSManager::delete_entity(EntityId entity)
 {
 	m_availableEntities.push(entity);
 
-	for (size_t i = 0; i < m_systemEntities.size(); i++)
-		std::erase(m_systemEntities[i], entity);
+	for (size_t i = 0; i < m_systems.size(); i++)
+		std::erase(m_systems[i]->m_entities, entity);
 
 	m_componentManager.remove_entity(entity);
+	std::erase(m_newEntities, entity);
 }
 
 void ECSManager::ensure_component(const char* typeName)
@@ -174,17 +178,17 @@ template<typename T> void ECSManager::add_component(EntityId entity)
 	ComponentTypeId id = m_componentTypeToId[typeName];
 	auto entityComponents = used_components(entity);
 
-	for (SystemId system = 0; system < m_systems.size(); system++)
-		if ((entityComponents & m_systemComponents[system]) == m_systemComponents[system])
-			m_systemEntities[system].push_back(entity);
+	for (SystemId systemId = 0; systemId < m_systems.size(); systemId++)
+		if ((entityComponents & m_systemComponents[systemId]) == m_systemComponents[systemId])
+			m_systems[systemId]->m_entities.push_back(entity);
 }
 template<typename T> void ECSManager::remove_component(EntityId entity)
 {
 	ComponentTypeId id = m_componentTypeToId[typeid(T).name()];
 	auto entityComponents = used_components(entity);
-	for (SystemId system = 0; system < m_systems.size(); system++)
-		if ((entityComponents & m_systemComponents[system]) == m_systemComponents[system])
-			std::erase(m_systemEntities[system], entity);
+	for (SystemId systemId = 0; systemId < m_systems.size(); systemId++)
+		if ((entityComponents & m_systemComponents[systemId]) == m_systemComponents[systemId])
+			std::erase(m_systems[systemId]->m_entities, entity);
 
 	m_componentManager.remove_component<T>(entity);
 }
@@ -199,9 +203,34 @@ std::bitset<ECS_MAX_COMPONENTS> ECSManager::used_components(EntityId entity)
 
 void ECSManager::update_systems(float dt)
 {
-	for (SystemId systemId = 0; systemId < m_systems.size(); systemId++)
-		for (EntityId entity : m_systemEntities[systemId])
-			m_systems[systemId]->update(dt, entity, *this);
+	if (m_newEntities.size() > 0)
+	{
+		awake_entities();
+		m_newEntities.clear();
+	}
+
+	for (auto system : m_systems)
+	{
+		system->update(dt, *this);
+		for (EntityId entity : system->m_entities)
+			system->update(dt, entity, *this);
+	}
+}
+void ECSManager::awake_entities()
+{
+	for (auto system : m_systems)
+	{
+		std::vector<EntityId> newEntities;
+		std::set_intersection(
+			system->m_entities.begin(),
+			system->m_entities.end(),
+			m_newEntities.begin(),
+			m_newEntities.end(),
+			newEntities.begin()
+		);
+		for (EntityId entity : newEntities)
+			system->awake(entity, *this);
+	}
 }
 
 void ECSManager::fill_available_entities()

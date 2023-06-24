@@ -14,22 +14,9 @@
 
 class Texture;
 
-class Material
-{
-public:
-	Texture* m_pDiffuseTexture;
-	Texture* m_pNormalTexture;
-	VkShaderModule* m_pShader;
-	glm::vec4 m_diffuseColor;
-	Vector3 m_ambientColor;
-	float m_alphaTest;
-};
-
 class Submesh
 {
 public:
-	Material m_material;
-
 	std::vector<Vertex> vertices;
 	std::vector<Index> indices;
 };
@@ -48,13 +35,6 @@ public:
 	static Mesh create_simple_mesh(std::vector<Vertex> vertices, std::vector<Index> indices);
 	static Mesh create_cube();
 	static Mesh create_triangle();
-};
-
-struct Transform
-{
-	alignas(16) Vector3 position;
-	alignas(16) Vector3 scale;
-	alignas(16) Quaternion rotation;
 };
 
 class Model
@@ -109,8 +89,6 @@ public:
 private:
 	void reset();
 	void init_buffers();
-
-	bool m_buffersCreated;
 
 	VkDevice m_device;
 	VkPhysicalDevice m_physicalDevice;

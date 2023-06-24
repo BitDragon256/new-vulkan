@@ -37,7 +37,6 @@ void ModelHandler::reset()
 
 	m_initialized = false;
 	m_dataChanged = true;
-	m_buffersCreated = false;
 
 	m_models.clear();
 }

@@ -19,11 +19,6 @@
 
 // PUBLIC METHODS
 
-Renderer::Renderer()
-{
-
-}
-
 NVE_RESULT Renderer::init(RenderConfig config)
 {
     m_config = config;
@@ -569,7 +564,7 @@ NVE_RESULT Renderer::create_graphics_pipeline()
 
     if (m_config.cameraEnabled)
     {
-        VkPushConstantRange pushConstantRange;
+        VkPushConstantRange pushConstantRange = {};
         pushConstantRange.offset = 0;
         pushConstantRange.size = sizeof(CameraPushConstant);
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -826,7 +821,7 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
     if (m_config.dataMode != RenderConfig::TestTri)
     {
         VkDeviceSize offsets[] = { 0 };
-        VkBuffer vertexBuffers[1];
+        VkBuffer vertexBuffers[1] = { 0 };
 
         if (m_config.useModelHandler)
             vertexBuffers[0] = m_pModelHandler->vertex_buffer();
@@ -861,7 +856,7 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
 
     if (m_config.cameraEnabled)
     {
-        CameraPushConstant cameraData;
+        CameraPushConstant cameraData = {};
         cameraData.proj = m_activeCamera->projection_matrix();
         cameraData.view = m_activeCamera->view_matrix();
 

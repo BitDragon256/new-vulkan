@@ -53,7 +53,6 @@ class Camera;
 class Renderer
 {
 public:
-	Renderer();
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
 	NVE_RESULT bind_model_handler(ModelHandler* pHandler);
@@ -181,12 +180,6 @@ private:
 };
 
 void imgui_error_handle(VkResult err);
-
-class Texture
-{
-public:
-	VkImage m_tex;
-};
 
 class Camera
 {
