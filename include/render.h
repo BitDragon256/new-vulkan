@@ -41,7 +41,7 @@ struct RenderConfig
 
 	RenderConfig() :
 		width{ 600 }, height{ 400 }, title{ "DEFAULT TITLE" },
-		dataMode{ Indexed }, cameraEnabled{ true }, useModelHandler{ true },
+		dataMode{ TestTri }, cameraEnabled{ false }, useModelHandler{ false },
 		clearColor{ 0, 0, 0 },
 		enableValidationLayers{ true },
 		enabledInstanceLayers {}

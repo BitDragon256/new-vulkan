@@ -134,4 +134,25 @@ namespace math
 		return (quat * t * quat.conjugated()).vector_part();
 	}
 
+	// --------------------------------
+	// FUNCTIONS
+	// --------------------------------
+	float abs(float x)
+	{
+		return x * ((x > 0) - (x < 0));
+	}
+	float min(float a, float b)
+	{
+		return (a + b - abs(a - b)) / 2;
+	}
+	float max(float a, float b)
+	{
+		return (a + b + abs(a - b)) / 2;
+	}
+
+	float clamp(float x, float lower, float upper)
+	{
+		return min(max(x, lower), upper);
+	}
+
 } // namespace math

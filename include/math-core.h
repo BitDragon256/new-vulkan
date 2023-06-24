@@ -39,4 +39,10 @@ namespace math
 		bool is_normalized();
 		static const float m_normalizeThreshold;
 	};
+
+	float abs(float x);
+	float min(float a, float b);
+	float max(float a, float b);
+	float clamp(float x, float lower, float upper);
+
 } // namespace math

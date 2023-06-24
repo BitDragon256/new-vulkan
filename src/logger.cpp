@@ -29,6 +29,7 @@ void log_cond(bool cond, std::string str)
 
 void log_err(std::string err)
 {
+    log(err);
     throw std::runtime_error(err);
 }
 void log_cond_err(bool cond, std::string err)

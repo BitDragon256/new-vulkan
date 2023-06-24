@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.24)
 project(NewVulkan CXX)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED On)
+
 # vulkan
 find_package(Vulkan REQUIRED)
 
@@ -9,25 +12,33 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-add_subdirectory("external/glfw")
+add_subdirectory(external/glfw)
 
 #imgui
-file(GLOB IMGUI_SOURCE_FILES
-	external/imgui/*.cpp
+set(IMGUI_FOLDER external/imgui)
+
+set(
+	IMGUI_FILES
+
+	${IMGUI_FOLDER}/imconfig.h
+	${IMGUI_FOLDER}/imgui_demo.cpp
+	${IMGUI_FOLDER}/imgui_impl_vulkan.cpp
+	${IMGUI_FOLDER}/imgui_widgets.cpp
+	${IMGUI_FOLDER}/imgui_draw.cpp
+	${IMGUI_FOLDER}/imgui_impl_vulkan.h
+	${IMGUI_FOLDER}/imstb_rectpack.h
+	${IMGUI_FOLDER}/imgui.cpp
+	${IMGUI_FOLDER}/imgui_impl_glfw.cpp
+	${IMGUI_FOLDER}/imgui_internal.h
+	${IMGUI_FOLDER}/imstb_textedit.h
+	${IMGUI_FOLDER}/imgui.h
+	${IMGUI_FOLDER}/imgui_impl_glfw.h
+	${IMGUI_FOLDER}/imgui_tables.cpp
+	${IMGUI_FOLDER}/imstb_truetype.h
 )
-file(GLOB IMGUI_INCLUDE_FILES
-	external/imgui/*.h
-)
-set(IMGUI_FILES ${IMGUI_SOURCE_FILES} ${IMGUI_INCLUDE_FILES})
 
 set(SOURCE_DIR src)
-#file(GLOB SOURCE_FILES
-#	${SOURCE_DIR}/*.cpp
-#)
 set(INCLUDE_DIR include)
-#file(GLOB INCLUDE_FILES
-#	${INCLUDE_DIR}/*.h
-#)
 
 set(
 	SOURCE_FILES
@@ -52,10 +63,15 @@ set(
 	${INCLUDE_DIR}/vulkan_helpers.h
 )
 
-add_executable(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${IMGUI_FILES})
+option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
+
+if (NVE_BUILD_EXAMPLES)
+	add_subdirectory("examples")
+endif()
+
+add_library(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${IMGUI_FILES})
 
 set_target_properties(nve PROPERTIES LINKER_LANGUAGE CXX)
-set_property(TARGET nve PROPERTY CXX_STANDARD 20)
 
 target_include_directories(nve PUBLIC include)
 target_include_directories(nve PUBLIC external/imgui)

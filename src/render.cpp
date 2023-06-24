@@ -377,8 +377,36 @@ NVE_RESULT Renderer::create_graphics_pipeline()
     prefix = "..";
 #endif
 
-    auto vertShaderCode = read_file(prefix + "/shaders/vert.spv");
-    auto fragShaderCode = read_file(prefix + "/shaders/frag.spv");
+    // -------------------------------------------
+
+    std::string vertexShader;
+    switch (m_config.dataMode)
+    {
+    case RenderConfig::TestTri:
+        vertexShader = "hard_tri_vert.spv";
+        break;
+    case RenderConfig::VertexOnly:
+        vertexShader = "vbuffer_vert.spv";
+        break;
+    case RenderConfig::Indexed:
+        vertexShader = "models_cam_vert.spv";
+        break;
+    default:
+        break;
+    }
+
+    // -------------------------------------------
+
+    std::string fragmentShader;
+
+    // ...
+    fragmentShader = "frag.spv";
+    // ...
+
+    // -------------------------------------------
+
+    auto vertShaderCode = read_file(prefix + "/shaders/" + vertexShader);
+    auto fragShaderCode = read_file(prefix + "/shaders/" + fragmentShader);
 
     VkShaderModule vertShaderModule = create_shader_module(vertShaderCode, m_device);
     VkShaderModule fragShaderModule = create_shader_module(fragShaderCode, m_device);
@@ -402,13 +430,23 @@ NVE_RESULT Renderer::create_graphics_pipeline()
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    auto bindingDescription = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    if (m_config.dataMode != RenderConfig::TestTri)
+    {
+        auto bindingDescription = Vertex::getBindingDescription();
+        auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    }
+    else
+    {
+        vertexInputInfo.vertexBindingDescriptionCount = 0;
+        vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
+        vertexInputInfo.vertexAttributeDescriptionCount = 0;
+        vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+    }
 
     // -------------------------------------------
 
@@ -814,7 +852,10 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
 
     // ------------------------------------------
 
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_mainPipelineLayout, 0, 1, &m_descriptorSet, 0, nullptr);
+    if (m_config.dataMode != RenderConfig::TestTri)
+    {
+        vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_mainPipelineLayout, 0, 1, &m_descriptorSet, 0, nullptr);
+    }
 
     // ------------------------------------------
 
@@ -850,10 +891,13 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
     {
     case RenderConfig::TestTri:
         vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
+        break;
     case RenderConfig::VertexOnly:
         vkCmdDraw(m_commandBuffer, vertexCount, 1, 0, 0);
+        break;
     case RenderConfig::Indexed:
         vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, 0);
+        break;
     }
 
     // -------------------------------------------
@@ -927,17 +971,17 @@ NVE_RESULT Renderer::draw_frame()
     vkResetCommandBuffer(m_commandBuffer, 0);
     record_main_command_buffer(imageIndex);
 
-    if (m_imguiDraw)
-    {
-        imgui_draw(imageIndex);
-        m_imguiDraw = false;
-    }
+    if (!m_imguiDraw)
+        gui_begin();
+
+    imgui_draw(imageIndex);
+    m_imguiDraw = false;
 
     std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphore };
     std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphore };
 
     // Submit the recorded command buffers
-    std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffer, m_imgui_commandBuffers[imageIndex]};
+    std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffer, m_imgui_commandBuffers[imageIndex] };
     submit_command_buffers(commandBuffers, waitSemaphores, signalSemaphores);
 
     // Present the swap chain image
