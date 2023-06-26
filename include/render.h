@@ -198,9 +198,3 @@ public:
 private:
 	Renderer* renderer;
 };
-
-struct CameraPushConstant
-{
-	glm::mat4 view;
-	glm::mat4 proj;
-};

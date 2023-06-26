@@ -10,12 +10,6 @@
 
 #include "buffer.h"
 
-struct Submesh
-{
-	std::vector<Vertex> vertices;
-	std::vector<Index> indices;
-};
-
 struct StaticMesh
 {
 	std::vector<Vertex> vertices;
@@ -23,68 +17,75 @@ struct StaticMesh
 
 	Material material;
 };
-
-// 1,572,864 byte per segment (~1.5 MB)
-#define VERTEX_GROUP_MAX_SIZE 32768
-
-struct VertexGroup
-{
-	uint32_t start;
-	uint32_t size;
-	Material material;
-};
-
 struct MeshDataInfo
 {
-	uint32_t vertexStart;
-	uint32_t vertexEnd;
-	uint32_t indexStart;
-	uint32_t indexEnd;
+	size_t vertexStart;
+	size_t vertexCount;
+	size_t indexStart;
+	size_t indexCount;
 
+	size_t meshGroup;
+};
+
+struct MeshGroup
+{
+	std::vector<Vertex> vertices;
+	std::vector<Index> indices;
 	Material material;
+
+	Buffer<Vertex> m_vertexBuffer;
+	Buffer<Index> m_indexBuffer;
+
+	VkPipeline pipeline;
+	bool rerecordBuffer;
+	VkCommandBuffer commandBuffer;
+};
+
+struct PipelineCreationData
+{
+	VkPipelineShaderStageCreateInfo			stages[2];
+
+	VkPipelineVertexInputStateCreateInfo	vertexInputState;
+	std::array<VkVertexInputAttributeDescription, 3> vertexAttributeDescriptions;
+	VkVertexInputBindingDescription			vertexBindingDescription;
+
+	VkPipelineInputAssemblyStateCreateInfo	inputAssemblyState;
+	VkPipelineTessellationStateCreateInfo	tessellationState;
+	VkPipelineViewportStateCreateInfo		viewportState;
+	VkPipelineRasterizationStateCreateInfo	rasterizationState;
+	VkPipelineMultisampleStateCreateInfo	multisampleState;
+	VkPipelineDepthStencilStateCreateInfo	depthStencilState;
+
+	VkPipelineColorBlendStateCreateInfo		colorBlendState;
+	VkPipelineColorBlendAttachmentState		colorBlendAttachment;
+
+	VkPipelineDynamicStateCreateInfo		dynamicState;
+	std::vector<VkDynamicState>				dynamicStates;
 };
 
 class StaticGeometryHandler : System<StaticMesh, Transform>
 {
 public:
-	VkCommandBuffer secondary_command_buffer();
+	void create_command_buffers(VkDevice device, VkCommandPool commandPool);
+	void record_command_buffers(VkRenderPass renderPass, uint32_t firstSubpass, VkFramebuffer framebuffer, VkExtent2D swapChainExtent);
+	void create_pipelines(VkDevice device, VkRenderPass renderPass, uint32_t firstSubpass, std::vector<VkPipeline>& pipelines, std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
 
 	void awake(EntityId entity, ECSManager& ecs) override;
 	void update(float dt, ECSManager& ecs) override;
 
 private:
-	void add_mesh(StaticMesh& mesh);
-	bool new_mat(const Material& material);
+	void add_mesh(StaticMesh& mesh, Transform transform);
+	MeshGroup* find_group(const Material& material, size_t& index);
 
-	std::vector<Vertex> m_vertices;
-	std::vector<Index> m_indices;
+	void create_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer* pCommandBuffer);
+	void record_command_buffer(VkRenderPass renderPass, uint32_t subpass, VkFramebuffer framebuffer, VkExtent2D swapChainExtent, const MeshGroup& meshGroup);
+
+	VkGraphicsPipelineCreateInfo create_pipeline_create_info(VkDevice device, VkRenderPass renderPass, uint32_t subpass, size_t pipelineIndex);
+	void create_pipeline_layout(VkDevice device);
+
+	std::vector<MeshGroup> m_meshGroups;
 	std::vector<MeshDataInfo> m_meshes;
 
-	Buffer<Vertex> m_vertexBuffer;
-	Buffer<Index> m_indexBuffer;
-};
-
-class ModelHandler : System<Mesh, Transform>
-{
-public:
-
-	void awake(EntityId entity, ECSManager& ecs) override;
-	void update(float dt, ECSManager& ecs) override;
-
-	void push_data(std::vector<VertexGroup> groups);
-
-private:
-	void add_mesh(Mesh& mesh);
-
-	std::vector<VertexGroup> m_groups;
-	bool new_mat(const Material& material);
-	VertexGroup& get_group(const Material& material);
-	void swap_groups(VertexGroup a, VertexGroup b);
-	VertexGroup& new_group();
-	void push_vertices(std::vector<Vertex>::const_iterator start, std::vector<Vertex>::const_iterator end);
-
-	std::vector<Vertex> m_vertices;
-	std::vector<Index> m_indices;
-	std::vector<Vertex>::const_iterator fill_group(std::vector<Vertex>::const_iterator start, std::vector<Vertex>::const_iterator end, VertexGroup& group);
-	void pad_vertices();
+	std::vector<PipelineCreationData> m_pipelineCreationData;
+	VkPipelineLayout m_pipelineLayout;
 };

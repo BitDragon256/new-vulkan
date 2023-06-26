@@ -37,7 +37,7 @@ VkPresentModeKHR choose_swap_present_mode(const std::vector<VkPresentModeKHR>& a
 VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window);
 
 std::vector<char> read_file(const std::string& filename);
-VkShaderModule create_shader_module(const std::vector<char>& code, VkDevice device);
+VkShaderModule create_shader_module(const std::string& file, VkDevice device);
 
 uint32_t find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 

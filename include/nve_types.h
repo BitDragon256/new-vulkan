@@ -47,6 +47,12 @@ struct Transform
 	alignas(16) Quaternion rotation;
 };
 
+struct CameraPushConstant
+{
+	glm::mat4 view;
+	glm::mat4 proj;
+};
+
 #define VECTOR_UP Vector3(0, 0, 1)
 #define VECTOR_FORWARD Vector3(1, 0, 0)
 #define VECTOR_RIGHT Vector3(0, 1, 0)

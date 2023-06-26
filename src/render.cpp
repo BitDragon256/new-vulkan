@@ -365,13 +365,6 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 }
 NVE_RESULT Renderer::create_graphics_pipeline()
 {
-    std::string prefix = "";
-#ifdef _MSC_BUILD
-    prefix = "X:/Dev/new-vulkan-engine";
-#else
-    prefix = "..";
-#endif
-
     // -------------------------------------------
 
     std::string vertexShader;
@@ -400,11 +393,8 @@ NVE_RESULT Renderer::create_graphics_pipeline()
 
     // -------------------------------------------
 
-    auto vertShaderCode = read_file(prefix + "/shaders/" + vertexShader);
-    auto fragShaderCode = read_file(prefix + "/shaders/" + fragmentShader);
-
-    VkShaderModule vertShaderModule = create_shader_module(vertShaderCode, m_device);
-    VkShaderModule fragShaderModule = create_shader_module(fragShaderCode, m_device);
+    VkShaderModule vertShaderModule = create_shader_module(vertexShader, m_device);
+    VkShaderModule fragShaderModule = create_shader_module(fragmentShader, m_device);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

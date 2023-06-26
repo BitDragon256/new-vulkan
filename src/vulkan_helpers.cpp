@@ -188,12 +188,23 @@ std::vector<char> read_file(const std::string& filename)
 
     return buffer;
 }
-VkShaderModule create_shader_module(const std::vector<char>& code, VkDevice device)
+VkShaderModule create_shader_module(const std::string& file, VkDevice device)
 {
+
+    std::string prefix = "";
+#ifdef _MSC_BUILD
+    prefix = "X:/Dev/new-vulkan-engine";
+#else
+    prefix = "..";
+#endif
+
+
+    std::vector<char> shaderCode = read_file(prefix + "/shaders/" + file);
+
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+    createInfo.codeSize = shaderCode.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
     VkShaderModule shaderModule;
     auto res = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
