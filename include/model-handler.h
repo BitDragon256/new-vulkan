@@ -2,9 +2,13 @@
 
 #include <vector>
 
+#include <vulkan/vulkan.h>
+
 #include "ecs.h"
 #include "nve_types.h"
 #include "material.h"
+
+#include "buffer.h"
 
 struct Submesh
 {
@@ -12,7 +16,7 @@ struct Submesh
 	std::vector<Index> indices;
 };
 
-struct Mesh
+struct StaticMesh
 {
 	std::vector<Vertex> vertices;
 	std::vector<Index> indices;
@@ -30,6 +34,36 @@ struct VertexGroup
 	Material material;
 };
 
+struct MeshDataInfo
+{
+	uint32_t vertexStart;
+	uint32_t vertexEnd;
+	uint32_t indexStart;
+	uint32_t indexEnd;
+
+	Material material;
+};
+
+class StaticGeometryHandler : System<StaticMesh, Transform>
+{
+public:
+	VkCommandBuffer secondary_command_buffer();
+
+	void awake(EntityId entity, ECSManager& ecs) override;
+	void update(float dt, ECSManager& ecs) override;
+
+private:
+	void add_mesh(StaticMesh& mesh);
+	bool new_mat(const Material& material);
+
+	std::vector<Vertex> m_vertices;
+	std::vector<Index> m_indices;
+	std::vector<MeshDataInfo> m_meshes;
+
+	Buffer<Vertex> m_vertexBuffer;
+	Buffer<Index> m_indexBuffer;
+};
+
 class ModelHandler : System<Mesh, Transform>
 {
 public:
@@ -37,10 +71,9 @@ public:
 	void awake(EntityId entity, ECSManager& ecs) override;
 	void update(float dt, ECSManager& ecs) override;
 
-	void push_data();
+	void push_data(std::vector<VertexGroup> groups);
 
 private:
-
 	void add_mesh(Mesh& mesh);
 
 	std::vector<VertexGroup> m_groups;

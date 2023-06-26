@@ -1,9 +1,9 @@
 #include "model-handler.h"
 
-void ModelHandler::awake(EntityId entity, ECSManager& ecs)
+void StaticGeometryHandler::awake(EntityId entity, ECSManager& ecs)
 {
 	Transform& transform = ecs.get_component<Transform>(entity);
-	Mesh& mesh = ecs.get_component<Mesh>(entity);
+	StaticMesh& mesh = ecs.get_component<StaticMesh>(entity);
 
 	add_mesh(mesh);
 }
@@ -13,7 +13,12 @@ void ModelHandler::update(float dt, ECSManager& ecs)
 
 }
 
-void ModelHandler::add_mesh(Mesh& mesh)
+void ModelHandler::push_data(std::vector<VertexGroup> groups)
+{
+
+}
+
+void StaticGeometryHandler::add_mesh(StaticMesh& mesh)
 {
 	if (new_mat(mesh.material))
 	{
@@ -24,10 +29,6 @@ void ModelHandler::add_mesh(Mesh& mesh)
 		auto it = fill_group(mesh.vertices.cbegin(), mesh.vertices.cend(), get_group(mesh.material));
 		push_vertices(it, mesh.vertices.cend());
 	}
-}
-void ModelHandler::push_data()
-{
-
 }
 std::vector<Vertex>::const_iterator ModelHandler::fill_group(std::vector<Vertex>::const_iterator start, std::vector<Vertex>::const_iterator end, VertexGroup& group)
 {
