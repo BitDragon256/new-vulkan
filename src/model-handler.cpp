@@ -153,12 +153,45 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	return graphicsPipelineCI;
 }
 
+void StaticGeometryHandler::initialize(StaticGeometryHandlerVulkanObjects vulkanObjects)
+{
+	m_vulkanObjects = vulkanObjects;
+}
+void StaticGeometryHandler::update_framebuffers(VkFramebuffer framebuffer, VkExtent2D swapchainExtent)
+{
+	m_vulkanObjects.framebuffer = framebuffer;
+	m_vulkanObjects.swapchainExtent = swapchainExtent;
+}
+
 void StaticGeometryHandler::awake(EntityId entity, ECSManager& ecs)
 {
 	Transform& transform = ecs.get_component<Transform>(entity);
 	StaticMesh& mesh = ecs.get_component<StaticMesh>(entity);
 
 	add_mesh(mesh, transform);
+}
+void StaticGeometryHandler::update(float dt, ECSManager& ecs)
+{
+	if (reloadMeshBuffers)
+	{
+		reload_meshes();
+		reloadMeshBuffers = false;
+	}
+}
+
+BufferConfig StaticGeometryHandler::default_buffer_config()
+{
+	BufferConfig config = {};
+	config.device = m_vulkanObjects.device;
+	config.physicalDevice = m_vulkanObjects.physicalDevice;
+	config.stagedBufferTransferCommandPool = m_vulkanObjects.commandPool;
+	config.stagedBufferTransferQueue = m_vulkanObjects.transferQueue;
+
+	config.useStagedBuffer = true;
+	config.singleUseStagedBuffer = true;
+	config.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	return config;
 }
 
 void StaticGeometryHandler::add_mesh(StaticMesh& mesh, Transform transform)
@@ -171,10 +204,20 @@ void StaticGeometryHandler::add_mesh(StaticMesh& mesh, Transform transform)
 		m_meshGroups.push_back(MeshGroup {});
 		group = &m_meshGroups.back();
 		group->material = mesh.material;
+
+		BufferConfig config = default_buffer_config();
+		config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		group->vertexBuffer.initialize(config);
+
+		config.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		group->indexBuffer.initialize(config);
 	}
 	m_meshes.push_back(MeshDataInfo{ group->vertices.size(), mesh.vertices.size(), group->indices.size(), mesh.indices.size(), index });
 	append_vector(group->vertices, mesh.vertices);
 	append_vector(group->indices, mesh.indices);
+
+	group->reloadMeshBuffers = true;
+	reloadMeshBuffers = true;
 }
 MeshGroup* StaticGeometryHandler::find_group(const Material& material, size_t& index)
 {
@@ -186,40 +229,40 @@ MeshGroup* StaticGeometryHandler::find_group(const Material& material, size_t& i
 	}
 	return nullptr;
 }
-void StaticGeometryHandler::create_command_buffers(VkDevice device, VkCommandPool commandPool)
+void StaticGeometryHandler::create_command_buffers()
 {
 	for (MeshGroup& meshGroup : m_meshGroups)
 	{
-		create_command_buffer(device, commandPool, &meshGroup.commandBuffer);
+		create_command_buffer(&meshGroup.commandBuffer);
 	}
 }
-void StaticGeometryHandler::create_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer* pCommandBuffer)
+void StaticGeometryHandler::create_command_buffer(VkCommandBuffer* pCommandBuffer)
 {
 	VkCommandBufferAllocateInfo commandBufferAI = {};
 	commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	commandBufferAI.pNext = nullptr;
 	commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-	commandBufferAI.commandPool = commandPool;
+	commandBufferAI.commandPool = m_vulkanObjects.commandPool;
 	commandBufferAI.commandBufferCount = 1;
-	auto res = vkAllocateCommandBuffers(device, &commandBufferAI, pCommandBuffer);
+	auto res = vkAllocateCommandBuffers(m_vulkanObjects.device, &commandBufferAI, pCommandBuffer);
 	log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer for the static geometry handler");
 }
 
-void StaticGeometryHandler::record_command_buffers(VkRenderPass renderPass, uint32_t firstSubpass, VkFramebuffer framebuffer, VkExtent2D swapchainExtent)
+void StaticGeometryHandler::record_command_buffers()
 {
-	uint32_t subpass = firstSubpass;
+	uint32_t subpass = m_vulkanObjects.firstSubpass;
 	for (MeshGroup& meshGroup : m_meshGroups)
 	{
-		record_command_buffer(renderPass, subpass, framebuffer, swapchainExtent, meshGroup);
+		record_command_buffer(subpass, meshGroup);
 
 		subpass++;
 	}
 }
-void StaticGeometryHandler::record_command_buffer(VkRenderPass renderPass, uint32_t subpass, VkFramebuffer framebuffer, VkExtent2D swapChainExtent, const MeshGroup& meshGroup)
+void StaticGeometryHandler::record_command_buffer(uint32_t subpass, const MeshGroup& meshGroup)
 {
 	// ---------------------------------------
 
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(renderPass, subpass, framebuffer);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffer);
 
 	{
 		auto res = vkBeginCommandBuffer(meshGroup.commandBuffer, &commandBufferBI);
@@ -232,16 +275,16 @@ void StaticGeometryHandler::record_command_buffer(VkRenderPass renderPass, uint3
 	
 	// ---------------------------------------
 
-	set_dynamic_state(meshGroup.commandBuffer, swapChainExtent);
+	set_dynamic_state(meshGroup.commandBuffer, m_vulkanObjects.swapchainExtent);
 
 	// ---------------------------------------
 
 	VkDeviceSize offsets[1] = { 0 };
-	vkCmdBindVertexBuffers(meshGroup.commandBuffer, 0, 1, &meshGroup.m_vertexBuffer.m_buffer, offsets);
+	vkCmdBindVertexBuffers(meshGroup.commandBuffer, 0, 1, &meshGroup.vertexBuffer.m_buffer, offsets);
 
 	// ---------------------------------------
 
-	vkCmdBindIndexBuffer(meshGroup.commandBuffer, meshGroup.m_indexBuffer.m_buffer, 0, NVE_INDEX_TYPE);
+	vkCmdBindIndexBuffer(meshGroup.commandBuffer, meshGroup.indexBuffer.m_buffer, 0, NVE_INDEX_TYPE);
 
 	// ---------------------------------------
 
@@ -256,14 +299,23 @@ void StaticGeometryHandler::record_command_buffer(VkRenderPass renderPass, uint3
 
 	// ---------------------------------------
 }
+std::vector<VkCommandBuffer> StaticGeometryHandler::get_command_buffers()
+{
+	std::vector<VkCommandBuffer> buffers;
 
-void StaticGeometryHandler::create_pipelines(VkDevice device, VkRenderPass renderPass, uint32_t firstSubpass, std::vector<VkPipeline>& pipelines, std::vector<VkGraphicsPipelineCreateInfo>& createInfos)
+	for (MeshGroup& meshGroup : m_meshGroups)
+		buffers.push_back(meshGroup.commandBuffer);
+
+	return buffers;
+}
+
+void StaticGeometryHandler::create_pipelines(std::vector<VkPipeline>& pipelines, std::vector<VkGraphicsPipelineCreateInfo>& createInfos)
 {
 	size_t index = 0;
-	uint32_t subpass = firstSubpass;
+	uint32_t subpass = m_vulkanObjects.firstSubpass;
 	for (MeshGroup& meshGroup : m_meshGroups)
 	{
-		createInfos.push_back(create_pipeline_create_info(device, renderPass, subpass, index));
+		createInfos.push_back(create_pipeline_create_info(subpass, index));
 		pipelines.push_back(meshGroup.pipeline);
 
 		index++;
@@ -292,7 +344,7 @@ void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelin
 	graphicsPipelineCI.pStages = pipelineCreationData.stages;
 }
 
-VkGraphicsPipelineCreateInfo StaticGeometryHandler::create_pipeline_create_info(VkDevice device, VkRenderPass renderPass, uint32_t subpass, size_t pipelineIndex)
+VkGraphicsPipelineCreateInfo StaticGeometryHandler::create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex)
 {
 	PipelineCreationData& pipelineCreationData = m_pipelineCreationData[pipelineIndex];
 
@@ -306,12 +358,12 @@ VkGraphicsPipelineCreateInfo StaticGeometryHandler::create_pipeline_create_info(
 
 	// ---------------------------------------
 
-	create_pipeline_layout(device);
+	create_pipeline_layout();
 	graphicsPipelineCI.layout = m_pipelineLayout;
 
 	// ---------------------------------------
 
-	graphicsPipelineCI.renderPass = renderPass;
+	graphicsPipelineCI.renderPass = m_vulkanObjects.renderPass;
 	graphicsPipelineCI.subpass = subpass;
 	graphicsPipelineCI.basePipelineHandle = VK_NULL_HANDLE;
 	graphicsPipelineCI.basePipelineIndex = -1;
@@ -321,7 +373,7 @@ VkGraphicsPipelineCreateInfo StaticGeometryHandler::create_pipeline_create_info(
 	return graphicsPipelineCI;
 }
 
-void StaticGeometryHandler::create_pipeline_layout(VkDevice device)
+void StaticGeometryHandler::create_pipeline_layout()
 {
 	VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
 	pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -340,7 +392,22 @@ void StaticGeometryHandler::create_pipeline_layout(VkDevice device)
 	pipelineLayoutCI.setLayoutCount = 0;
 
 	{
-		auto res = vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &m_pipelineLayout);
+		auto res = vkCreatePipelineLayout(m_vulkanObjects.device, &pipelineLayoutCI, nullptr, &m_pipelineLayout);
 		log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
 	}
+}
+
+void StaticGeometryHandler::reload_meshes()
+{
+	for (MeshGroup& meshGroup : m_meshGroups)
+		if (meshGroup.reloadMeshBuffers)
+			reload_mesh_group(meshGroup);
+	reloadMeshBuffers = false;
+}
+void StaticGeometryHandler::reload_mesh_group(MeshGroup& meshGroup)
+{
+	meshGroup.vertexBuffer.set(meshGroup.vertices);
+	meshGroup.indexBuffer.set(meshGroup.indices);
+
+	meshGroup.reloadMeshBuffers = false;
 }
