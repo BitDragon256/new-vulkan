@@ -40,13 +40,15 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
     log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
     log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
-    log_cond(create_commandbuffer() == NVE_SUCCESS, "command buffer created");
+    log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
     log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
     initialize_geometry_handlers(); log("geometry pipelines created");
 
     // imgui
     imgui_init();
+
+    m_frame = 0;
     
     return NVE_SUCCESS;
 }
@@ -430,8 +432,10 @@ NVE_RESULT Renderer::create_commandpool()
 
     return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::create_commandbuffer()
+NVE_RESULT Renderer::create_commandbuffers()
 {
+    m_commandBuffers.resize(m_swapchainFramebuffers.size());
+
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.pNext = nullptr;
@@ -446,6 +450,10 @@ NVE_RESULT Renderer::create_commandbuffer()
 }
 NVE_RESULT Renderer::create_sync_objects()
 {
+    m_imageAvailableSemaphores.resize(m_swapchainFramebuffers.size());
+    m_renderFinishedSemaphores.resize(m_swapchainFramebuffers.size());
+    m_inFlightFences.resize(m_swapchainFramebuffers.size());
+
     for (size_t frame = 0; frame < m_swapchainFramebuffers.size(); frame++)
     {
         VkSemaphoreCreateInfo semCI = {};

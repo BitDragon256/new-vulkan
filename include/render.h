@@ -154,7 +154,7 @@ private:
 	NVE_RESULT create_render_pass();
 	NVE_RESULT create_framebuffers();
 	NVE_RESULT create_commandpool();
-	NVE_RESULT create_commandbuffer();
+	NVE_RESULT create_commandbuffers();
 	NVE_RESULT create_sync_objects();
 	
 	// vulkan destruction
