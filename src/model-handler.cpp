@@ -2,6 +2,10 @@
 
 #include "math-core.h"
 
+// ------------------------------------------
+// NON-MEMBER FUNCTIONS
+// ------------------------------------------
+
 template<typename T>
 void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
 {
@@ -46,7 +50,7 @@ VkCommandBufferBeginInfo create_command_buffer_begin_info(VkRenderPass renderPas
 	VkCommandBufferBeginInfo commandBufferBI = {};
 	commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	commandBufferBI.pNext = nullptr;
-	commandBufferBI.flags = 0;
+	commandBufferBI.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
 	commandBufferBI.pInheritanceInfo = &inheritanceI;
 
 	return commandBufferBI;
@@ -153,13 +157,38 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	return graphicsPipelineCI;
 }
 
+void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelineCI, PipelineCreationData& pipelineCreationData, const Material& material)
+{
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = *material.m_pShader;
+	vertShaderStageInfo.pName = "vert";
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = *material.m_pShader;
+	fragShaderStageInfo.pName = "frag";
+
+	pipelineCreationData.stages[0] = vertShaderStageInfo;
+	pipelineCreationData.stages[1] = fragShaderStageInfo;
+
+	graphicsPipelineCI.stageCount = 2;
+	graphicsPipelineCI.pStages = pipelineCreationData.stages;
+}
+
+// ------------------------------------------
+// STATIC GEOMETRY HANDLER
+// ------------------------------------------
+
 void StaticGeometryHandler::initialize(StaticGeometryHandlerVulkanObjects vulkanObjects)
 {
 	m_vulkanObjects = vulkanObjects;
 }
-void StaticGeometryHandler::update_framebuffers(VkFramebuffer framebuffer, VkExtent2D swapchainExtent)
+void StaticGeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent)
 {
-	m_vulkanObjects.framebuffer = framebuffer;
+	m_vulkanObjects.framebuffers = framebuffers;
 	m_vulkanObjects.swapchainExtent = swapchainExtent;
 }
 
@@ -177,21 +206,6 @@ void StaticGeometryHandler::update(float dt, ECSManager& ecs)
 		reload_meshes();
 		reloadMeshBuffers = false;
 	}
-}
-
-BufferConfig StaticGeometryHandler::default_buffer_config()
-{
-	BufferConfig config = {};
-	config.device = m_vulkanObjects.device;
-	config.physicalDevice = m_vulkanObjects.physicalDevice;
-	config.stagedBufferTransferCommandPool = m_vulkanObjects.commandPool;
-	config.stagedBufferTransferQueue = m_vulkanObjects.transferQueue;
-
-	config.useStagedBuffer = true;
-	config.singleUseStagedBuffer = true;
-	config.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-	return config;
 }
 
 void StaticGeometryHandler::add_mesh(StaticMesh& mesh, Transform transform)
@@ -229,12 +243,12 @@ MeshGroup* StaticGeometryHandler::find_group(const Material& material, size_t& i
 	}
 	return nullptr;
 }
+
 void StaticGeometryHandler::create_command_buffers()
 {
 	for (MeshGroup& meshGroup : m_meshGroups)
-	{
-		create_command_buffer(&meshGroup.commandBuffer);
-	}
+		for (VkCommandBuffer& commandBuffer : meshGroup.commandBuffers)
+			create_command_buffer(&commandBuffer);
 }
 void StaticGeometryHandler::create_command_buffer(VkCommandBuffer* pCommandBuffer)
 {
@@ -253,58 +267,61 @@ void StaticGeometryHandler::record_command_buffers()
 	uint32_t subpass = m_vulkanObjects.firstSubpass;
 	for (MeshGroup& meshGroup : m_meshGroups)
 	{
-		record_command_buffer(subpass, meshGroup);
+		for (size_t frame = 0; frame < m_vulkanObjects.framebuffers.size(); frame++)
+			record_command_buffer(subpass, frame, meshGroup);
 
 		subpass++;
 	}
 }
-void StaticGeometryHandler::record_command_buffer(uint32_t subpass, const MeshGroup& meshGroup)
+void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup)
 {
+	VkCommandBuffer commandBuffer = meshGroup.commandBuffers[frame];
+
 	// ---------------------------------------
 
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffer);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)]);
 
 	{
-		auto res = vkBeginCommandBuffer(meshGroup.commandBuffer, &commandBufferBI);
+		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
 		log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording for the static geometry handler");
 	}
 
 	// ---------------------------------------
 
-	vkCmdBindPipeline(meshGroup.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
 	
 	// ---------------------------------------
 
-	set_dynamic_state(meshGroup.commandBuffer, m_vulkanObjects.swapchainExtent);
+	set_dynamic_state(commandBuffer, m_vulkanObjects.swapchainExtent);
 
 	// ---------------------------------------
 
 	VkDeviceSize offsets[1] = { 0 };
-	vkCmdBindVertexBuffers(meshGroup.commandBuffer, 0, 1, &meshGroup.vertexBuffer.m_buffer, offsets);
+	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &meshGroup.vertexBuffer.m_buffer, offsets);
 
 	// ---------------------------------------
 
-	vkCmdBindIndexBuffer(meshGroup.commandBuffer, meshGroup.indexBuffer.m_buffer, 0, NVE_INDEX_TYPE);
+	vkCmdBindIndexBuffer(commandBuffer, meshGroup.indexBuffer.m_buffer, 0, NVE_INDEX_TYPE);
 
 	// ---------------------------------------
 
-	vkCmdDrawIndexed(meshGroup.commandBuffer, meshGroup.indices.size(), 1, 0, 0, 0);
+	vkCmdDrawIndexed(commandBuffer, meshGroup.indices.size(), 1, 0, 0, 0);
 
 	// ---------------------------------------
 
 	{
-		auto res = vkEndCommandBuffer(meshGroup.commandBuffer);
+		auto res = vkEndCommandBuffer(commandBuffer);
 		log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording for the static geometry handler");
 	}
 
 	// ---------------------------------------
 }
-std::vector<VkCommandBuffer> StaticGeometryHandler::get_command_buffers()
+std::vector<VkCommandBuffer> StaticGeometryHandler::get_command_buffers(uint32_t frame)
 {
 	std::vector<VkCommandBuffer> buffers;
 
 	for (MeshGroup& meshGroup : m_meshGroups)
-		buffers.push_back(meshGroup.commandBuffer);
+		buffers.push_back(meshGroup.commandBuffers[static_cast<size_t>(frame)]);
 
 	return buffers;
 }
@@ -321,27 +338,6 @@ void StaticGeometryHandler::create_pipelines(std::vector<VkPipeline>& pipelines,
 		index++;
 		subpass++;
 	}
-}
-
-void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelineCI, PipelineCreationData& pipelineCreationData, const Material& material)
-{
-	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = *material.m_pShader;
-	vertShaderStageInfo.pName = "vert";
-
-	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = *material.m_pShader;
-	fragShaderStageInfo.pName = "frag";
-
-	pipelineCreationData.stages[0] = vertShaderStageInfo;
-	pipelineCreationData.stages[1] = fragShaderStageInfo;
-
-	graphicsPipelineCI.stageCount = 2;
-	graphicsPipelineCI.pStages = pipelineCreationData.stages;
 }
 
 VkGraphicsPipelineCreateInfo StaticGeometryHandler::create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex)
@@ -410,4 +406,23 @@ void StaticGeometryHandler::reload_mesh_group(MeshGroup& meshGroup)
 	meshGroup.indexBuffer.set(meshGroup.indices);
 
 	meshGroup.reloadMeshBuffers = false;
+}
+BufferConfig StaticGeometryHandler::default_buffer_config()
+{
+	BufferConfig config = {};
+	config.device = m_vulkanObjects.device;
+	config.physicalDevice = m_vulkanObjects.physicalDevice;
+	config.stagedBufferTransferCommandPool = m_vulkanObjects.commandPool;
+	config.stagedBufferTransferQueue = m_vulkanObjects.transferQueue;
+
+	config.useStagedBuffer = true;
+	config.singleUseStagedBuffer = true;
+	config.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	return config;
+} 
+
+uint32_t StaticGeometryHandler::subpass_count()
+{
+	return 1;
 }

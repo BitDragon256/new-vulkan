@@ -3,9 +3,7 @@
 #include <chrono>
 #include <sstream>
 
-#include <imgui.h>
-
-#include "render.h"
+#include <nve.h>
 
 int main(int argc, char** argv)
 {
@@ -17,23 +15,9 @@ int main(int argc, char** argv)
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
     renderConfig.clearColor = Vector3(0, 187, 233);
-    renderConfig.useModelHandler = true;
     renderConfig.cameraEnabled = true;
 
     renderer.init(renderConfig);
-
-    // Models
-
-    ModelHandler modelHandler;
-    renderer.bind_model_handler(&modelHandler);
-
-    Model triangle = Model::create_model(Mesh::create_triangle());
-    triangle.m_info.position = Vector3(0, 0, 0);
-
-    Model cube = Model::create_model(Mesh::create_cube());
-    cube.m_info.scale = { 1, 1, 1 };
-
-    modelHandler.add_model(&cube);
 
     // Camera
 
@@ -48,9 +32,6 @@ int main(int argc, char** argv)
     float cubePosition[3]{ 0, 0, 0 };
     float cubeScale[3]{ 1, 1, 1 };
     float cubeEulerRotation[3]{ 0, 0, 0 };
-
-    std::vector<Vertex> verts(8);
-    cube.write_vertices_to(verts.begin());
 
     int fps = 0;
     int avgFps = 0;
@@ -103,19 +84,19 @@ int main(int argc, char** argv)
         ImGui::SliderFloat3("scale", cubeScale, 0, 10);
         ImGui::SliderFloat3("euler rotation", cubeEulerRotation, -PI, PI);
 
-        cube.m_info.position.x = cubePosition[0];
+        /*cube.m_info.position.x = cubePosition[0];
         cube.m_info.position.y = cubePosition[1];
         cube.m_info.position.z = cubePosition[2];
 
         cube.m_info.scale.x = cubeScale[0];
         cube.m_info.scale.y = cubeScale[1];
-        cube.m_info.scale.z = cubeScale[2];
+        cube.m_info.scale.z = cubeScale[2];*/
 
         Vector3 EulerAngle(cubeEulerRotation[0], cubeEulerRotation[1], cubeEulerRotation[2]);
 
         Quaternion finalOrientation(EulerAngle);
 
-        cube.m_info.rotation = finalOrientation;
+        //cube.m_info.rotation = finalOrientation;
 
         std::stringstream quatDisplay;
         quatDisplay << finalOrientation.x << " " << finalOrientation.y << " " << finalOrientation.z << " " << finalOrientation.w;

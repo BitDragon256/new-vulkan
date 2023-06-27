@@ -78,11 +78,11 @@ class ECSManager;
 class ISystem
 {
 public:
-	virtual void start(ECSManager& ecs) = 0;
-	virtual void awake(EntityId entity, ECSManager& ecs) = 0;
-	virtual void update(float dt, ECSManager& ecs) = 0;
-	virtual void update(float dt, EntityId entity, ECSManager& ecs) = 0;
-	constexpr virtual const std::vector<const char*>& component_types() const = 0;
+	virtual void start(ECSManager& ecs);
+	virtual void awake(EntityId entity, ECSManager& ecs);
+	virtual void update(float dt, ECSManager& ecs);
+	virtual void update(float dt, EntityId entity, ECSManager& ecs);
+	virtual std::vector<const char*> component_types() = 0;
 	std::vector<EntityId> m_entities;
 };
 
@@ -95,7 +95,7 @@ public:
 		typelist<Types...> t;
 		m_types = get_type_names(t);
 	}
-	constexpr const std::vector<const char*>& component_types() const override;
+	std::vector<const char*> component_types() override;
 private:
 	std::vector<const char*> m_types;
 };

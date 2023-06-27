@@ -8,6 +8,9 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_glfw.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "logger.h"
@@ -23,7 +26,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
 {
     m_config = config;
 
-    add_descriptors();
+    // add_descriptors();
 
     glfwInit();
     log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
@@ -35,17 +38,12 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(create_swapchain() == NVE_SUCCESS, "swapchain created");
     log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
     log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
-    log_cond(create_graphics_pipeline() == NVE_SUCCESS, "graphics pipeline created");
     log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
     log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
     log_cond(create_commandbuffer() == NVE_SUCCESS, "command buffer created");
     log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
-    if (!m_config.useModelHandler)
-    {
-        log_cond(init_vertex_buffer() == NVE_SUCCESS, "vertex buffer initialized");
-        log_cond(init_index_buffer() == NVE_SUCCESS, "index buffer initialized");
-    }
+    initialize_geometry_handlers(); log("geometry pipelines created");
 
     // imgui
     imgui_init();
@@ -66,35 +64,6 @@ NVE_RESULT Renderer::render()
 
     return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::set_vertices(const std::vector<Vertex>& vertices)
-{
-    if (m_config.dataMode != RenderConfig::TestTri)
-    {
-        m_vertices = vertices;
-        m_vertexBuffer.set(m_vertices);
-    }
-
-    return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::set_indices(const std::vector<Index>& indices)
-{
-    if (m_config.dataMode >= RenderConfig::Indexed)
-    {
-        m_indices = indices;
-        m_indexBuffer.set(m_indices);
-    }
-
-    return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::bind_model_handler(ModelHandler* pHandler)
-{
-    if (!pHandler)
-        return NVE_FAILURE;
-
-    m_pModelHandler = pHandler;
-    m_pModelHandler->init(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue);
-    return NVE_SUCCESS;
-}
 NVE_RESULT Renderer::set_active_camera(Camera* camera)
 {
     if (!camera)
@@ -103,10 +72,6 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
     m_activeCamera->m_extent.x = m_swapchainExtent.width;
     m_activeCamera->m_extent.y = m_swapchainExtent.height;
     return NVE_SUCCESS;
-}
-void Renderer::reload_models()
-{
-    m_pModelHandler->upload_mesh_data(true);
 }
 
 int Renderer::get_key(int key)
@@ -363,246 +328,6 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 
     return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::create_graphics_pipeline()
-{
-    // -------------------------------------------
-
-    std::string vertexShader;
-    switch (m_config.dataMode)
-    {
-    case RenderConfig::TestTri:
-        vertexShader = "hard_tri_vert.spv";
-        break;
-    case RenderConfig::VertexOnly:
-        vertexShader = "vbuffer_vert.spv";
-        break;
-    case RenderConfig::Indexed:
-        vertexShader = "models_cam_vert.spv";
-        break;
-    default:
-        break;
-    }
-
-    // -------------------------------------------
-
-    std::string fragmentShader;
-
-    // ...
-    fragmentShader = "frag.spv";
-    // ...
-
-    // -------------------------------------------
-
-    VkShaderModule vertShaderModule = create_shader_module(vertexShader, m_device);
-    VkShaderModule fragShaderModule = create_shader_module(fragmentShader, m_device);
-
-    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertShaderStageInfo.module = vertShaderModule;
-    vertShaderStageInfo.pName = "main";
-
-    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderStageInfo.module = fragShaderModule;
-    fragShaderStageInfo.pName = "main";
-
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
-    // -------------------------------------------
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    if (m_config.dataMode != RenderConfig::TestTri)
-    {
-        auto bindingDescription = Vertex::getBindingDescription();
-        auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-    }
-    else
-    {
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;
-        vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
-    }
-
-    // -------------------------------------------
-
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-    // -------------------------------------------
-
-    VkPipelineViewportStateCreateInfo viewportState{};
-    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount = 1;
-
-    // -------------------------------------------
-
-    VkPipelineRasterizationStateCreateInfo rasterizer{};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
-
-    // -------------------------------------------
-
-    VkPipelineMultisampleStateCreateInfo multisampling{};
-    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    // -------------------------------------------
-
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-
-    VkPipelineColorBlendStateCreateInfo colorBlending{};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
-    colorBlending.blendConstants[0] = 0.0f;
-    colorBlending.blendConstants[1] = 0.0f;
-    colorBlending.blendConstants[2] = 0.0f;
-    colorBlending.blendConstants[3] = 0.0f;
-
-    // -------------------------------------------
-
-    std::vector<VkDynamicState> dynamicStates = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
-    VkPipelineDynamicStateCreateInfo dynamicState{};
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    dynamicState.pDynamicStates = dynamicStates.data();
-
-    // -------------------------------------------
-
-    VkDescriptorPoolSize poolSizes[] =
-    {
-        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-    };
-
-    VkDescriptorPoolCreateInfo descPoolCI = {};
-    descPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descPoolCI.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    descPoolCI.maxSets = 1000 * IM_ARRAYSIZE(poolSizes);
-    descPoolCI.poolSizeCount = static_cast<uint32_t>(IM_ARRAYSIZE(poolSizes));
-    descPoolCI.pPoolSizes = poolSizes;
-
-    {
-        auto res = vkCreateDescriptorPool(m_device, &descPoolCI, nullptr, &m_descriptorPool);
-        log_cond_err(res == VK_SUCCESS, "failed to create descriptor pool");
-    }
-
-    // -------------------------------------------
-
-    VkDescriptorSetAllocateInfo descriptorSetAI = {};
-    descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    descriptorSetAI.descriptorPool = m_descriptorPool;
-
-    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
-    descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorSetLayoutCI.bindingCount = m_descriptors.size();
-    descriptorSetLayoutCI.pBindings = m_descriptors.data();
-    descriptorSetLayoutCI.flags = 0;
-    {
-        auto res = vkCreateDescriptorSetLayout(m_device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayout);
-        log_cond_err(res == VK_SUCCESS, "failed to create descriptor set layout");
-    }
-
-    descriptorSetAI.descriptorSetCount = 1;
-    descriptorSetAI.pSetLayouts = &m_descriptorSetLayout;
-
-    {
-        auto res = vkAllocateDescriptorSets(m_device, &descriptorSetAI, &m_descriptorSet);
-        log_cond_err(res == VK_SUCCESS, "failed to create descriptor set");
-    }
-
-    // -------------------------------------------
-
-    VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
-    pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-    if (m_config.cameraEnabled)
-    {
-        VkPushConstantRange pushConstantRange = {};
-        pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(CameraPushConstant);
-        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
-        pipelineLayoutCI.pushConstantRangeCount = 1;
-    }
-    else
-    {
-        pipelineLayoutCI.pushConstantRangeCount = 0;
-    }
-
-    pipelineLayoutCI.setLayoutCount = 1;
-    pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayout;
-
-    auto res = vkCreatePipelineLayout(m_device, &pipelineLayoutCI, nullptr, &m_mainPipelineLayout);
-    log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
-
-    // -------------------------------------------
-
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = m_mainPipelineLayout;
-    pipelineInfo.renderPass = m_renderPass;
-    pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    {
-        auto res = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline);
-        log_cond_err(res == VK_SUCCESS, "failed to create graphics pipeline");
-    }
-
-    // -------------------------------------------
-
-    vkDestroyShaderModule(m_device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(m_device, vertShaderModule, nullptr);
-
-    return NVE_SUCCESS;
-}
 NVE_RESULT Renderer::create_render_pass()
 {
     VkAttachmentDescription colorAttachment{};
@@ -619,28 +344,49 @@ NVE_RESULT Renderer::create_render_pass()
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
+    uint32_t subpassCount = geometry_handler_subpass_count();
+    std::vector<VkSubpassDescription> subpasses(subpassCount);
 
-    VkSubpassDependency dependency = {};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    for (VkSubpassDescription& subpass : subpasses)
+    {
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+    }
+
+    VkSubpassDependency firstDependency = {};
+    firstDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    firstDependency.dstSubpass = 0;
+    firstDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    firstDependency.srcAccessMask = 0;
+    firstDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    firstDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    std::vector<VkSubpassDependency> dependencies(subpassCount - 1);
+    uint32_t subpassIndex = 1;
+    for (VkSubpassDependency& dependency : dependencies)
+    {
+        dependency.srcSubpass = subpassIndex;
+        dependency.dstSubpass = subpassIndex + 1;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        subpassIndex++;
+    }
+
+    dependencies.insert(dependencies.begin(), firstDependency);
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.subpassCount = subpassCount;
+    renderPassInfo.pSubpasses = subpasses.data();
 
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
+    renderPassInfo.dependencyCount = subpassCount;
+    renderPassInfo.pDependencies = dependencies.data();
 
     auto res = vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
     log_cond_err(res == VK_SUCCESS, "failed to create render pass");
@@ -688,67 +434,59 @@ NVE_RESULT Renderer::create_commandbuffer()
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.pNext = nullptr;
     allocInfo.commandPool = m_commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = m_swapchainFramebuffers.size();
 
-    auto res = vkAllocateCommandBuffers(m_device, &allocInfo, &m_commandBuffer);
+    auto res = vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data());
     log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer");
 
     return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::create_sync_objects()
 {
-    VkSemaphoreCreateInfo semCI = {};
-    semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    for (size_t frame = 0; frame < m_swapchainFramebuffers.size(); frame++)
+    {
+        VkSemaphoreCreateInfo semCI = {};
+        semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    VkFenceCreateInfo fenceCI = {};
-    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        VkFenceCreateInfo fenceCI = {};
+        fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    auto res = VK_SUCCESS;
+        auto res = VK_SUCCESS;
 
-    res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_imageAvailableSemaphore);
-    log_cond_err(res == VK_SUCCESS, "failed to create imageAvailable semaphore");
+        res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_imageAvailableSemaphores[frame]);
+        log_cond_err(res == VK_SUCCESS, "failed to create imageAvailable semaphore");
 
-    res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_renderFinishedSemaphore);
-    log_cond_err(res == VK_SUCCESS, "failed to create renderFinished semaphore");
+        res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_renderFinishedSemaphores[frame]);
+        log_cond_err(res == VK_SUCCESS, "failed to create renderFinished semaphore");
 
-    res = vkCreateFence(m_device, &fenceCI, nullptr, &m_inFlightFence);
-    log_cond_err(res == VK_SUCCESS, "failed to create inFlight fence");
+        res = vkCreateFence(m_device, &fenceCI, nullptr, &m_inFlightFences[frame]);
+        log_cond_err(res == VK_SUCCESS, "failed to create inFlight fence");
+    }
 
     return NVE_SUCCESS;
 }
 
-NVE_RESULT Renderer::init_vertex_buffer()
+void Renderer::initialize_geometry_handlers()
 {
-    BufferConfig config = {};
-    config.device = m_device;
-    config.physicalDevice = m_physicalDevice;
-    config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    config.useStagedBuffer = true;
-    config.stagedBufferTransferQueue = m_graphicsQueue;
-    config.stagedBufferTransferCommandPool = m_commandPool;
+    StaticGeometryHandlerVulkanObjects vulkanObjects;
+    vulkanObjects.device = m_device;
+    vulkanObjects.physicalDevice = m_physicalDevice;
+    vulkanObjects.commandPool = m_commandPool;
+    vulkanObjects.renderPass = m_renderPass;
+    vulkanObjects.transferQueue = m_graphicsQueue;
 
-    m_vertexBuffer.initialize(config);
-    
-    return NVE_SUCCESS;
+    vulkanObjects.swapchainExtent = m_swapchainExtent;
+    vulkanObjects.framebuffers = m_swapchainFramebuffers;
+    vulkanObjects.firstSubpass = 0;
+    m_staticGeometryHandler.initialize(vulkanObjects);
 }
-NVE_RESULT Renderer::init_index_buffer()
+void Renderer::create_geometry_pipelines()
 {
-    BufferConfig config = {};
-    config.device = m_device;
-    config.physicalDevice = m_physicalDevice;
-    config.memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    config.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    config.useStagedBuffer = true;
-    config.stagedBufferTransferQueue = m_graphicsQueue;
-    config.stagedBufferTransferCommandPool = m_commandPool;
-
-    m_indexBuffer.initialize(config);
     
-    return NVE_SUCCESS;
 }
 
 void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
@@ -759,15 +497,20 @@ void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessenge
     }
 }
 
-NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
+NVE_RESULT Renderer::record_main_command_buffer(uint32_t frame)
 {
+    VkCommandBuffer commandBuffer = m_commandBuffers[frame];
+
+    // -------------------------------------------
+
     VkCommandBufferBeginInfo commandBufferBI = {};
     commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    commandBufferBI.flags = 0; // Optional
-    commandBufferBI.pInheritanceInfo = nullptr; // Optional
+    commandBufferBI.pNext = nullptr;
+    commandBufferBI.flags = 0;
+    commandBufferBI.pInheritanceInfo = nullptr;
 
     {
-        auto res = vkBeginCommandBuffer(m_commandBuffer, &commandBufferBI);
+        auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
         log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording");
     }
 
@@ -776,7 +519,7 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
     VkRenderPassBeginInfo renderPassBI = {};
     renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBI.renderPass = m_renderPass;
-    renderPassBI.framebuffer = m_swapchainFramebuffers[imageIndex];
+    renderPassBI.framebuffer = m_swapchainFramebuffers[frame];
     renderPassBI.renderArea.offset = { 0, 0 };
     renderPassBI.renderArea.extent = m_swapchainExtent;
 
@@ -784,113 +527,22 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t imageIndex)
     renderPassBI.clearValueCount = 1;
     renderPassBI.pClearValues = &clearValue;
 
-    vkCmdBeginRenderPass(m_commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     // -------------------------------------------
 
-    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
-
-    // -------------------------------------------
-
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapchainExtent.width);
-    viewport.height = static_cast<float>(m_swapchainExtent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = { 0, 0 };
-    scissor.extent = m_swapchainExtent;
-    vkCmdSetScissor(m_commandBuffer, 0, 1, &scissor);
-
-    // -------------------------------------------
-    
-    if (m_config.dataMode != RenderConfig::TestTri)
+    uint32_t subpassCount = m_staticGeometryHandler.subpass_count();
+    for (uint32_t subpass = 0; subpass < subpassCount; subpass++)
     {
-        VkDeviceSize offsets[] = { 0 };
-        VkBuffer vertexBuffers[1] = { 0 };
 
-        if (m_config.useModelHandler)
-            vertexBuffers[0] = m_pModelHandler->vertex_buffer();
-        else
-            vertexBuffers[0] = m_vertexBuffer.m_buffer;
-
-        vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
     }
 
     // -------------------------------------------
 
-    if (m_config.dataMode == RenderConfig::Indexed)
-    {
-        VkBuffer indexBuffer;
-
-        if (m_config.useModelHandler)
-            indexBuffer = m_pModelHandler->index_buffer();
-        else
-            indexBuffer = m_indexBuffer.m_buffer;
-
-        vkCmdBindIndexBuffer(m_commandBuffer, indexBuffer, 0, NVE_INDEX_TYPE);
-    }
-
-    // ------------------------------------------
-
-    if (m_config.dataMode != RenderConfig::TestTri)
-    {
-        vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_mainPipelineLayout, 0, 1, &m_descriptorSet, 0, nullptr);
-    }
-
-    // ------------------------------------------
-
-    if (m_config.cameraEnabled)
-    {
-        CameraPushConstant cameraData = {};
-        cameraData.proj = m_activeCamera->projection_matrix();
-        cameraData.view = m_activeCamera->view_matrix();
-
-        uint32_t pushConstantOffset = 0;
-        uint32_t pushConstantSize = sizeof(cameraData);
-
-        vkCmdPushConstants(m_commandBuffer, m_mainPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, pushConstantOffset, pushConstantSize, &cameraData);
-    }
-
-    // -------------------------------------------
-
-    uint32_t vertexCount { 0 };
-    uint32_t indexCount { 0 };
-
-    if (m_config.useModelHandler)
-    {
-        vertexCount = m_pModelHandler->vertex_count();
-        indexCount = m_pModelHandler->index_count();
-    }
-    else
-    {
-        vertexCount = static_cast<uint32_t>(m_vertices.size());
-        indexCount = static_cast<uint32_t>(m_indices.size());
-    }
-
-    switch (m_config.dataMode)
-    {
-    case RenderConfig::TestTri:
-        vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
-        break;
-    case RenderConfig::VertexOnly:
-        vkCmdDraw(m_commandBuffer, vertexCount, 1, 0, 0);
-        break;
-    case RenderConfig::Indexed:
-        vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, 0);
-        break;
-    }
-
-    // -------------------------------------------
-
-    vkCmdEndRenderPass(m_commandBuffer);
+    vkCmdEndRenderPass(commandBuffer);
 
     {
-        auto res = vkEndCommandBuffer(m_commandBuffer);
+        auto res = vkEndCommandBuffer(commandBuffer);
         log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording");
     }
 
@@ -914,7 +566,7 @@ NVE_RESULT Renderer::submit_command_buffers(std::vector<VkCommandBuffer> command
     submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSems.size());
     submitInfo.pSignalSemaphores = signalSems.data();
 
-    auto res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFence);
+    auto res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_frame]);
     log_cond_err(res == VK_SUCCESS, "failed to submit command buffers to graphics queue");
 
     return NVE_SUCCESS;
@@ -938,39 +590,31 @@ void Renderer::present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageI
 NVE_RESULT Renderer::draw_frame()
 {
     // Wait for the previous frame to finish
-    vkWaitForFences(m_device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(m_device, 1, &m_inFlightFence);
-
-    if (m_config.useModelHandler)
-    {
-        m_pModelHandler->upload_mesh_data();
-        m_pModelHandler->upload_model_info();
-        update_model_info_descriptor_set();
-    }
+    vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
+    vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
 
     // Acquire an image from the swap chain
-    uint32_t imageIndex;
-    vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &m_frame);
 
     // Record a command buffer which draws the scene onto that image
-    vkResetCommandBuffer(m_commandBuffer, 0);
-    record_main_command_buffer(imageIndex);
+    vkResetCommandBuffer(m_commandBuffers[m_frame], 0);
+    record_main_command_buffer(m_frame);
 
     if (!m_imguiDraw)
         gui_begin();
 
-    imgui_draw(imageIndex);
+    imgui_draw(m_frame);
     m_imguiDraw = false;
 
-    std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphore };
-    std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphore };
+    std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
+    std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphores[m_frame] };
 
     // Submit the recorded command buffers
-    std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffer, m_imgui_commandBuffers[imageIndex] };
+    std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffers[m_frame], m_imgui_commandBuffers[m_frame]};
     submit_command_buffers(commandBuffers, waitSemaphores, signalSemaphores);
 
     // Present the swap chain image
-    present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
+    present_swapchain_image(m_swapchain, m_frame, signalSemaphores);
 
     return NVE_SUCCESS;
 }
@@ -981,28 +625,21 @@ void Renderer::clean_up()
 
     imgui_cleanup();
 
-    m_vertexBuffer.destroy();
-    m_indexBuffer.destroy();
+    // vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
+    // vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
 
-    if (m_config.useModelHandler)
-        m_pModelHandler->destroy_buffers();
-
-    vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
-    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
-
-    vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
-    vkDestroyFence(m_device, m_inFlightFence, nullptr);
+    for (uint32_t frame = 0; frame < m_swapchainFramebuffers.size(); frame++)
+    {
+        vkDestroySemaphore(m_device, m_imageAvailableSemaphores[static_cast<size_t>(frame)], nullptr);
+        vkDestroySemaphore(m_device, m_renderFinishedSemaphores[static_cast<size_t>(frame)], nullptr);
+        vkDestroyFence(m_device, m_inFlightFences[static_cast<size_t>(frame)], nullptr);
+    }
 
     vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 
     for (auto framebuffer : m_swapchainFramebuffers) {
         vkDestroyFramebuffer(m_device, framebuffer, nullptr);
     }
-
-    vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
-
-    vkDestroyPipelineLayout(m_device, m_mainPipelineLayout, nullptr);
 
     vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 
@@ -1021,38 +658,43 @@ void Renderer::clean_up()
     glfwTerminate();
 }
 
-void Renderer::add_descriptors()
+uint32_t Renderer::geometry_handler_subpass_count()
 {
-    if (m_config.useModelHandler)
-    {
-        VkDescriptorSetLayoutBinding binding = {};
-        binding.binding = NVE_MODEL_INFO_BUFFER_BINDING;
-        binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        binding.descriptorCount = NVE_MAX_MODEL_INFO_COUNT;
-
-        m_descriptors.push_back(binding);
-    }
+    return m_staticGeometryHandler.subpass_count();
 }
-void Renderer::update_model_info_descriptor_set()
-{
-    VkWriteDescriptorSet write = {};
-    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstSet = m_descriptorSet;
-    write.dstBinding = NVE_MODEL_INFO_BUFFER_BINDING;
-    write.dstArrayElement = 0;
-    write.descriptorCount = 1;
-    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = m_pModelHandler->model_buffer();
-    bufferInfo.offset = 0;
-    bufferInfo.range = VK_WHOLE_SIZE;
-
-    write.pBufferInfo = &bufferInfo;
-
-    vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
-}
+//void Renderer::add_descriptors()
+//{
+//    if (m_config.useModelHandler)
+//    {
+//        VkDescriptorSetLayoutBinding binding = {};
+//        binding.binding = NVE_MODEL_INFO_BUFFER_BINDING;
+//        binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+//        binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+//        binding.descriptorCount = NVE_MAX_MODEL_INFO_COUNT;
+//
+//        m_descriptors.push_back(binding);
+//    }
+//}
+//void Renderer::update_model_info_descriptor_set()
+//{
+//    VkWriteDescriptorSet write = {};
+//    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//    write.dstSet = m_descriptorSet;
+//    write.dstBinding = NVE_MODEL_INFO_BUFFER_BINDING;
+//    write.dstArrayElement = 0;
+//    write.descriptorCount = 1;
+//    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+//
+//    VkDescriptorBufferInfo bufferInfo = {};
+//    bufferInfo.buffer = m_pModelHandler->model_buffer();
+//    bufferInfo.offset = 0;
+//    bufferInfo.range = VK_WHOLE_SIZE;
+//
+//    write.pBufferInfo = &bufferInfo;
+//
+//    vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
+//}
 
 // ---------------------------------------
 // GUI

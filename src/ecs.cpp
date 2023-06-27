@@ -1,5 +1,4 @@
 #include "ecs.h"
-
 #include <assert.h>
 
 // -----------------------------------
@@ -226,7 +225,7 @@ void ECSManager::awake_entities()
 			system->m_entities.end(),
 			m_newEntities.begin(),
 			m_newEntities.end(),
-			newEntities.begin()
+			std::back_inserter(newEntities)
 		);
 		for (EntityId entity : newEntities)
 			system->awake(entity, *this);
@@ -245,7 +244,28 @@ void ECSManager::fill_available_entities()
 // -----------------------------------
 
 template<typename... Types>
-constexpr const std::vector<const char*>& System<Types...>::component_types() const
+std::vector<const char*> System<Types...>::component_types()
 {
 	return m_types;
+}
+
+// -----------------------------------
+// ISystem
+// -----------------------------------
+
+void ISystem::start(ECSManager& ecs)
+{
+
+}
+void ISystem::awake(EntityId entity, ECSManager& ecs)
+{
+
+}
+void ISystem::update(float dt, ECSManager& ecs)
+{
+
+}
+void ISystem::update(float dt, EntityId entity, ECSManager& ecs)
+{
+
 }

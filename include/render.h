@@ -16,8 +16,8 @@
 #include <glm/glm.hpp>
 
 #include "buffer.h"
-#include "models.h"
 #include "nve_types.h"
+#include "model-handler.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1
@@ -32,7 +32,6 @@ struct RenderConfig
 	DataMode dataMode;
 
 	bool cameraEnabled;
-	bool useModelHandler;
 
 	Vector3 clearColor;
 
@@ -41,7 +40,7 @@ struct RenderConfig
 
 	RenderConfig() :
 		width{ 600 }, height{ 400 }, title{ "DEFAULT TITLE" },
-		dataMode{ TestTri }, cameraEnabled{ false }, useModelHandler{ false },
+		dataMode{ TestTri }, cameraEnabled{ false },
 		clearColor{ 0, 0, 0 },
 		enableValidationLayers{ true },
 		enabledInstanceLayers {}
@@ -55,11 +54,7 @@ class Renderer
 public:
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
-	NVE_RESULT bind_model_handler(ModelHandler* pHandler);
-	NVE_RESULT set_vertices(const std::vector<Vertex>& vertices);
-	NVE_RESULT set_indices(const std::vector<Index>& indices);
 	NVE_RESULT set_active_camera(Camera* camera);
-	void reload_models();
 
 	// input
 	int get_key(int key);
@@ -91,36 +86,32 @@ private:
 
 	VkRenderPass m_renderPass;
 
-	VkPipelineLayout m_mainPipelineLayout;
-	VkPipeline m_graphicsPipeline;
-
+	uint32_t m_frame;
 	std::vector<VkFramebuffer> m_swapchainFramebuffers;
 
 	VkCommandPool m_commandPool;
-	VkCommandBuffer m_commandBuffer;
+	std::vector<VkCommandBuffer> m_commandBuffers;
 
-	VkSemaphore m_imageAvailableSemaphore;
-	VkSemaphore m_renderFinishedSemaphore;
-	VkFence m_inFlightFence;
-
-	std::vector<Vertex> m_vertices;
-	Buffer<Vertex> m_vertexBuffer;
-
-	std::vector<Index> m_indices;
-	Buffer<Index> m_indexBuffer;
+	std::vector<VkSemaphore> m_imageAvailableSemaphores;
+	std::vector<VkSemaphore> m_renderFinishedSemaphores;
+	std::vector<VkFence> m_inFlightFences;
 
 	VkDebugUtilsMessengerEXT m_debugMessenger;
 
 	// model handling
-	ModelHandler* m_pModelHandler;
+	StaticGeometryHandler m_staticGeometryHandler;
+	void create_geometry_pipelines();
+	void initialize_geometry_handlers();
 
-	VkDescriptorPool m_descriptorPool;
+	uint32_t geometry_handler_subpass_count();
+
+	/*VkDescriptorPool m_descriptorPool;
 	std::vector<VkDescriptorSetLayoutBinding> m_descriptors;
 	VkDescriptorSet m_descriptorSet;
 	VkDescriptorSetLayout m_descriptorSetLayout;
 
 	void add_descriptors();
-	void update_model_info_descriptor_set();
+	void update_model_info_descriptor_set();*/
 
 	// camera stuff
 	Camera* m_activeCamera;
@@ -161,13 +152,10 @@ private:
 	NVE_RESULT create_swapchain();
 	NVE_RESULT create_swapchain_image_views();
 	NVE_RESULT create_render_pass();
-	NVE_RESULT create_graphics_pipeline();
 	NVE_RESULT create_framebuffers();
 	NVE_RESULT create_commandpool();
 	NVE_RESULT create_commandbuffer();
 	NVE_RESULT create_sync_objects();
-	NVE_RESULT init_vertex_buffer();
-	NVE_RESULT init_index_buffer();
 	
 	// vulkan destruction
 	void destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);

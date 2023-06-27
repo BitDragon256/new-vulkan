@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string>
+#include <vulkan/vulkan.h>
+
+#include "nve_types.h"
 
 class Texture
 {
@@ -15,7 +18,7 @@ public:
 	Texture* m_pDiffuseTexture;
 	Texture* m_pNormalTexture;
 	VkShaderModule* m_pShader;
-	glm::vec4 m_diffuseColor;
+	Vector4 m_diffuseColor;
 	Vector3 m_ambientColor;
 	float m_alphaTest;
 

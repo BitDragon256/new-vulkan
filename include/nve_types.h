@@ -23,7 +23,7 @@ typedef uint32_t Index;
 namespace math
 {
 	class quaternion;
-} // namespace math
+};
 
 typedef glm::vec2 Vector2;
 typedef glm::vec3 Vector3;
@@ -39,13 +39,6 @@ typedef struct Vertex
 	static VkVertexInputBindingDescription getBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> getAttributeDescriptions();
 } Vertex;
-
-struct Transform
-{
-	alignas(16) Vector3 position;
-	alignas(16) Vector3 scale;
-	alignas(16) Quaternion rotation;
-};
 
 struct CameraPushConstant
 {

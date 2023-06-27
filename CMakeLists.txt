@@ -14,6 +14,42 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(external/glfw)
 
+set(SOURCE_DIR src)
+set(INCLUDE_DIR include)
+
+set(
+	SOURCE_FILES
+	# ${SOURCE_DIR}/buffer.cpp
+	# ${SOURCE_DIR}/ecs.cpp
+	${SOURCE_DIR}/logger.cpp
+	${SOURCE_DIR}/math-core.cpp
+	# ${SOURCE_DIR}/models.cpp
+	${SOURCE_DIR}/model-handler.cpp
+	${SOURCE_DIR}/render.cpp
+	${SOURCE_DIR}/vulkan_helpers.cpp
+	${SOURCE_DIR}/material.cpp
+)
+
+set(
+	INCLUDE_FILES
+	${INCLUDE_DIR}/buffer.h
+	${INCLUDE_DIR}/ecs.h
+	${INCLUDE_DIR}/logger.h
+	${INCLUDE_DIR}/math-core.h
+	# ${INCLUDE_DIR}/models.h
+	${INCLUDE_DIR}/model-handler.h
+	${INCLUDE_DIR}/nve_types.h
+	${INCLUDE_DIR}/render.h
+	${INCLUDE_DIR}/vulkan_helpers.h
+	${INCLUDE_DIR}/material.h
+)
+
+option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
+
+if (NVE_BUILD_EXAMPLES)
+	add_subdirectory("examples")
+endif()
+
 #imgui
 set(IMGUI_FOLDER external/imgui)
 
@@ -36,42 +72,6 @@ set(
 	${IMGUI_FOLDER}/imgui_tables.cpp
 	${IMGUI_FOLDER}/imstb_truetype.h
 )
-
-set(SOURCE_DIR src)
-set(INCLUDE_DIR include)
-
-set(
-	SOURCE_FILES
-	${SOURCE_DIR}/buffer.cpp
-	${SOURCE_DIR}/ecs.cpp
-	${SOURCE_DIR}/logger.cpp
-	${SOURCE_DIR}/math-core.cpp
-	${SOURCE_DIR}/models.cpp
-	${SOURCE_DIR}/model-handler.cpp
-	${SOURCE_DIR}/render.cpp
-	${SOURCE_DIR}/vulkan_helpers.cpp
-	${SOURCE_DIR}/material.cpp
-)
-
-set(
-	INCLUDE_FILES
-	${INCLUDE_DIR}/buffer.h
-	${INCLUDE_DIR}/ecs.h
-	${INCLUDE_DIR}/logger.h
-	${INCLUDE_DIR}/math-core.h
-	${INCLUDE_DIR}/models.h
-	${INCLUDE_DIR}/model-handler.h
-	${INCLUDE_DIR}/nve_types.h
-	${INCLUDE_DIR}/render.h
-	${INCLUDE_DIR}/vulkan_helpers.h
-	${INCLUDE_DIR}/material.h
-)
-
-option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
-
-if (NVE_BUILD_EXAMPLES)
-	add_subdirectory("examples")
-endif()
 
 add_library(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${IMGUI_FILES})
 

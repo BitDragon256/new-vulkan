@@ -4,11 +4,19 @@
 
 #include <vulkan/vulkan.h>
 
-#include "ecs.h"
 #include "nve_types.h"
-#include "material.h"
+#include "math-core.h"
 
 #include "buffer.h"
+#include "ecs.h"
+#include "material.h"
+
+struct Transform
+{
+	alignas(16) Vector3 position;
+	alignas(16) Vector3 scale;
+	alignas(16) Quaternion rotation;
+};
 
 struct StaticMesh
 {
@@ -39,7 +47,7 @@ struct MeshGroup
 
 	VkPipeline pipeline;
 	bool rerecordBuffer;
-	VkCommandBuffer commandBuffer;
+	std::vector<VkCommandBuffer> commandBuffers;
 };
 
 struct StaticGeometryHandlerVulkanObjects
@@ -49,7 +57,7 @@ struct StaticGeometryHandlerVulkanObjects
 	VkRenderPass renderPass;
 	uint32_t firstSubpass;
 
-	VkFramebuffer framebuffer;
+	std::vector<VkFramebuffer> framebuffers;
 	VkExtent2D swapchainExtent;
 
 	VkPhysicalDevice physicalDevice;
@@ -83,22 +91,24 @@ class StaticGeometryHandler : System<StaticMesh, Transform>
 public:
 	void create_command_buffers();
 	void record_command_buffers();
-	std::vector<VkCommandBuffer> get_command_buffers();
+	std::vector<VkCommandBuffer> get_command_buffers(uint32_t frame);
 
 	void create_pipelines(std::vector<VkPipeline>& pipelines, std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
 
 	void initialize(StaticGeometryHandlerVulkanObjects vulkanObjects);
-	void update_framebuffers(VkFramebuffer framebuffer, VkExtent2D swapchainExtent);
+	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
 
 	void awake(EntityId entity, ECSManager& ecs) override;
 	void update(float dt, ECSManager& ecs) override;
+
+	uint32_t subpass_count();
 
 private:
 	void add_mesh(StaticMesh& mesh, Transform transform);
 	MeshGroup* find_group(const Material& material, size_t& index);
 
 	void create_command_buffer(VkCommandBuffer* pCommandBuffer);
-	void record_command_buffer(uint32_t subpass, const MeshGroup& meshGroup);
+	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup);
 
 	VkGraphicsPipelineCreateInfo create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex);
 	void create_pipeline_layout();
