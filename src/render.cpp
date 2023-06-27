@@ -49,6 +49,9 @@ NVE_RESULT Renderer::init(RenderConfig config)
     imgui_init();
 
     m_frame = 0;
+
+    record_main_command_buffer(0);
+    record_main_command_buffer(1);
     
     return NVE_SUCCESS;
 }
@@ -454,15 +457,16 @@ NVE_RESULT Renderer::create_sync_objects()
     m_renderFinishedSemaphores.resize(m_swapchainFramebuffers.size());
     m_inFlightFences.resize(m_swapchainFramebuffers.size());
 
+    VkSemaphoreCreateInfo semCI = {};
+    semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceCI = {};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+
     for (size_t frame = 0; frame < m_swapchainFramebuffers.size(); frame++)
     {
-        VkSemaphoreCreateInfo semCI = {};
-        semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-        VkFenceCreateInfo fenceCI = {};
-        fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
         auto res = VK_SUCCESS;
 
         res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_imageAvailableSemaphores[frame]);
@@ -602,16 +606,16 @@ NVE_RESULT Renderer::draw_frame()
     vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
 
     // Acquire an image from the swap chain
-    vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &m_frame);
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
 
     // Record a command buffer which draws the scene onto that image
-    vkResetCommandBuffer(m_commandBuffers[m_frame], 0);
-    record_main_command_buffer(m_frame);
+    // vkResetCommandBuffer(m_commandBuffers[m_frame], 0);
 
     if (!m_imguiDraw)
         gui_begin();
 
-    imgui_draw(m_frame);
+    imgui_draw(imageIndex);
     m_imguiDraw = false;
 
     std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
@@ -622,7 +626,9 @@ NVE_RESULT Renderer::draw_frame()
     submit_command_buffers(commandBuffers, waitSemaphores, signalSemaphores);
 
     // Present the swap chain image
-    present_swapchain_image(m_swapchain, m_frame, signalSemaphores);
+    present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
+
+    m_frame = (m_frame + 1) % m_swapchainFramebuffers.size();
 
     return NVE_SUCCESS;
 }
