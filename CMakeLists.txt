@@ -19,8 +19,6 @@ set(INCLUDE_DIR include)
 
 set(
 	SOURCE_FILES
-	# ${SOURCE_DIR}/buffer.cpp
-	# ${SOURCE_DIR}/ecs.cpp
 	${SOURCE_DIR}/logger.cpp
 	${SOURCE_DIR}/math-core.cpp
 	# ${SOURCE_DIR}/models.cpp
