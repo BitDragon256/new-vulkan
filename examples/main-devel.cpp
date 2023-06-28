@@ -52,6 +52,8 @@ int main(int argc, char** argv)
         0, 1, 2,
         0, 2, 1,
     };
+    testEntityMesh.material.m_fragmentShader.load_shader("static_geometry/default_unlit.frag.spv");
+    testEntityMesh.material.m_vertexShader.load_shader("static_geometry/default_unlit.vert.spv");
 
     bool running = true;
     while (running)

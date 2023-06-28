@@ -18,6 +18,7 @@
 #include "buffer.h"
 #include "nve_types.h"
 #include "model-handler.h"
+#include "ecs.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1

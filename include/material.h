@@ -31,12 +31,25 @@ private:
 	void reiterate_active();
 };
 
+class Shader
+{
+public:
+	void load_shader(std::string file);
+	VkShaderModule m_module;
+
+	bool operator==(const Shader& other);
+
+	static VkDevice s_device;
+private:
+};
+
 class Material
 {
 public:
 	Texture* m_pDiffuseTexture;
 	Texture* m_pNormalTexture;
-	VkShaderModule* m_pShader;
+	Shader m_fragmentShader;
+	Shader m_vertexShader;
 	Vector4 m_diffuseColor;
 	Vector3 m_ambientColor;
 	float m_alphaTest;
@@ -46,4 +59,6 @@ public:
 	void load_normal_tex(std::string file);
 
 	bool operator==(const Material& other);
+
+	static Material default_unlit();
 };

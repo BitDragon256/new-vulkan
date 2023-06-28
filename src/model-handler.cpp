@@ -161,14 +161,14 @@ void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelin
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = *material.m_pShader;
-	vertShaderStageInfo.pName = "vert";
+	vertShaderStageInfo.module = material.m_vertexShader.m_module;
+	vertShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = *material.m_pShader;
-	fragShaderStageInfo.pName = "frag";
+	fragShaderStageInfo.module = material.m_fragmentShader.m_module;
+	fragShaderStageInfo.pName = "main";
 
 	pipelineCreationData.stages[0] = vertShaderStageInfo;
 	pipelineCreationData.stages[1] = fragShaderStageInfo;

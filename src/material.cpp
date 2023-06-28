@@ -54,7 +54,21 @@ void TexturePool::push_image_info(VkImageView view)
 	m_imageInfos.push_back(imageInfo);
 }
 
+// --------------------------------------
+// SHADER
+// --------------------------------------
 
+void Shader::load_shader(std::string file)
+{
+	m_module = create_shader_module(file, s_device);
+}
+
+bool Shader::operator==(const Shader& other)
+{
+	return m_module == other.m_module;
+}
+
+VkDevice Shader::s_device;
 
 // --------------------------------------
 // MATERIAL
@@ -62,12 +76,14 @@ void TexturePool::push_image_info(VkImageView view)
 
 bool Material::operator==(const Material& other)
 {
-	return
-		m_pDiffuseTexture == other.m_pDiffuseTexture &&
-		m_pNormalTexture  == other.m_pNormalTexture  &&
-		m_pShader		  == other.m_pShader		 &&
-		m_diffuseColor	  == other.m_diffuseColor	 &&
-		m_ambientColor	  == other.m_ambientColor	 &&
-		m_alphaTest		  == other.m_alphaTest
-	;
+	return m_fragmentShader == other.m_fragmentShader && m_vertexShader == other.m_vertexShader;
+}
+
+Material Material::default_unlit()
+{
+	Material material;
+
+	
+
+	return material;
 }

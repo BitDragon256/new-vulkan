@@ -15,6 +15,7 @@
 
 #include "logger.h"
 #include "vulkan_helpers.h"
+#include "material.h"
 
 // ---------------------------------------
 // RENDERER
@@ -46,6 +47,9 @@ NVE_RESULT Renderer::init(RenderConfig config)
     create_descriptor_pool();           log("descriptor pool created");
 
     initialize_geometry_handlers();     log("geometry handlers initialized");
+
+    // TODO delete this
+    Shader::s_device = m_device;
 
     // imgui
     imgui_init();
