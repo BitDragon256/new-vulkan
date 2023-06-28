@@ -35,6 +35,7 @@ class Shader
 {
 public:
 	void load_shader(std::string file);
+	void destroy();
 	VkShaderModule m_module;
 
 	bool operator==(const Shader& other);

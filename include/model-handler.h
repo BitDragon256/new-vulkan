@@ -110,6 +110,8 @@ public:
 
 	uint32_t subpass_count();
 
+	void cleanup();
+
 private:
 	void add_mesh(StaticMesh& mesh, Transform transform);
 	MeshGroup* find_group(const Material& material, size_t& index);

@@ -62,6 +62,10 @@ void Shader::load_shader(std::string file)
 {
 	m_module = create_shader_module(file, s_device);
 }
+void Shader::destroy()
+{
+	vkDestroyShaderModule(s_device, m_module, nullptr);
+}
 
 bool Shader::operator==(const Shader& other)
 {

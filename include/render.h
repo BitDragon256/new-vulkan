@@ -113,6 +113,8 @@ private:
 
 	uint32_t geometry_handler_subpass_count();
 
+	void geometry_handler_cleanup();
+
 	VkDescriptorPool m_descriptorPool;
 	void create_descriptor_pool();
 

@@ -501,3 +501,23 @@ void StaticGeometryHandler::update_descriptor_set()
 	if (writes.size() > 0)
 		vkUpdateDescriptorSets(m_vulkanObjects.device, writes.size(), writes.data(), 0, nullptr);
 }
+
+void StaticGeometryHandler::cleanup()
+{
+	for (MeshGroup& meshGroup : m_meshGroups)
+	{
+		meshGroup.indexBuffer.destroy();
+		meshGroup.vertexBuffer.destroy();
+
+		vkDestroyPipeline(m_vulkanObjects.device, meshGroup.pipeline, nullptr);
+		vkDestroyPipelineLayout(m_vulkanObjects.device, m_pipelineLayout, nullptr);
+
+		vkFreeDescriptorSets(m_vulkanObjects.device, m_vulkanObjects.descriptorPool, 1, &m_descriptorSet);
+		vkDestroyDescriptorSetLayout(m_vulkanObjects.device, m_descriptorSetLayout, nullptr);
+
+		vkFreeCommandBuffers(m_vulkanObjects.device, m_vulkanObjects.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
+
+		meshGroup.material.m_fragmentShader.destroy();
+		meshGroup.material.m_vertexShader.destroy();
+	}
+}

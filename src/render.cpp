@@ -707,6 +707,8 @@ NVE_RESULT Renderer::draw_frame()
 void Renderer::first_frame()
 {
     create_geometry_pipelines();
+
+    m_firstFrame = false;
 }
 
 void Renderer::clean_up()
@@ -715,8 +717,9 @@ void Renderer::clean_up()
 
     imgui_cleanup();
 
-    // vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
-    // vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+    geometry_handler_cleanup();
+
+    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
 
     for (uint32_t frame = 0; frame < m_swapchainFramebuffers.size(); frame++)
     {
@@ -746,6 +749,10 @@ void Renderer::clean_up()
 
     glfwDestroyWindow(m_window);
     glfwTerminate();
+}
+void Renderer::geometry_handler_cleanup()
+{
+    m_staticGeometryHandler.cleanup();
 }
 
 uint32_t Renderer::geometry_handler_subpass_count()
