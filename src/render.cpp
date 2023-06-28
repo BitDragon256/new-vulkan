@@ -43,7 +43,9 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
     log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
-    initialize_geometry_handlers(); log("geometry pipelines created");
+    create_descriptor_pool();           log("descriptor pool created");
+
+    initialize_geometry_handlers();     log("geometry handlers initialized");
 
     // imgui
     imgui_init();
@@ -52,6 +54,10 @@ NVE_RESULT Renderer::init(RenderConfig config)
 
     record_main_command_buffer(0);
     record_main_command_buffer(1);
+
+    m_ecs.register_system<StaticGeometryHandler>(&m_staticGeometryHandler);
+
+    m_firstFrame = true;
     
     return NVE_SUCCESS;
 }
@@ -62,6 +68,8 @@ NVE_RESULT Renderer::render()
         clean_up();
         return NVE_RENDER_EXIT_SUCCESS;
     }
+
+    m_ecs.update_systems(0.016666f);
 
     glfwPollEvents();
 
@@ -482,7 +490,52 @@ NVE_RESULT Renderer::create_sync_objects()
     return NVE_SUCCESS;
 }
 
+void Renderer::create_descriptor_pool()
+{
+    VkDescriptorPoolSize poolSizes[] =
+    {
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+
+    VkDescriptorPoolCreateInfo descPoolCI = {};
+    descPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descPoolCI.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    descPoolCI.maxSets = 1000 * IM_ARRAYSIZE(poolSizes);
+    descPoolCI.poolSizeCount = static_cast<uint32_t>(IM_ARRAYSIZE(poolSizes));
+    descPoolCI.pPoolSizes = poolSizes;
+
+    auto res = vkCreateDescriptorPool(m_device, &descPoolCI, nullptr, &m_descriptorPool);
+    log_cond_err(res == VK_SUCCESS, "failed to create descriptor pool");
+}
+
 void Renderer::initialize_geometry_handlers()
+{
+    init_static_geometry_handler();
+}
+void Renderer::create_geometry_pipelines()
+{
+    std::vector<VkGraphicsPipelineCreateInfo> pipelineCIs;
+    
+    m_staticGeometryHandler.create_pipeline_create_infos(pipelineCIs);
+
+    std::vector<VkPipeline> pipelines(pipelineCIs.size());
+    auto res = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, pipelineCIs.size(), pipelineCIs.data(), nullptr, pipelines.data());
+    log_cond_err(res == VK_SUCCESS, "failed to create geometry handler pipelines");
+    
+    m_staticGeometryHandler.set_pipelines(pipelines);
+}
+
+void Renderer::init_static_geometry_handler()
 {
     StaticGeometryHandlerVulkanObjects vulkanObjects;
     vulkanObjects.device = m_device;
@@ -490,15 +543,15 @@ void Renderer::initialize_geometry_handlers()
     vulkanObjects.commandPool = m_commandPool;
     vulkanObjects.renderPass = m_renderPass;
     vulkanObjects.transferQueue = m_graphicsQueue;
+    vulkanObjects.descriptorPool = m_descriptorPool;
 
     vulkanObjects.swapchainExtent = m_swapchainExtent;
     vulkanObjects.framebuffers = m_swapchainFramebuffers;
     vulkanObjects.firstSubpass = 0;
+
+    vulkanObjects.pCameraPushConstant = &m_cameraPushConstant;
+
     m_staticGeometryHandler.initialize(vulkanObjects);
-}
-void Renderer::create_geometry_pipelines()
-{
-    
 }
 
 void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
@@ -509,8 +562,14 @@ void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessenge
     }
 }
 
-NVE_RESULT Renderer::record_main_command_buffer(uint32_t frame)
+void Renderer::record_main_command_buffer(uint32_t frame)
 {
+    // -------------------------------------------
+
+    vkResetCommandBuffer(m_commandBuffers[frame], 0);
+
+    // -------------------------------------------
+
     VkCommandBuffer commandBuffer = m_commandBuffers[frame];
 
     // -------------------------------------------
@@ -543,10 +602,13 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t frame)
 
     // -------------------------------------------
 
-    uint32_t subpassCount = m_staticGeometryHandler.subpass_count();
+    std::vector<VkCommandBuffer> secondaryCommandBuffers = m_staticGeometryHandler.get_command_buffers(frame);
+    uint32_t subpassCount = secondaryCommandBuffers.size();
     for (uint32_t subpass = 0; subpass < subpassCount; subpass++)
     {
-
+        vkCmdExecuteCommands(commandBuffer, 1, &secondaryCommandBuffers[subpass]);
+        if (subpass != subpassCount - 1)
+            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     }
 
     // -------------------------------------------
@@ -559,8 +621,6 @@ NVE_RESULT Renderer::record_main_command_buffer(uint32_t frame)
     }
 
     // -------------------------------------------
-
-    return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems)
 {
@@ -601,6 +661,9 @@ void Renderer::present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageI
 
 NVE_RESULT Renderer::draw_frame()
 {
+    if (m_firstFrame)
+        first_frame();
+
     // Wait for the previous frame to finish
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
     vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
@@ -609,8 +672,13 @@ NVE_RESULT Renderer::draw_frame()
     uint32_t imageIndex;
     vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
 
-    // Record a command buffer which draws the scene onto that image
-    // vkResetCommandBuffer(m_commandBuffers[m_frame], 0);
+    // update push constant
+    m_cameraPushConstant.proj = m_activeCamera->projection_matrix();
+    m_cameraPushConstant.view = m_activeCamera->view_matrix();
+
+    // record command buffers
+    m_staticGeometryHandler.record_command_buffers(m_frame);
+    record_main_command_buffer(m_frame);
 
     if (!m_imguiDraw)
         gui_begin();
@@ -631,6 +699,10 @@ NVE_RESULT Renderer::draw_frame()
     m_frame = (m_frame + 1) % m_swapchainFramebuffers.size();
 
     return NVE_SUCCESS;
+}
+void Renderer::first_frame()
+{
+    create_geometry_pipelines();
 }
 
 void Renderer::clean_up()

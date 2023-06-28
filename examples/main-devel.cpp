@@ -39,6 +39,20 @@ int main(int argc, char** argv)
     float deltaTime;
     auto lastTime = std::chrono::high_resolution_clock::now();
 
+    auto testEntity = renderer.m_ecs.create_entity();
+    renderer.m_ecs.add_component<Transform>(testEntity);
+    renderer.m_ecs.add_component<StaticMesh>(testEntity);
+    auto& testEntityMesh = renderer.m_ecs.get_component<StaticMesh>(testEntity);
+    testEntityMesh.vertices = {
+        { { -0.5f, -0.5f,  0.0f }, { 1.f, 0.f, 0.f }, { 0.f, 0.f } },
+        { {  0.5f,  0.0f,  0.0f }, { 0.f, 1.f, 0.f }, { 0.f, 0.f } },
+        { { -0.5f,  0.5f,  0.0f }, { 0.f, 0.f, 1.f }, { 0.f, 0.f } },
+    };
+    testEntityMesh.indices = {
+        0, 1, 2,
+        0, 2, 1,
+    };
+
     bool running = true;
     while (running)
     {

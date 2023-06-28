@@ -56,6 +56,8 @@ public:
 	NVE_RESULT init(RenderConfig config);
 	NVE_RESULT set_active_camera(Camera* camera);
 
+	ECSManager m_ecs;
+
 	// input
 	int get_key(int key);
 
@@ -65,6 +67,9 @@ public:
 	void clean_up();
 
 private:
+	void first_frame();
+	bool m_firstFrame;
+
 	RenderConfig m_config;
 
 	// vulkan objects
@@ -100,21 +105,26 @@ private:
 
 	// model handling
 	StaticGeometryHandler m_staticGeometryHandler;
+	void init_static_geometry_handler();
+
 	void create_geometry_pipelines();
 	void initialize_geometry_handlers();
 
 	uint32_t geometry_handler_subpass_count();
 
-	/*VkDescriptorPool m_descriptorPool;
-	std::vector<VkDescriptorSetLayoutBinding> m_descriptors;
-	VkDescriptorSet m_descriptorSet;
-	VkDescriptorSetLayout m_descriptorSetLayout;
+	VkDescriptorPool m_descriptorPool;
+	void create_descriptor_pool();
 
-	void add_descriptors();
-	void update_model_info_descriptor_set();*/
+	// std::vector<VkDescriptorSetLayoutBinding> m_descriptors;
+	// VkDescriptorSet m_descriptorSet;
+	// VkDescriptorSetLayout m_descriptorSetLayout;
+	
+	// void add_descriptors();
+	// void update_model_info_descriptor_set();
 
 	// camera stuff
 	Camera* m_activeCamera;
+	CameraPushConstant m_cameraPushConstant;
 
 	// imgui vulkan objects
 	VkDescriptorPool m_imgui_descriptorPool;
@@ -161,7 +171,7 @@ private:
 	void destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 	// rendering
-	NVE_RESULT record_main_command_buffer(uint32_t imageIndex);
+	void record_main_command_buffer(uint32_t imageIndex);
 	NVE_RESULT submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems);
 	void present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageIndex, std::vector<VkSemaphore> signalSems);
 	NVE_RESULT draw_frame();

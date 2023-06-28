@@ -184,15 +184,10 @@ public:
 	{
 		fill_available_entities();
 	}
-	~ECSManager()
-	{
-		for (size_t i = 0; i < m_systems.size(); i++)
-			delete m_systems[i];
-	}
 
-	template<typename S> void register_system()
+	template<typename S> void register_system(S* system)
 	{
-		m_systems.push_back(new S());
+		m_systems.emplace_back((ISystem*) system);
 		m_systemComponents.push_back(std::bitset<ECS_MAX_COMPONENTS>());
 
 		const auto& systemTypeNames = m_systems.back()->component_types();

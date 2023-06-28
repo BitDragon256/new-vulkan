@@ -11,6 +11,8 @@
 #include "ecs.h"
 #include "material.h"
 
+#define STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING 0
+
 struct Transform
 {
 	alignas(16) Vector3 position;
@@ -43,10 +45,10 @@ struct MeshGroup
 
 	Buffer<Vertex> vertexBuffer;
 	Buffer<Index> indexBuffer;
+	
 	bool reloadMeshBuffers;
 
 	VkPipeline pipeline;
-	bool rerecordBuffer;
 	std::vector<VkCommandBuffer> commandBuffers;
 };
 
@@ -62,6 +64,10 @@ struct StaticGeometryHandlerVulkanObjects
 
 	VkPhysicalDevice physicalDevice;
 	VkQueue transferQueue;
+	
+	VkDescriptorPool descriptorPool;
+
+	CameraPushConstant* pCameraPushConstant;
 };
 
 struct PipelineCreationData
@@ -89,11 +95,12 @@ struct PipelineCreationData
 class StaticGeometryHandler : System<StaticMesh, Transform>
 {
 public:
-	void create_command_buffers();
-	void record_command_buffers();
+	// void create_command_buffers();
+	void record_command_buffers(uint32_t frame);
 	std::vector<VkCommandBuffer> get_command_buffers(uint32_t frame);
 
-	void create_pipelines(std::vector<VkPipeline>& pipelines, std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
+	void create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
+	void set_pipelines(std::vector<VkPipeline>& pipelines);
 
 	void initialize(StaticGeometryHandlerVulkanObjects vulkanObjects);
 	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
@@ -106,8 +113,10 @@ public:
 private:
 	void add_mesh(StaticMesh& mesh, Transform transform);
 	MeshGroup* find_group(const Material& material, size_t& index);
+	MeshGroup* push_mesh_group(const Material& material);
 
-	void create_command_buffer(VkCommandBuffer* pCommandBuffer);
+	void create_group_command_buffers(MeshGroup& meshGroup);
+
 	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup);
 
 	VkGraphicsPipelineCreateInfo create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex);
@@ -126,4 +135,12 @@ private:
 
 	BufferConfig default_buffer_config();
 	StaticGeometryHandlerVulkanObjects m_vulkanObjects;
+
+	VkDescriptorSetLayout m_descriptorSetLayout;
+	VkDescriptorSet m_descriptorSet;
+
+	void create_descriptor_set();
+	void update_descriptor_set();
+
+	TexturePool m_texturePool;
 };
