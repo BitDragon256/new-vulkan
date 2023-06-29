@@ -18,6 +18,9 @@ struct Transform
 	alignas(16) Vector3 position;
 	alignas(16) Vector3 scale;
 	alignas(16) Quaternion rotation;
+
+	Transform();
+	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
 };
 
 struct StaticMesh

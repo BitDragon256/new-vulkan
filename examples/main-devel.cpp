@@ -88,9 +88,6 @@ int main(int argc, char** argv)
     testEntityMesh.material.m_vertexShader.load_shader("static_geometry/default_unlit.vert.spv");
 
     auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
-    testEntityTransform.position = Vector3(0, 0, 0);
-    testEntityTransform.scale = Vector3(1, 1, 1);
-    testEntityTransform.rotation = Quaternion(Vector3(0, 0, 0));
 
     bool running = true;
     while (running)
