@@ -21,7 +21,7 @@ void bake_transform(StaticMesh& mesh, Transform transform)
 
 void set_dynamic_state(VkCommandBuffer commandBuffer, VkExtent2D swapChainExtent)
 {
-	VkViewport viewport{};
+	VkViewport viewport = {};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
 	viewport.width = static_cast<float>(swapChainExtent.width);
@@ -70,10 +70,12 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	pipelineCreationData.vertexInputState.flags = 0;
 
 	pipelineCreationData.vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
+	pipelineCreationData.vertexInputState.vertexAttributeDescriptionCount = 0;
 	pipelineCreationData.vertexInputState.vertexAttributeDescriptionCount = pipelineCreationData.vertexAttributeDescriptions.size();
 	pipelineCreationData.vertexInputState.pVertexAttributeDescriptions = pipelineCreationData.vertexAttributeDescriptions.data();
 
 	pipelineCreationData.vertexBindingDescription = Vertex::getBindingDescription();
+	pipelineCreationData.vertexInputState.vertexBindingDescriptionCount = 0;
 	pipelineCreationData.vertexInputState.vertexBindingDescriptionCount = 1;
 	pipelineCreationData.vertexInputState.pVertexBindingDescriptions = &pipelineCreationData.vertexBindingDescription;
 
@@ -105,7 +107,7 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	pipelineCreationData.rasterizationState.rasterizerDiscardEnable = VK_FALSE;
 	pipelineCreationData.rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
 	pipelineCreationData.rasterizationState.lineWidth = 1.0f;
-	pipelineCreationData.rasterizationState.cullMode = VK_CULL_MODE_BACK_BIT;
+	pipelineCreationData.rasterizationState.cullMode = VK_CULL_MODE_NONE;
 	pipelineCreationData.rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	pipelineCreationData.rasterizationState.depthBiasEnable = VK_FALSE;
 
@@ -324,7 +326,8 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// ---------------------------------------
 
-	vkCmdDrawIndexed(commandBuffer, meshGroup.indices.size(), 1, 0, 0, 0);
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), 1, 0, 0, 0);
+	//vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
 	// ---------------------------------------
 

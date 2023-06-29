@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <bitset>
 #include <iostream>
 #include <queue>

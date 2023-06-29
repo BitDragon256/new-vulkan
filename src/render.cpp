@@ -56,9 +56,6 @@ NVE_RESULT Renderer::init(RenderConfig config)
 
     m_frame = 0;
 
-    record_main_command_buffer(0);
-    record_main_command_buffer(1);
-
     m_ecs.register_system<StaticGeometryHandler>(&m_staticGeometryHandler);
 
     m_firstFrame = true;
@@ -371,16 +368,16 @@ NVE_RESULT Renderer::create_render_pass()
         subpass.pColorAttachments = &colorAttachmentRef;
     }
 
-    VkSubpassDependency firstDependency = {};
+    /*VkSubpassDependency firstDependency = {};
     firstDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     firstDependency.dstSubpass = 0;
     firstDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     firstDependency.srcAccessMask = 0;
     firstDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    firstDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    firstDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;*/
 
     std::vector<VkSubpassDependency> dependencies(subpassCount - 1);
-    uint32_t subpassIndex = 1;
+    uint32_t subpassIndex = 0;
     for (VkSubpassDependency& dependency : dependencies)
     {
         dependency.srcSubpass = subpassIndex;
@@ -393,7 +390,7 @@ NVE_RESULT Renderer::create_render_pass()
         subpassIndex++;
     }
 
-    dependencies.insert(dependencies.begin(), firstDependency);
+    // dependencies.insert(dependencies.begin(), firstDependency);
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -402,7 +399,7 @@ NVE_RESULT Renderer::create_render_pass()
     renderPassInfo.subpassCount = subpassCount;
     renderPassInfo.pSubpasses = subpasses.data();
 
-    renderPassInfo.dependencyCount = subpassCount;
+    renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
     renderPassInfo.pDependencies = dependencies.data();
 
     auto res = vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);

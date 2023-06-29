@@ -195,7 +195,7 @@ VkShaderModule create_shader_module(const std::string& file, VkDevice device)
 #ifdef _MSC_BUILD
     prefix = "X:/Dev/new-vulkan-engine";
 #else
-    prefix = "..";
+    prefix = "../..";
 #endif
 
 

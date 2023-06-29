@@ -1,7 +1,6 @@
 #include <stdio.h>
 
 #include "ecs.h"
-#include "ecs.cpp"
 
 struct FooComponentA
 {
@@ -31,7 +30,9 @@ public:
 int main(int argc, char** argv)
 {
     ECSManager ecs;
-    ecs.register_system<FooSys>();
+
+    FooSys fooSys;
+    ecs.register_system<FooSys>(&fooSys);
 
     std::vector<EntityId> entities(100);
     for (size_t i = 0; i < entities.size(); i++)
