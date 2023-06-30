@@ -75,7 +75,7 @@ public:
 	void load_diff_tex(std::string file);
 	void load_normal_tex(std::string file);
 
-	bool operator== (const Material& other);
+	bool operator== (const Material& mat);
 	Material& operator= (const tinyobj::material_t& other);
 
 	static Material default_unlit();
@@ -85,5 +85,15 @@ public:
 
 struct MaterialSSBO
 {
+	alignas(16) Color m_ambient;
+	alignas(16) Color m_diffuse;
+	alignas(16) Color m_specular;
+	alignas(16) Color m_transmittance;
+	alignas(16) Color m_emission;
+	float m_specularHighlight;
+	float m_refraction;
+	float m_dissolve;
+	float test;
 
+	MaterialSSBO& operator= (const Material& mat);
 };

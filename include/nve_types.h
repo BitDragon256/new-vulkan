@@ -18,7 +18,7 @@ typedef int NVE_RESULT;
 typedef uint32_t Index;
 #define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
-#define VERTEX_ATTRIBUTE_COUNT 4
+#define VERTEX_ATTRIBUTE_COUNT 5
 
 namespace math
 {

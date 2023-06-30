@@ -116,6 +116,19 @@ Material& Material::operator= (const tinyobj::material_t& mat)
 
 	return *this;
 }
+MaterialSSBO& MaterialSSBO::operator= (const Material& mat)
+{
+	m_ambient = mat.m_ambient;
+	m_diffuse = mat.m_diffuse;
+	m_specular = mat.m_specular;
+	m_transmittance = mat.m_transmittance;
+	m_emission = mat.m_emission;
+	m_specularHighlight = mat.m_specularHighlight;
+	m_refraction = mat.m_refraction;
+	m_dissolve = mat.m_dissolve;
+
+	return *this;
+}
 
 Material Material::default_unlit()
 {

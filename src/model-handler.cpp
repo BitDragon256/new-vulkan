@@ -205,6 +205,10 @@ void StaticGeometryHandler::initialize(StaticGeometryHandlerVulkanObjects vulkan
 	m_vulkanObjects = vulkanObjects;
 	reloadMeshBuffers = true;
 
+	BufferConfig matBufConf = default_buffer_config();
+	matBufConf.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	m_materialBuffer.initialize(matBufConf);
+
 	create_descriptor_set();
 }
 void StaticGeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent)
@@ -452,9 +456,17 @@ void StaticGeometryHandler::create_pipeline_layout()
 
 void StaticGeometryHandler::reload_meshes()
 {
+	// reload materials
+	std::vector<MaterialSSBO> mats(m_materials.size());
+	for (size_t i = 0; i < mats.size(); i++) mats[i] = m_materials[i];
+	m_materialBuffer.set(mats);
+	update_descriptor_set();
+
+	// reload meshes
 	for (MeshGroup& meshGroup : m_meshGroups)
 		if (meshGroup.reloadMeshBuffers)
 			reload_mesh_group(meshGroup);
+
 	reloadMeshBuffers = false;
 }
 void StaticGeometryHandler::reload_mesh_group(MeshGroup& meshGroup)
@@ -484,6 +496,25 @@ uint32_t StaticGeometryHandler::subpass_count()
 	return 1;
 }
 
+VkWriteDescriptorSet StaticGeometryHandler::material_buffer_descriptor_set_write()
+{
+	m_materialBufferDescriptorInfo = {};
+	m_materialBufferDescriptorInfo.buffer = m_materialBuffer.m_buffer;
+	m_materialBufferDescriptorInfo.offset = 0;
+	m_materialBufferDescriptorInfo.range = sizeof(MaterialSSBO) * m_materials.size();
+
+	VkWriteDescriptorSet write = {};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = m_descriptorSet;
+	write.dstBinding = STATIC_GEOMETRY_HANDLER_MATERIAL_BINDING;
+	write.dstArrayElement = 0;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	write.pBufferInfo = &m_materialBufferDescriptorInfo;
+
+	return write;
+}
+
 void StaticGeometryHandler::create_descriptor_set()
 {
 	VkDescriptorSetLayoutBinding texturePoolBinding = {};
@@ -493,8 +524,16 @@ void StaticGeometryHandler::create_descriptor_set()
 	texturePoolBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	texturePoolBinding.pImmutableSamplers = nullptr;
 
+	VkDescriptorSetLayoutBinding materialBufferBinding = {};
+	materialBufferBinding.descriptorCount = 1;
+	materialBufferBinding.binding = STATIC_GEOMETRY_HANDLER_MATERIAL_BINDING;
+	materialBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	materialBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	materialBufferBinding.pImmutableSamplers = nullptr;
+
 	std::vector<VkDescriptorSetLayoutBinding> layoutBindings = {
-		texturePoolBinding
+		//texturePoolBinding,
+		materialBufferBinding
 	};
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
@@ -527,11 +566,11 @@ void StaticGeometryHandler::update_descriptor_set()
 {
 	std::vector<VkWriteDescriptorSet> writes;
 
-	VkWriteDescriptorSet textureWrite = m_texturePool.get_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING);
-	writes.push_back(textureWrite);
+	// writes.push_back(m_texturePool.get_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING));
+	writes.push_back(material_buffer_descriptor_set_write());
 
 	if (writes.size() > 0)
-		vkUpdateDescriptorSets(m_vulkanObjects.device, writes.size(), writes.data(), 0, nullptr);
+		vkUpdateDescriptorSets(m_vulkanObjects.device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
 
 void StaticGeometryHandler::cleanup()

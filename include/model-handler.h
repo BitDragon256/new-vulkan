@@ -11,7 +11,9 @@
 #include "ecs.h"
 #include "material.h"
 
-#define STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING 0
+#define STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING 1
+#define STATIC_GEOMETRY_HANDLER_MATERIAL_BINDING 0
+#define STATIC_GEOMETRY_HANDLER_MAX_MATERIALS 128
 
 struct Transform
 {
@@ -137,6 +139,9 @@ private:
 	std::vector<MeshGroup> m_meshGroups;
 	std::vector<MeshDataInfo> m_meshes;
 	std::vector<Material> m_materials;
+	Buffer<MaterialSSBO> m_materialBuffer;
+	VkWriteDescriptorSet material_buffer_descriptor_set_write();
+	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
 
 	std::vector<PipelineCreationData> m_pipelineCreationData;
 	VkPipelineLayout m_pipelineLayout;
