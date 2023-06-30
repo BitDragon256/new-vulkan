@@ -68,14 +68,19 @@ void Shader::destroy()
 	vkDestroyShaderModule(s_device, m_module, nullptr);
 }
 
-bool Shader::operator==(const Shader& other)
+bool Shader::operator==(const Shader& other) const
 {
 	return m_file == other.m_file;
 }
 
 VkDevice Shader::s_device;
 
-bool GraphicsShader::operator==(const GraphicsShader& other)
+void GraphicsShader::set_default_shader()
+{
+	fragment.load_shader("static_geometry/default_unlit.frag.spv");
+	vertex.load_shader("static_geometry/default_unlit.vert.spv");
+}
+bool GraphicsShader::operator==(const GraphicsShader& other) const
 {
 	return fragment == other.fragment && vertex == other.vertex;
 }
@@ -138,14 +143,9 @@ Material Material::default_unlit()
 
 	return material;
 }
-void Material::set_default_shader()
-{
-	m_shader.fragment.load_shader("static_geometry/default_unlit.frag.spv");
-	m_shader.vertex.load_shader("static_geometry/default_unlit.vert.spv");
-}
 
 Material::Material() :
-	m_dissolve{1}
+	m_dissolve{ 1 }, m_shader{ nullptr }
 {
-	set_default_shader();
+	
 }

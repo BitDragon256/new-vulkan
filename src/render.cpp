@@ -1113,7 +1113,7 @@ std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> Vertex::ge
 
     attributeDescriptions[4].binding = 0;
     attributeDescriptions[4].location = 4;
-    attributeDescriptions[4].format = VK_FORMAT_R32_SFLOAT;
+    attributeDescriptions[4].format = VK_FORMAT_R32_UINT;
     attributeDescriptions[4].offset = offsetof(Vertex, material);
 
     return attributeDescriptions;

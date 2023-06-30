@@ -259,22 +259,34 @@ void StaticGeometryHandler::add_model(StaticModel& model, Transform transform)
 		reloadMeshBuffers = true;
 	}
 }
-MeshGroup* StaticGeometryHandler::find_group(const GraphicsShader& shader, size_t& index)
+MeshGroup* StaticGeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
 {
+	if (!shader)
+	{
+		// automatically assign the first best
+		if (m_meshGroups.size() > 0)
+		{
+			shader = &m_meshGroups[0].shader;
+			return &m_meshGroups[0];
+		}
+		return nullptr;
+	}
+
 	index = 0;
 	while (index < m_meshGroups.size())
 	{
-		if (m_meshGroups[index].shader == shader)
+		if (m_meshGroups[index].shader == (*shader))
 			return &m_meshGroups[index];
 		index++;
 	}
 	return nullptr;
 }
-MeshGroup* StaticGeometryHandler::push_mesh_group(const GraphicsShader& shader)
+MeshGroup* StaticGeometryHandler::push_mesh_group(GraphicsShader*& shader)
 {
 	m_meshGroups.push_back(MeshGroup {});
 	auto& meshGroup = m_meshGroups.back();
-	meshGroup.shader = shader;
+	meshGroup.shader.set_default_shader();
+	shader = &meshGroup.shader;
 
 	BufferConfig config = default_buffer_config();
 	config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -579,6 +591,8 @@ void StaticGeometryHandler::cleanup()
 	{
 		meshGroup.indexBuffer.destroy();
 		meshGroup.vertexBuffer.destroy();
+
+		m_materialBuffer.destroy();
 
 		vkDestroyPipeline(m_vulkanObjects.device, meshGroup.pipeline, nullptr);
 		vkDestroyPipelineLayout(m_vulkanObjects.device, m_pipelineLayout, nullptr);

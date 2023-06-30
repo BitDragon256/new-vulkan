@@ -40,7 +40,7 @@ public:
 	void destroy();
 	VkShaderModule m_module;
 
-	bool operator==(const Shader& other);
+	bool operator==(const Shader& other) const;
 
 	static VkDevice s_device;
 private:
@@ -52,7 +52,8 @@ struct GraphicsShader
 	Shader fragment;
 	Shader vertex;
 
-	bool operator==(const GraphicsShader& other);
+	void set_default_shader();
+	bool operator==(const GraphicsShader& other) const;
 };
 
 class Material
@@ -61,7 +62,7 @@ public:
 	Texture* m_pDiffuseTexture;
 	Texture* m_pNormalTexture;
 
-	GraphicsShader m_shader;
+	GraphicsShader* m_shader;
 
 	Color m_ambient;
 	Color m_diffuse;
@@ -79,7 +80,6 @@ public:
 	Material& operator= (const tinyobj::material_t& other);
 
 	static Material default_unlit();
-	void set_default_shader();
 	Material();
 };
 

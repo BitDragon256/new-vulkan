@@ -126,8 +126,8 @@ public:
 
 private:
 	void add_model(StaticModel& model, Transform transform);
-	MeshGroup* find_group(const GraphicsShader& shader, size_t& index);
-	MeshGroup* push_mesh_group(const GraphicsShader& shader);
+	MeshGroup* find_group(GraphicsShader*& shader, size_t& index);
+	MeshGroup* push_mesh_group(GraphicsShader*& shader);
 
 	void create_group_command_buffers(MeshGroup& meshGroup);
 
