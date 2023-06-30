@@ -18,7 +18,9 @@ struct Material
 	float m_dissolve;
 };
 
-layout(location = 0) out Material outMat;
+layout(location = 0) out vec3 outPos;
+layout(location = 1) out vec3 outNormal;
+layout(location = 2) out Material outMat;
 
 layout(std140,set = 0, binding = 0) readonly buffer MaterialBuffer
 {
@@ -42,4 +44,7 @@ void main()
     mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
     gl_Position = cameraMatrix * vec4(inPosition, 1.0);
     outMat = MaterialBufferObjects.mats[inMaterial];
+
+    outPos = gl_Position.xyz;
+    outNormal = inNormal;
 }
