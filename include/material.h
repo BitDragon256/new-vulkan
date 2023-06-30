@@ -1,7 +1,9 @@
 #pragma once
 
 #include <string>
+
 #include <vulkan/vulkan.h>
+#include <tiny_obj_loader.h>
 
 #include "nve_types.h"
 
@@ -42,6 +44,15 @@ public:
 
 	static VkDevice s_device;
 private:
+	std::string m_file;
+};
+
+struct GraphicsShader
+{
+	Shader fragment;
+	Shader vertex;
+
+	bool operator==(const GraphicsShader& other);
 };
 
 class Material
@@ -50,20 +61,29 @@ public:
 	Texture* m_pDiffuseTexture;
 	Texture* m_pNormalTexture;
 
-	Shader m_fragmentShader;
-	Shader m_vertexShader;
+	GraphicsShader m_shader;
 
-	Vector3 m_ambientColor;
-	Vector3 m_diffuseColor;
-	Vector3 m_specularColor;
+	Color m_ambient;
+	Color m_diffuse;
+	Color m_specular;
+	Color m_transmittance;
+	Color m_emission;
+	float m_specularHighlight;
+	float m_refraction;
+	float m_dissolve;
 
-	float m_alphaTest;
-
-	void load_shader(std::string file);
 	void load_diff_tex(std::string file);
 	void load_normal_tex(std::string file);
 
-	bool operator==(const Material& other);
+	bool operator== (const Material& other);
+	Material& operator= (const tinyobj::material_t& other);
 
 	static Material default_unlit();
+	void set_default_shader();
+	Material();
+};
+
+struct MaterialSSBO
+{
+
 };

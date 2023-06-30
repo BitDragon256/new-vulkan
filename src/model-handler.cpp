@@ -175,18 +175,18 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	return graphicsPipelineCI;
 }
 
-void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelineCI, PipelineCreationData& pipelineCreationData, const Material& material)
+void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelineCI, PipelineCreationData& pipelineCreationData, const GraphicsShader& shader)
 {
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = material.m_vertexShader.m_module;
+	vertShaderStageInfo.module = shader.vertex.m_module;
 	vertShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = material.m_fragmentShader.m_module;
+	fragShaderStageInfo.module = shader.fragment.m_module;
 	fragShaderStageInfo.pName = "main";
 
 	pipelineCreationData.stages[0] = vertShaderStageInfo;
@@ -216,9 +216,9 @@ void StaticGeometryHandler::update_framebuffers(std::vector<VkFramebuffer> frame
 void StaticGeometryHandler::awake(EntityId entity, ECSManager& ecs)
 {
 	Transform& transform = ecs.get_component<Transform>(entity);
-	StaticMesh& mesh = ecs.get_component<StaticMesh>(entity);
+	StaticModel& model = ecs.get_component<StaticModel>(entity);
 
-	add_mesh(mesh, transform);
+	add_model(model, transform);
 }
 void StaticGeometryHandler::update(float dt, ECSManager& ecs)
 {
@@ -229,36 +229,48 @@ void StaticGeometryHandler::update(float dt, ECSManager& ecs)
 	}
 }
 
-void StaticGeometryHandler::add_mesh(StaticMesh& mesh, Transform transform)
+void StaticGeometryHandler::add_model(StaticModel& model, Transform transform)
 {
-	bake_transform(mesh, transform);
-	size_t index;
-	MeshGroup* meshGroup = find_group(mesh.material, index);
-	if (!meshGroup) // no group found
-		meshGroup = push_mesh_group(mesh.material);
+	for (auto& mesh : model.m_children)
+	{
+		bake_transform(mesh, transform);
+		size_t index;
+		MeshGroup* meshGroup = find_group(mesh.material.m_shader, index);
+		if (!meshGroup) // no group found
+			meshGroup = push_mesh_group(mesh.material.m_shader);
 
-	m_meshes.push_back(MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index });
-	append_vector(meshGroup->vertices, mesh.vertices);
-	append_vector(meshGroup->indices, mesh.indices);
+		// material
+		uint32_t materialIndex = static_cast<uint32_t>(std::find(m_materials.begin(), m_materials.end(), mesh.material) - m_materials.begin());
+		if (materialIndex == m_materials.size())
+			m_materials.push_back(mesh.material);
+		for (auto& vert : mesh.vertices)
+			vert.material = materialIndex;
 
-	meshGroup->reloadMeshBuffers = true;
-	reloadMeshBuffers = true;
+		// save mesh
+		m_meshes.push_back(MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index });
+		append_vector(meshGroup->vertices, mesh.vertices);
+		append_vector(meshGroup->indices, mesh.indices);
+
+		meshGroup->reloadMeshBuffers = true;
+		reloadMeshBuffers = true;
+	}
 }
-MeshGroup* StaticGeometryHandler::find_group(const Material& material, size_t& index)
+MeshGroup* StaticGeometryHandler::find_group(const GraphicsShader& shader, size_t& index)
 {
+	index = 0;
 	while (index < m_meshGroups.size())
 	{
-		if (m_meshGroups[index].material == material)
+		if (m_meshGroups[index].shader == shader)
 			return &m_meshGroups[index];
 		index++;
 	}
 	return nullptr;
 }
-MeshGroup* StaticGeometryHandler::push_mesh_group(const Material& material)
+MeshGroup* StaticGeometryHandler::push_mesh_group(const GraphicsShader& shader)
 {
 	m_meshGroups.push_back(MeshGroup {});
 	auto& meshGroup = m_meshGroups.back();
-	meshGroup.material = material;
+	meshGroup.shader = shader;
 
 	BufferConfig config = default_buffer_config();
 	config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -367,7 +379,7 @@ std::vector<VkCommandBuffer> StaticGeometryHandler::get_command_buffers(uint32_t
 
 void StaticGeometryHandler::create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos)
 {
-	m_pipelineCreationData.resize(m_vulkanObjects.framebuffers.size());
+	m_pipelineCreationData.resize(m_meshGroups.size());
 
 	size_t index = 0;
 	uint32_t subpass = m_vulkanObjects.firstSubpass;
@@ -395,7 +407,7 @@ VkGraphicsPipelineCreateInfo StaticGeometryHandler::create_pipeline_create_info(
 
 	// ---------------------------------------
 
-	create_pipeline_shader_stages(graphicsPipelineCI, pipelineCreationData, m_meshGroups[pipelineIndex].material);
+	create_pipeline_shader_stages(graphicsPipelineCI, pipelineCreationData, m_meshGroups[pipelineIndex].shader);
 
 	// ---------------------------------------
 
@@ -537,8 +549,8 @@ void StaticGeometryHandler::cleanup()
 
 		vkFreeCommandBuffers(m_vulkanObjects.device, m_vulkanObjects.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 
-		meshGroup.material.m_fragmentShader.destroy();
-		meshGroup.material.m_vertexShader.destroy();
+		meshGroup.shader.fragment.destroy();
+		meshGroup.shader.vertex.destroy();
 	}
 }
 
@@ -559,10 +571,16 @@ Transform::Transform(Vector3 position, Vector3 scale, Quaternion rotation) :
 // TINY OBJ LOADER HELPER
 // ------------------------------------------
 
-struct ObjData
+struct ObjMesh
 {
 	std::vector<Vertex> vertices;
 	std::vector<Index> indices;
+
+	Material mat;
+};
+struct ObjData
+{
+	std::vector<ObjMesh> meshes;
 };
 
 template <>
@@ -604,14 +622,23 @@ void load_mesh(std::string file, ObjData& objData)
 
 	// transferring data
 
-	objData.vertices.clear();
-	objData.indices.clear();
+	objData.meshes.clear();
+	objData.meshes.reserve(shapes.size());
 
 	std::unordered_map<Vertex, uint32_t> vertices;
 	uint32_t i = 0;
 
 	for (auto& shape : shapes)
 	{
+		objData.meshes.push_back(ObjMesh{});
+		ObjMesh& mesh = objData.meshes.back();
+
+		if (shape.mesh.material_ids.size() > 0)
+		{
+			auto matIndex = shape.mesh.material_ids[0];
+			mesh.mat = materials[matIndex];
+		}
+
 		for (tinyobj::index_t index : shape.mesh.indices)
 		{
 			Vertex vert;
@@ -641,8 +668,8 @@ void load_mesh(std::string file, ObjData& objData)
 				attrib.colors[3 * index.vertex_index + 2]
 			};
 
-			objData.vertices.push_back(vert);
-			objData.indices.push_back(i);
+			mesh.vertices.push_back(vert);
+			mesh.indices.push_back(i);
 			i++;
 			/*if (!vertices.contains(vert))
 			{
@@ -663,14 +690,22 @@ void load_mesh(std::string file, ObjData& objData)
 }
 
 // ------------------------------------------
-// STATIC MESH
+// STATIC MODEL
 // ------------------------------------------
 
-void StaticMesh::load_mesh(std::string file)
+void StaticModel::load_mesh(std::string file)
 {
 	ObjData objData;
 	::load_mesh(file, objData);
 
-	vertices = objData.vertices;
-	indices = objData.indices;
+	m_children.clear();
+	m_children.reserve(objData.meshes.size());
+	for (const auto& objMesh : objData.meshes)
+	{
+		m_children.push_back(StaticMesh{});
+		StaticMesh& mesh = m_children.back();
+		mesh.material = objMesh.mat;
+		mesh.vertices = objMesh.vertices;
+		mesh.indices = objMesh.indices;
+	}
 }

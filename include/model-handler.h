@@ -29,6 +29,10 @@ struct StaticMesh
 	std::vector<Index> indices;
 
 	Material material;
+};
+struct StaticModel
+{
+	std::vector<StaticMesh> m_children;
 
 	void load_mesh(std::string file);
 };
@@ -42,14 +46,15 @@ struct MeshDataInfo
 	size_t meshGroup;
 };
 
-struct MeshGroup
+struct MeshGroup // group with individual shaders
 {
 	std::vector<Vertex> vertices;
 	std::vector<Index> indices;
-	Material material;
 
 	Buffer<Vertex> vertexBuffer;
 	Buffer<Index> indexBuffer;
+
+	GraphicsShader shader;
 	
 	bool reloadMeshBuffers;
 
@@ -97,7 +102,7 @@ struct PipelineCreationData
 	std::vector<VkDynamicState>				dynamicStates;
 };
 
-class StaticGeometryHandler : System<StaticMesh, Transform>
+class StaticGeometryHandler : System<StaticModel, Transform>
 {
 public:
 	// void create_command_buffers();
@@ -118,9 +123,9 @@ public:
 	void cleanup();
 
 private:
-	void add_mesh(StaticMesh& mesh, Transform transform);
-	MeshGroup* find_group(const Material& material, size_t& index);
-	MeshGroup* push_mesh_group(const Material& material);
+	void add_model(StaticModel& model, Transform transform);
+	MeshGroup* find_group(const GraphicsShader& shader, size_t& index);
+	MeshGroup* push_mesh_group(const GraphicsShader& shader);
 
 	void create_group_command_buffers(MeshGroup& meshGroup);
 
@@ -131,6 +136,7 @@ private:
 
 	std::vector<MeshGroup> m_meshGroups;
 	std::vector<MeshDataInfo> m_meshes;
+	std::vector<Material> m_materials;
 
 	std::vector<PipelineCreationData> m_pipelineCreationData;
 	VkPipelineLayout m_pipelineLayout;

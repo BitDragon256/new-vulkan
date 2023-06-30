@@ -60,6 +60,7 @@ void TexturePool::push_image_info(VkImageView view)
 
 void Shader::load_shader(std::string file)
 {
+	m_file = file;
 	m_module = create_shader_module(file, s_device);
 }
 void Shader::destroy()
@@ -69,10 +70,15 @@ void Shader::destroy()
 
 bool Shader::operator==(const Shader& other)
 {
-	return m_module == other.m_module;
+	return m_file == other.m_file;
 }
 
 VkDevice Shader::s_device;
+
+bool GraphicsShader::operator==(const GraphicsShader& other)
+{
+	return fragment == other.fragment && vertex == other.vertex;
+}
 
 // --------------------------------------
 // MATERIAL
@@ -80,7 +86,35 @@ VkDevice Shader::s_device;
 
 bool Material::operator==(const Material& other)
 {
-	return m_fragmentShader == other.m_fragmentShader && m_vertexShader == other.m_vertexShader;
+	return 
+		m_pDiffuseTexture == other.m_pDiffuseTexture &&
+		m_pNormalTexture == other.m_pNormalTexture &&
+		m_shader == other.m_shader &&
+		m_ambient == other.m_ambient &&
+		m_diffuse == other.m_diffuse &&
+		m_specular == other.m_specular &&
+		m_transmittance == other.m_transmittance &&
+		m_emission == other.m_emission &&
+		m_specularHighlight == other.m_specularHighlight &&
+		m_refraction == other.m_refraction &&
+		m_dissolve == other.m_dissolve;
+}
+Vector3 to_vec(const float col[3])
+{
+	return Vector3{ col[0], col[1], col[2] };
+}
+Material& Material::operator= (const tinyobj::material_t& mat)
+{
+	m_ambient = to_vec(mat.ambient);
+	m_diffuse = to_vec(mat.diffuse);
+	m_specular = to_vec(mat.specular);
+	m_transmittance = to_vec(mat.transmittance);
+	m_emission = to_vec(mat.emission);
+	m_specularHighlight = mat.shininess;
+	m_refraction = mat.ior;
+	m_dissolve = mat.dissolve;
+
+	return *this;
 }
 
 Material Material::default_unlit()
@@ -90,4 +124,15 @@ Material Material::default_unlit()
 	
 
 	return material;
+}
+void Material::set_default_shader()
+{
+	m_shader.fragment.load_shader("static_geometry/default_unlit.frag.spv");
+	m_shader.vertex.load_shader("static_geometry/default_unlit.vert.spv");
+}
+
+Material::Material() :
+	m_dissolve{1}
+{
+	set_default_shader();
 }

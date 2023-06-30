@@ -347,7 +347,7 @@ NVE_RESULT Renderer::create_render_pass()
 {
     // color attachment
 
-    VkAttachmentDescription colorAttachment{};
+    VkAttachmentDescription colorAttachment = {};
     colorAttachment.format = m_swapchainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -357,7 +357,7 @@ NVE_RESULT Renderer::create_render_pass()
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference colorAttachmentRef{};
+    VkAttachmentReference colorAttachmentRef = {};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
@@ -388,14 +388,6 @@ NVE_RESULT Renderer::create_render_pass()
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
     }
-
-    /*VkSubpassDependency firstDependency = {};
-    firstDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    firstDependency.dstSubpass = 0;
-    firstDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    firstDependency.srcAccessMask = 0;
-    firstDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    firstDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;*/
 
     std::vector<VkSubpassDependency> dependencies(subpassCount - 1);
     uint32_t subpassIndex = 0;

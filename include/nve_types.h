@@ -29,6 +29,7 @@ typedef glm::vec2 Vector2;
 typedef glm::vec3 Vector3;
 typedef glm::vec4 Vector4;
 typedef math::quaternion Quaternion;
+typedef Vector3 Color;
 
 typedef struct Vertex
 {
@@ -36,6 +37,7 @@ typedef struct Vertex
 	Vector3 normal;
 	Vector3 color;
 	Vector2 uv;
+	uint32_t material;
 
 	static VkVertexInputBindingDescription getBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> getAttributeDescriptions();

@@ -75,11 +75,9 @@ int main(int argc, char** argv)
 
     auto testEntity = renderer.m_ecs.create_entity();
     renderer.m_ecs.add_component<Transform>(testEntity);
-    renderer.m_ecs.add_component<StaticMesh>(testEntity);
-    auto& testEntityMesh = renderer.m_ecs.get_component<StaticMesh>(testEntity);
-    testEntityMesh.load_mesh("X:/Dev/new-vulkan-engine/test-models/sportsCar.obj");
-    testEntityMesh.material.m_fragmentShader.load_shader("static_geometry/default_unlit.frag.spv");
-    testEntityMesh.material.m_vertexShader.load_shader("static_geometry/default_unlit.vert.spv");
+    renderer.m_ecs.add_component<StaticModel>(testEntity);
+    auto& testEntityModel = renderer.m_ecs.get_component<StaticModel>(testEntity);
+    testEntityModel.load_mesh("X:/Dev/new-vulkan-engine/test-models/sportsCar.obj");
     renderer.m_ecs.get_component<Transform>(testEntity).rotation = Quaternion({ -PI/2,0,0 });
 
     bool running = true;
