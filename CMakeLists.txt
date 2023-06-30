@@ -26,6 +26,7 @@ set(
 	${SOURCE_DIR}/render.cpp
 	${SOURCE_DIR}/vulkan_helpers.cpp
 	${SOURCE_DIR}/material.cpp
+	${SOURCE_DIR}/image.cpp
 )
 
 set(
@@ -40,6 +41,7 @@ set(
 	${INCLUDE_DIR}/render.h
 	${INCLUDE_DIR}/vulkan_helpers.h
 	${INCLUDE_DIR}/material.h
+	${INCLUDE_DIR}/image.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
@@ -71,10 +73,17 @@ set(
 	${IMGUI_FOLDER}/imstb_truetype.h
 )
 
-add_library(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${IMGUI_FILES})
+set(
+	EXTERNAL_LIBRARY_FILES
+	${IMGUI_FILES}
+	external/tinyobjloader/tiny_obj_loader.h
+)
+
+add_library(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${EXTERNAL_LIBRARY_FILES})
 
 set_target_properties(nve PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(nve PUBLIC include)
 target_include_directories(nve PUBLIC external/imgui)
+target_include_directories(nve PUBLIC external/tinyobjloader)
 target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw)

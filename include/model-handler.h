@@ -29,6 +29,8 @@ struct StaticMesh
 	std::vector<Index> indices;
 
 	Material material;
+
+	void load_mesh(std::string file);
 };
 struct MeshDataInfo
 {
@@ -78,7 +80,7 @@ struct PipelineCreationData
 	VkPipelineShaderStageCreateInfo			stages[2];
 
 	VkPipelineVertexInputStateCreateInfo	vertexInputState;
-	std::array<VkVertexInputAttributeDescription, 3> vertexAttributeDescriptions;
+	std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> vertexAttributeDescriptions;
 	VkVertexInputBindingDescription			vertexBindingDescription;
 
 	VkPipelineInputAssemblyStateCreateInfo	inputAssemblyState;

@@ -19,6 +19,7 @@
 #include "nve_types.h"
 #include "model-handler.h"
 #include "ecs.h"
+#include "image.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1
@@ -84,6 +85,9 @@ private:
 	std::vector<VkImageView> m_swapchainImageViews;
 	VkFormat m_swapchainImageFormat;
 	VkExtent2D m_swapchainExtent;
+
+	std::vector<VImage> m_depthImages;
+	void create_depth_images();
 
 	VkQueue m_graphicsQueue;
 	VkQueue m_presentationQueue;

@@ -38,6 +38,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     log_cond(create_device() == NVE_SUCCESS, "logical device created");
     log_cond(create_swapchain() == NVE_SUCCESS, "swapchain created");
     log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
+    create_depth_images();              log("depth images created");
     log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
     log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
     log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
@@ -344,6 +345,8 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 }
 NVE_RESULT Renderer::create_render_pass()
 {
+    // color attachment
+
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = m_swapchainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -358,6 +361,22 @@ NVE_RESULT Renderer::create_render_pass()
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    // depth attachment
+
+    VkAttachmentDescription depthAttachment;
+    depthAttachment.format = find_depth_format(m_physicalDevice);
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef;
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     uint32_t subpassCount = geometry_handler_subpass_count();
     std::vector<VkSubpassDescription> subpasses(subpassCount);
 
@@ -366,6 +385,7 @@ NVE_RESULT Renderer::create_render_pass()
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
     }
 
     /*VkSubpassDependency firstDependency = {};
@@ -385,7 +405,7 @@ NVE_RESULT Renderer::create_render_pass()
         dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         subpassIndex++;
     }
@@ -394,8 +414,12 @@ NVE_RESULT Renderer::create_render_pass()
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
+    std::vector<VkAttachmentDescription> attachments = {
+        colorAttachment,
+        depthAttachment
+    };
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = subpassCount;
     renderPassInfo.pSubpasses = subpasses.data();
 
@@ -412,15 +436,16 @@ NVE_RESULT Renderer::create_framebuffers()
     m_swapchainFramebuffers.resize(m_swapchainImageViews.size());
 
     for (size_t i = 0; i < m_swapchainImageViews.size(); i++) {
-        VkImageView attachments[] = {
-            m_swapchainImageViews[i]
+        std::vector<VkImageView> attachments = {
+            m_swapchainImageViews[i],
+            m_depthImages[i].m_imageView
         };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = m_renderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = m_swapchainExtent.width;
         framebufferInfo.height = m_swapchainExtent.height;
         framebufferInfo.layers = 1;
@@ -489,6 +514,24 @@ NVE_RESULT Renderer::create_sync_objects()
     }
 
     return NVE_SUCCESS;
+}
+void Renderer::create_depth_images()
+{
+    m_depthImages.resize(m_swapchainImages.size());
+    for (auto& image : m_depthImages)
+    {
+        image.create(
+            m_device,
+            m_physicalDevice,
+            m_swapchainExtent.width,
+            m_swapchainExtent.height,
+            find_depth_format(m_physicalDevice),
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            VK_IMAGE_ASPECT_DEPTH_BIT
+        );
+    }
 }
 
 void Renderer::create_descriptor_pool()
@@ -595,9 +638,11 @@ void Renderer::record_main_command_buffer(uint32_t frame)
     renderPassBI.renderArea.offset = { 0, 0 };
     renderPassBI.renderArea.extent = m_swapchainExtent;
 
-    VkClearValue clearValue = { {{ m_config.clearColor.x / 255.f, m_config.clearColor.y / 255.f, m_config.clearColor.z / 255.f, 1.f }} };
-    renderPassBI.clearValueCount = 1;
-    renderPassBI.pClearValues = &clearValue;
+    std::vector<VkClearValue> clearValues(2);
+    clearValues[0].color = { m_config.clearColor.x / 255.f, m_config.clearColor.y / 255.f, m_config.clearColor.z / 255.f, 1.f };
+    clearValues[1].depthStencil = { 1.0f, 0 };
+    renderPassBI.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassBI.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
@@ -733,8 +778,11 @@ void Renderer::clean_up()
 
     vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 
+    for (auto& image : m_depthImages)
+        image.destroy();
     for (auto imageView : m_swapchainImageViews)
         vkDestroyImageView(m_device, imageView, nullptr);
+
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
@@ -1058,14 +1106,24 @@ std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> Vertex::ge
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, color);
+    attributeDescriptions[1].offset = offsetof(Vertex, normal);
 
     attributeDescriptions[2].binding = 0;
     attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(Vertex, uv);
+    attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[2].offset = offsetof(Vertex, color);
+
+    attributeDescriptions[3].binding = 0;
+    attributeDescriptions[3].location = 3;
+    attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[3].offset = offsetof(Vertex, uv);
 
     return attributeDescriptions;
+}
+
+bool Vertex::operator== (const Vertex& other) const
+{
+    return pos == other.pos && normal == other.normal && color == other.color && uv == other.uv;
 }
 
 // ---------------------------------------

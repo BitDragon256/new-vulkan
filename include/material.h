@@ -49,10 +49,14 @@ class Material
 public:
 	Texture* m_pDiffuseTexture;
 	Texture* m_pNormalTexture;
+
 	Shader m_fragmentShader;
 	Shader m_vertexShader;
-	Vector4 m_diffuseColor;
+
 	Vector3 m_ambientColor;
+	Vector3 m_diffuseColor;
+	Vector3 m_specularColor;
+
 	float m_alphaTest;
 
 	void load_shader(std::string file);

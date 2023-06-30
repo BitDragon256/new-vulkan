@@ -18,7 +18,7 @@ typedef int NVE_RESULT;
 typedef uint32_t Index;
 #define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
-#define VERTEX_ATTRIBUTE_COUNT 3
+#define VERTEX_ATTRIBUTE_COUNT 4
 
 namespace math
 {
@@ -33,11 +33,14 @@ typedef math::quaternion Quaternion;
 typedef struct Vertex
 {
 	Vector3 pos;
+	Vector3 normal;
 	Vector3 color;
 	Vector2 uv;
 
 	static VkVertexInputBindingDescription getBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> getAttributeDescriptions();
+
+	bool operator== (const Vertex& other) const;
 } Vertex;
 
 struct CameraPushConstant

@@ -110,7 +110,7 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	pipelineCreationData.rasterizationState.rasterizerDiscardEnable = VK_FALSE;
 	pipelineCreationData.rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
 	pipelineCreationData.rasterizationState.lineWidth = 1.0f;
-	pipelineCreationData.rasterizationState.cullMode = VK_CULL_MODE_NONE;
+	pipelineCreationData.rasterizationState.cullMode = VK_CULL_MODE_BACK_BIT;
 	pipelineCreationData.rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	pipelineCreationData.rasterizationState.depthBiasEnable = VK_FALSE;
 
@@ -124,6 +124,20 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	pipelineCreationData.multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
 	graphicsPipelineCI.pMultisampleState = &pipelineCreationData.multisampleState;
+
+	// -------------------------------------------
+	
+	pipelineCreationData.depthStencilState = {};
+	pipelineCreationData.depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	pipelineCreationData.depthStencilState.pNext = nullptr;
+	pipelineCreationData.depthStencilState.flags = 0;
+	pipelineCreationData.depthStencilState.depthTestEnable = VK_TRUE;
+	pipelineCreationData.depthStencilState.depthWriteEnable = VK_TRUE;
+	pipelineCreationData.depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
+	pipelineCreationData.depthStencilState.depthBoundsTestEnable = VK_FALSE;
+	pipelineCreationData.depthStencilState.stencilTestEnable = VK_FALSE;
+
+	graphicsPipelineCI.pDepthStencilState = &pipelineCreationData.depthStencilState;
 
 	// -------------------------------------------
 
@@ -217,7 +231,7 @@ void StaticGeometryHandler::update(float dt, ECSManager& ecs)
 
 void StaticGeometryHandler::add_mesh(StaticMesh& mesh, Transform transform)
 {
-	bake_transform(mesh, transform);
+	//bake_transform(mesh, transform);
 	size_t index;
 	MeshGroup* meshGroup = find_group(mesh.material, index);
 	if (!meshGroup) // no group found
@@ -538,3 +552,115 @@ Transform::Transform() :
 Transform::Transform(Vector3 position, Vector3 scale, Quaternion rotation) :
 	position{ position }, scale{ scale }, rotation{ rotation }
 {}
+
+
+
+// ------------------------------------------
+// TINY OBJ LOADER HELPER
+// ------------------------------------------
+
+struct ObjData
+{
+	std::vector<Vertex> vertices;
+	std::vector<Index> indices;
+};
+
+template <>
+struct std::hash<Vertex>
+{
+	std::size_t operator()(const Vertex& v) const
+	{
+		return    std::hash<float>()(v.pos.x)
+				^ std::hash<float>()(v.normal.x)
+				^ std::hash<float>()(v.pos.y)
+				^ std::hash<float>()(v.uv.x)
+				^ std::hash<float>()(v.color.z);
+	}
+};
+
+void load_mesh(std::string file, ObjData& objData)
+{
+	tinyobj::ObjReaderConfig readerConfig;
+	readerConfig.mtl_search_path = "";
+
+	tinyobj::ObjReader reader;
+
+	if (!reader.ParseFromFile(file, readerConfig))
+		if (!reader.Error().empty())
+			log_err(reader.Error());
+
+	if (!reader.Warning().empty())
+		log(reader.Warning());
+
+	auto& attrib = reader.GetAttrib();
+	auto& shapes = reader.GetShapes();
+	auto& materials = reader.GetMaterials();
+
+	// transferring data
+
+	objData.vertices.clear();
+	objData.indices.clear();
+
+	std::unordered_map<Vertex, uint32_t> vertices;
+	uint32_t i = 0;
+
+	for (auto& shape : shapes)
+	{
+		for (tinyobj::index_t index : shape.mesh.indices)
+		{
+			Vertex vert;
+			vert.pos = Vector3 {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2]
+			};
+			if (index.normal_index >= 0)
+			{
+				vert.normal = Vector3{
+					attrib.normals[3 * index.normal_index + 0],
+					attrib.normals[3 * index.normal_index + 1],
+					attrib.normals[3 * index.normal_index + 2]
+				};
+			}
+			if (index.texcoord_index >= 0)
+			{
+				vert.uv = Vector2{
+					attrib.texcoords[2 * index.texcoord_index + 0],
+					attrib.texcoords[2 * index.texcoord_index + 1]
+				};
+			}
+			vert.color = Vector3 {
+				attrib.colors[3 * index.vertex_index + 0],
+				attrib.colors[3 * index.vertex_index + 1],
+				attrib.colors[3 * index.vertex_index + 2]
+			};
+			if (!vertices.contains(vert))
+			{
+				vertices[vert] = i;
+				objData.indices.push_back(i);
+				i++;
+			}
+			else
+			{
+				objData.indices.push_back(vertices.at(vert));
+			}
+		}
+	}
+
+	objData.vertices.reserve(vertices.size());
+	for (auto kv : vertices)
+		objData.vertices.push_back(kv.first);
+}
+
+// ------------------------------------------
+// STATIC MESH
+// ------------------------------------------
+
+void StaticMesh::load_mesh(std::string file)
+{
+	ObjData objData;
+	::load_mesh(file, objData);
+
+	vertices = objData.vertices;
+	indices = objData.indices;
+}

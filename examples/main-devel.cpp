@@ -68,26 +68,18 @@ int main(int argc, char** argv)
     int fps = 0;
     int avgFps = 0;
     std::string fpsText;
+    std::string avgFpsText;
     float deltaTime;
     auto lastTime = std::chrono::high_resolution_clock::now();
+    uint32_t frame = 0;
 
     auto testEntity = renderer.m_ecs.create_entity();
     renderer.m_ecs.add_component<Transform>(testEntity);
     renderer.m_ecs.add_component<StaticMesh>(testEntity);
     auto& testEntityMesh = renderer.m_ecs.get_component<StaticMesh>(testEntity);
-    testEntityMesh.vertices = {
-        { { -0.5f, -0.5f,  0.0f }, { 1.f, 0.f, 0.f }, { 0.f, 0.f } },
-        { {  0.5f,  0.0f,  0.0f }, { 0.f, 1.f, 0.f }, { 0.f, 0.f } },
-        { { -0.5f,  0.5f,  0.0f }, { 0.f, 0.f, 1.f }, { 0.f, 0.f } },
-    };
-    testEntityMesh.indices = {
-        0, 1, 2,
-        0, 2, 1,
-    };
+    testEntityMesh.load_mesh("X:/Dev/new-vulkan-engine/test-models/sportsCar.obj");
     testEntityMesh.material.m_fragmentShader.load_shader("static_geometry/default_unlit.frag.spv");
     testEntityMesh.material.m_vertexShader.load_shader("static_geometry/default_unlit.vert.spv");
-
-    auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
 
     bool running = true;
     while (running)
@@ -98,36 +90,16 @@ int main(int argc, char** argv)
 
         ImGui::Begin("FPS");
 
-        fpsText = std::to_string(fps);
+        if (frame >= fps / 2)
+        {
+            fpsText = std::to_string(fps);
+            avgFpsText = std::to_string(avgFps);
+            frame = 0;
+
+        }
         ImGui::Text(fpsText.c_str());
-        fpsText = std::to_string(avgFps);
-        ImGui::Text(fpsText.c_str());
-
-        ImGui::End();
-
-        ImGui::Begin("Cube Transform");
-
-        ImGui::SliderFloat3("position", cubePosition, -1, 1);
-        ImGui::SliderFloat3("scale", cubeScale, 0, 10);
-        ImGui::SliderFloat3("euler rotation", cubeEulerRotation, -PI, PI);
-
-        /*cube.m_info.position.x = cubePosition[0];
-        cube.m_info.position.y = cubePosition[1];
-        cube.m_info.position.z = cubePosition[2];
-
-        cube.m_info.scale.x = cubeScale[0];
-        cube.m_info.scale.y = cubeScale[1];
-        cube.m_info.scale.z = cubeScale[2];*/
-
-        Vector3 EulerAngle(cubeEulerRotation[0], cubeEulerRotation[1], cubeEulerRotation[2]);
-
-        Quaternion finalOrientation(EulerAngle);
-
-        //cube.m_info.rotation = finalOrientation;
-
-        std::stringstream quatDisplay;
-        quatDisplay << finalOrientation.x << " " << finalOrientation.y << " " << finalOrientation.z << " " << finalOrientation.w;
-        ImGui::Text(quatDisplay.str().c_str());
+        ImGui::Text(avgFpsText.c_str());
+        frame++;
 
         ImGui::End();
 
