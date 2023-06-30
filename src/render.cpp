@@ -363,7 +363,8 @@ NVE_RESULT Renderer::create_render_pass()
 
     // depth attachment
 
-    VkAttachmentDescription depthAttachment;
+    VkAttachmentDescription depthAttachment = {};
+    depthAttachment.flags = 0;
     depthAttachment.format = find_depth_format(m_physicalDevice);
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -373,7 +374,7 @@ NVE_RESULT Renderer::create_render_pass()
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference depthAttachmentRef;
+    VkAttachmentReference depthAttachmentRef = {};
     depthAttachmentRef.attachment = 1;
     depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
