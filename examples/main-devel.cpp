@@ -80,6 +80,7 @@ int main(int argc, char** argv)
     testEntityMesh.load_mesh("X:/Dev/new-vulkan-engine/test-models/sportsCar.obj");
     testEntityMesh.material.m_fragmentShader.load_shader("static_geometry/default_unlit.frag.spv");
     testEntityMesh.material.m_vertexShader.load_shader("static_geometry/default_unlit.vert.spv");
+    renderer.m_ecs.get_component<Transform>(testEntity).rotation = Quaternion({ -PI/2,0,0 });
 
     bool running = true;
     while (running)

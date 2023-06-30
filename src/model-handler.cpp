@@ -111,7 +111,7 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	pipelineCreationData.rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
 	pipelineCreationData.rasterizationState.lineWidth = 1.0f;
 	pipelineCreationData.rasterizationState.cullMode = VK_CULL_MODE_BACK_BIT;
-	pipelineCreationData.rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	pipelineCreationData.rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	pipelineCreationData.rasterizationState.depthBiasEnable = VK_FALSE;
 
 	graphicsPipelineCI.pRasterizationState = &pipelineCreationData.rasterizationState;
@@ -231,7 +231,7 @@ void StaticGeometryHandler::update(float dt, ECSManager& ecs)
 
 void StaticGeometryHandler::add_mesh(StaticMesh& mesh, Transform transform)
 {
-	//bake_transform(mesh, transform);
+	bake_transform(mesh, transform);
 	size_t index;
 	MeshGroup* meshGroup = find_group(mesh.material, index);
 	if (!meshGroup) // no group found
@@ -571,10 +571,16 @@ struct std::hash<Vertex>
 	std::size_t operator()(const Vertex& v) const
 	{
 		return    std::hash<float>()(v.pos.x)
+				^ std::hash<float>()(v.pos.y) << 1
+				^ std::hash<float>()(v.pos.z) >> 1
 				^ std::hash<float>()(v.normal.x)
-				^ std::hash<float>()(v.pos.y)
-				^ std::hash<float>()(v.uv.x)
-				^ std::hash<float>()(v.color.z);
+				^ std::hash<float>()(v.normal.y) << 2
+				^ std::hash<float>()(v.normal.z) >> 2
+				^ std::hash<float>()(v.uv.x) << 3
+				^ std::hash<float>()(v.uv.y) >> 3
+				^ std::hash<float>()(v.color.x) << 4
+				^ std::hash<float>()(v.color.y) >> 4
+				^ std::hash<float>()(v.color.z) << 5;
 	}
 };
 
@@ -634,7 +640,11 @@ void load_mesh(std::string file, ObjData& objData)
 				attrib.colors[3 * index.vertex_index + 1],
 				attrib.colors[3 * index.vertex_index + 2]
 			};
-			if (!vertices.contains(vert))
+
+			objData.vertices.push_back(vert);
+			objData.indices.push_back(i);
+			i++;
+			/*if (!vertices.contains(vert))
 			{
 				vertices[vert] = i;
 				objData.indices.push_back(i);
@@ -643,13 +653,13 @@ void load_mesh(std::string file, ObjData& objData)
 			else
 			{
 				objData.indices.push_back(vertices.at(vert));
-			}
+			}*/
 		}
 	}
 
-	objData.vertices.reserve(vertices.size());
-	for (auto kv : vertices)
-		objData.vertices.push_back(kv.first);
+	//objData.vertices.reserve(vertices.size());
+	//for (const auto& kv : vertices)
+	//	objData.vertices.push_back(kv.first);
 }
 
 // ------------------------------------------

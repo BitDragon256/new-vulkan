@@ -93,8 +93,6 @@ namespace math
 		this->y = y;
 		this->z = z;
 		this->w = w;
-
-		normalize();
 	}
 	void quaternion::set(Vector3 complex, float real)
 	{
@@ -113,7 +111,6 @@ namespace math
 
 	quaternion quaternion::operator*(const quaternion& q)
 	{
-		normalize();
 		quaternion ret;
 		ret.x = (w*q.x + x*q.w + y*q.z - z*q.y);
 		ret.y = (w*q.y - x*q.z + y*q.w + z*q.x);
