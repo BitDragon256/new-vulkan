@@ -18,6 +18,12 @@ layout(location = 2) in Material inMat;
 
 layout(location = 0) out vec4 outColor;
 
+layout( push_constant ) uniform constants
+{
+    mat4 projView; // not updated // vertex stage
+    vec3 camPos;
+} CameraPushConstant;
+
 vec3 lightPos = vec3(3, 2, 5);
 
 void main()
@@ -29,8 +35,8 @@ void main()
     float specular = 0.0;
     if(lambertian > 0.0)
     {
-        vec3 R = reflect(-L, N);      // Reflected light vector
-        vec3 V = normalize(-inPos); // Vector to viewer
+        vec3 R = reflect(-L, N); // Reflected light vector
+        vec3 V = normalize(CameraPushConstant.camPos - inPos); // Vector to viewer
         // Compute the specular term
         float specAngle = max(dot(R, V), 0.0);
         specular = pow(specAngle, inMat.specularHighlight);

@@ -131,7 +131,8 @@ private:
 
 	// camera stuff
 	Camera* m_activeCamera;
-	CameraPushConstant m_cameraPushConstant;
+	CameraPushConstantVertex m_cameraPushConstantVertex;
+	CameraPushConstantFragment m_cameraPushConstantFragment;
 
 	// imgui vulkan objects
 	VkDescriptorPool m_imgui_descriptorPool;

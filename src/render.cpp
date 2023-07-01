@@ -586,7 +586,8 @@ void Renderer::init_static_geometry_handler()
     vulkanObjects.framebuffers = m_swapchainFramebuffers;
     vulkanObjects.firstSubpass = 0;
 
-    vulkanObjects.pCameraPushConstant = &m_cameraPushConstant;
+    vulkanObjects.pCameraPushConstantVertex = &m_cameraPushConstantVertex;
+    vulkanObjects.pCameraPushConstantFragment = &m_cameraPushConstantFragment;
 
     m_staticGeometryHandler.initialize(vulkanObjects);
 }
@@ -712,8 +713,8 @@ NVE_RESULT Renderer::draw_frame()
     vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
 
     // update push constant
-    m_cameraPushConstant.proj = m_activeCamera->projection_matrix();
-    m_cameraPushConstant.view = m_activeCamera->view_matrix();
+    m_cameraPushConstantVertex.projView = m_activeCamera->projection_matrix() * m_activeCamera->view_matrix();
+    m_cameraPushConstantFragment.camPos = m_activeCamera->m_position;
 
     // record command buffers
     m_staticGeometryHandler.record_command_buffers(m_frame);

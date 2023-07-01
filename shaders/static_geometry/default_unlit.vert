@@ -29,9 +29,9 @@ layout(std140,set = 0, binding = 0) readonly buffer MaterialBuffer
 
 layout( push_constant ) uniform constants
 {
-    mat4 view;
-    mat4 proj;
-} CameraPushConstant;
+    mat4 projView;
+    vec3 camPos; // not updated // fragment stage
+} CPC;
 
 // vec2 positions[3] = vec2[](
 //     vec2(0.0, -0.5),
@@ -40,11 +40,10 @@ layout( push_constant ) uniform constants
 // );
 
 void main()
-{
-    mat4 cameraMatrix = CameraPushConstant.proj * CameraPushConstant.view;
-    gl_Position = cameraMatrix * vec4(inPosition, 1.0);
-    outMat = MaterialBufferObjects.mats[inMaterial];
+{;
+    gl_Position = CPC.projView * vec4(inPosition, 1.0);
 
+    outMat = MaterialBufferObjects.mats[inMaterial];
     outPos = gl_Position.xyz;
     outNormal = inNormal;
 }
