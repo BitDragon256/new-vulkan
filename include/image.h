@@ -13,8 +13,9 @@ public:
 		VkFormat format,
 		VkImageTiling tiling,
 		VkImageUsageFlags usage,
-		VkMemoryPropertyFlags memoryProperties,
-		VkImageAspectFlags aspect
+		VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT,
+		VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
 	);
 	void destroy();
 

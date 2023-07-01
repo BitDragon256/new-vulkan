@@ -191,13 +191,7 @@ std::vector<char> read_file(const std::string& filename)
 VkShaderModule create_shader_module(const std::string& file, VkDevice device)
 {
 
-    std::string prefix = "";
-#ifdef _MSC_BUILD
-    prefix = "X:/Dev/new-vulkan-engine";
-#else
-    prefix = "../..";
-#endif
-
+    std::string prefix = ROOT_DIRECTORY;
 
     std::vector<char> shaderCode = read_file(prefix + "/shaders/" + file);
 
@@ -249,17 +243,26 @@ VkCommandBuffer begin_single_time_cmd_buffer(VkCommandPool cmdPool, VkDevice dev
 }
 void end_single_time_cmd_buffer(VkCommandBuffer commandBuffer, VkCommandPool cmdPool, VkDevice device, VkQueue queue)
 {
-    vkEndCommandBuffer(commandBuffer);
+    auto res = vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(queue);
+    VkFence fence;
+    VkFenceCreateInfo fenceCI = {};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCI.pNext = nullptr;
+    fenceCI.flags = 0;
 
-    vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
+    vkCreateFence(device, &fenceCI, nullptr, &fence);
+
+    res = vkQueueSubmit(queue, 1, &submitInfo, fence);
+    res = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+    //res = vkQueueWaitIdle(queue);
+
+    //vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
 }
 void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {

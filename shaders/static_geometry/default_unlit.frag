@@ -14,7 +14,9 @@ struct Material
 
 layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNormal;
-layout(location = 2) in Material inMat;
+layout(location = 2) in vec2 inUV;
+layout(location = 3) in flat uint inTex;
+layout(location = 4) in Material inMat;
 
 layout(location = 0) out vec4 outColor;
 
@@ -24,10 +26,16 @@ layout( push_constant ) uniform constants
     vec3 camPos;
 } CameraPushConstant;
 
+layout(set = 0, binding = 1) uniform texture2D textures[128];
+layout(set = 0, binding = 2) uniform sampler samp;
+
 vec3 lightPos = vec3(3, 2, 5);
 
 void main()
 {
+    outColor = texture(sampler2D(textures[inTex], samp), inUV);
+
+    /*
     vec3 N = normalize(inNormal);
     vec3 L = normalize(lightPos - inPos);
     // Lambert's cosine law
@@ -42,4 +50,5 @@ void main()
         specular = pow(specAngle, inMat.specularHighlight);
     }
     outColor = vec4(inMat.ambient + inMat.diffuse * lambertian + inMat.specular * specular, 1.0);
+    */
 }

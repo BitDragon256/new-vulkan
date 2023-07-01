@@ -36,10 +36,10 @@ public:
     RawBuffer() :
         m_created{ false }, m_initialized{ false }, m_data(), m_realSize{ 0 } {}
 
-    NVE_RESULT set(const std::vector<T>& data)
+    void set(const std::vector<T>& data)
     {
         if (!m_initialized || data.size() == 0)
-            return NVE_FAILURE;
+            return;
 
         bool recreate = data.size() > m_data.size() || !m_created;
         m_data = data;
@@ -48,8 +48,12 @@ public:
         if (recreate)
             create();
         reload_data();
-
-        return NVE_SUCCESS;
+    }
+    void cpy_raw(uint32_t size, const T* data)
+    {
+        m_realSize = sizeof(T) * size;
+        create();
+        cpy_data(data);
     }
     void destroy()
     {
@@ -79,9 +83,13 @@ protected:
     }
     virtual void reload_data()
     {
+        cpy_data(m_data.data());
+    }
+    void cpy_data(const T* d)
+    {
         void* data;
         vkMapMemory(m_config.device, m_memory, 0, m_realSize, 0, &data);
-        std::memcpy(data, m_data.data(), (size_t)m_realSize);
+        std::memcpy(data, d, (size_t)m_realSize);
         vkUnmapMemory(m_config.device, m_memory);
     }
 

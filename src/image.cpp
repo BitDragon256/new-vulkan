@@ -12,7 +12,8 @@ void VImage::create(
 	VkImageTiling tiling,
 	VkImageUsageFlags usage,
 	VkMemoryPropertyFlags memoryProperties,
-	VkImageAspectFlags aspect)
+	VkImageAspectFlags aspect,
+	VkImageLayout initialLayout)
 {
 	m_device = device;
 
@@ -34,7 +35,7 @@ void VImage::create(
 	imageCI.tiling = tiling;
 	imageCI.usage = usage;
 	imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	imageCI.initialLayout = initialLayout;
 
 	{
 		auto res = vkCreateImage(device, &imageCI, nullptr, &m_image);

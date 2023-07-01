@@ -6,31 +6,50 @@
 #include <tiny_obj_loader.h>
 
 #include "nve_types.h"
+#include "image.h"
+
+#define TEXTURE_POOL_MAX_TEXTURES 1024
 
 typedef struct Texture
 {
-	VkImage image;
-	VkImageView view;
+	VImage image;
 	bool active;
 } Texture;
-
-#define TEXTURE_POOL_MAX_TEXTURES 1024
 
 class TexturePool
 {
 public:
-	uint32_t add_texture(Texture* tex);
+	uint32_t add_texture(std::string tex);
+	uint32_t find(std::string tex);
 	VkWriteDescriptorSet get_descriptor_set_write(VkDescriptorSet descriptorSet, uint32_t binding);
+	VkWriteDescriptorSet get_sampler_descriptor_set_write(VkDescriptorSet descriptorSet, uint32_t binding);
 	void should_reiterate_active();
+	void init(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue);
+	void cleanup();
 
 private:
-	std::vector<Texture*> m_textures;
+	std::vector<Texture> m_textures;
+	std::vector<std::string> m_loadedTextures;
 	std::vector<VkDescriptorImageInfo> m_imageInfos;
 	void push_image_info(VkImageView view);
 	std::vector<VkDescriptorImageInfo> m_activeImageInfos;
 
+	std::vector<VImage> m_emptyImages;
+	void create_empty_images();
+
 	bool m_reiterateActive;
 	void reiterate_active();
+
+	void create_sampler();
+	void push_texture(std::string texFile);
+
+	VkSampler m_sampler;
+	VkDescriptorImageInfo m_samplerInfo;
+
+	VkDevice m_device;
+	VkPhysicalDevice m_physicalDevice;
+	VkCommandPool m_commandPool;
+	VkQueue m_queue;
 };
 
 class Shader
@@ -59,8 +78,12 @@ struct GraphicsShader
 class Material
 {
 public:
-	Texture* m_pDiffuseTexture;
-	Texture* m_pNormalTexture;
+	std::string m_ambientTex;
+	std::string m_diffuseTex;
+	std::string m_specularTex;
+	std::string m_bumpTex;
+
+	std::string m_texBaseDir;
 
 	GraphicsShader* m_shader;
 
@@ -93,7 +116,7 @@ struct MaterialSSBO
 	float m_specularHighlight;
 	float m_refraction;
 	float m_dissolve;
-	float test;
+	uint32_t m_textureIndex;
 
 	MaterialSSBO& operator= (const Material& mat);
 };

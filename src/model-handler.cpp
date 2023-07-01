@@ -209,6 +209,8 @@ void StaticGeometryHandler::initialize(StaticGeometryHandlerVulkanObjects vulkan
 	matBufConf.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	m_materialBuffer.initialize(matBufConf);
 
+	m_texturePool.init(m_vulkanObjects.device, m_vulkanObjects.physicalDevice, m_vulkanObjects.commandPool, m_vulkanObjects.transferQueue);
+
 	create_descriptor_set();
 }
 void StaticGeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent)
@@ -487,7 +489,14 @@ void StaticGeometryHandler::reload_meshes()
 {
 	// reload materials
 	std::vector<MaterialSSBO> mats(m_materials.size());
-	for (size_t i = 0; i < mats.size(); i++) mats[i] = m_materials[i];
+	for (size_t i = 0; i < mats.size(); i++)
+	{
+		mats[i] = m_materials[i];
+		if (!m_materials[i].m_diffuseTex.empty())
+			mats[i].m_textureIndex = m_texturePool.find(m_materials[i].m_diffuseTex);
+		else
+			mats[i].m_textureIndex = UINT32_MAX;
+	}
 	m_materialBuffer.set(mats);
 	update_descriptor_set();
 
@@ -546,13 +555,6 @@ VkWriteDescriptorSet StaticGeometryHandler::material_buffer_descriptor_set_write
 
 void StaticGeometryHandler::create_descriptor_set()
 {
-	VkDescriptorSetLayoutBinding texturePoolBinding = {};
-	texturePoolBinding.descriptorCount = TEXTURE_POOL_MAX_TEXTURES;
-	texturePoolBinding.binding = STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING;
-	texturePoolBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	texturePoolBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	texturePoolBinding.pImmutableSamplers = nullptr;
-
 	VkDescriptorSetLayoutBinding materialBufferBinding = {};
 	materialBufferBinding.descriptorCount = 1;
 	materialBufferBinding.binding = STATIC_GEOMETRY_HANDLER_MATERIAL_BINDING;
@@ -560,9 +562,24 @@ void StaticGeometryHandler::create_descriptor_set()
 	materialBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	materialBufferBinding.pImmutableSamplers = nullptr;
 
+	VkDescriptorSetLayoutBinding texturePoolBinding = {};
+	texturePoolBinding.descriptorCount = TEXTURE_POOL_MAX_TEXTURES;
+	texturePoolBinding.binding = STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING;
+	texturePoolBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	texturePoolBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	texturePoolBinding.pImmutableSamplers = nullptr;
+	
+	VkDescriptorSetLayoutBinding samplerBinding = {};
+	samplerBinding.descriptorCount = 1;
+	samplerBinding.binding = STATIC_GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING;
+	samplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	samplerBinding.pImmutableSamplers = nullptr;
+
 	std::vector<VkDescriptorSetLayoutBinding> layoutBindings = {
-		//texturePoolBinding,
-		materialBufferBinding
+		materialBufferBinding,
+		texturePoolBinding,
+		samplerBinding,
 	};
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
@@ -595,8 +612,9 @@ void StaticGeometryHandler::update_descriptor_set()
 {
 	std::vector<VkWriteDescriptorSet> writes;
 
-	// writes.push_back(m_texturePool.get_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING));
 	writes.push_back(material_buffer_descriptor_set_write());
+	writes.push_back(m_texturePool.get_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING));
+	writes.push_back(m_texturePool.get_sampler_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING));
 
 	if (writes.size() > 0)
 		vkUpdateDescriptorSets(m_vulkanObjects.device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
@@ -622,6 +640,8 @@ void StaticGeometryHandler::cleanup()
 		meshGroup.shader.fragment.destroy();
 		meshGroup.shader.vertex.destroy();
 	}
+
+	m_texturePool.cleanup();
 }
 
 // ------------------------------------------
@@ -674,6 +694,12 @@ struct std::hash<Vertex>
 
 void load_mesh(std::string file, ObjData& objData)
 {
+	file = ROOT_DIRECTORY + file;
+	std::string directory;
+	const size_t lastSlash = file.find_last_of("\\/");
+	if (lastSlash != std::string::npos)
+		directory = file.substr(0, lastSlash + 1);
+
 	tinyobj::ObjReaderConfig readerConfig;
 	readerConfig.mtl_search_path = "";
 
@@ -706,6 +732,7 @@ void load_mesh(std::string file, ObjData& objData)
 		if (shape.mesh.material_ids.size() > 0)
 		{
 			auto matIndex = shape.mesh.material_ids[0];
+			mesh.mat.m_texBaseDir = directory;
 			mesh.mat = materials[matIndex];
 		}
 

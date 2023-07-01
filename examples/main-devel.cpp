@@ -77,7 +77,7 @@ int main(int argc, char** argv)
     renderer.m_ecs.add_component<Transform>(testEntity);
     renderer.m_ecs.add_component<StaticModel>(testEntity);
     auto& testEntityModel = renderer.m_ecs.get_component<StaticModel>(testEntity);
-    testEntityModel.load_mesh("X:/Dev/new-vulkan-engine/test-models/sportsCar.obj");
+    testEntityModel.load_mesh("/test-models/sponza/sponza.obj");
     renderer.m_ecs.get_component<Transform>(testEntity).rotation = Quaternion({ -PI/2,0,0 });
 
     bool running = true;

@@ -77,6 +77,7 @@ set(
 	EXTERNAL_LIBRARY_FILES
 	${IMGUI_FILES}
 	external/tinyobjloader/tiny_obj_loader.h
+	external/stbimage/stb_image.h
 )
 
 add_library(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${EXTERNAL_LIBRARY_FILES})
@@ -86,4 +87,7 @@ set_target_properties(nve PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(nve PUBLIC include)
 target_include_directories(nve PUBLIC external/imgui)
 target_include_directories(nve PUBLIC external/tinyobjloader)
+target_include_directories(nve PUBLIC external/stbimage)
 target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw)
+
+add_definitions(-DROOT_DIRECTORY=\"${CMAKE_SOURCE_DIR}\")
