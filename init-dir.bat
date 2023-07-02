@@ -26,8 +26,20 @@ wget -O imgui_impl_vulkan.h   https://raw.githubusercontent.com/ocornut/imgui/ma
 wget -O imgui_impl_vulkan.cpp https://raw.githubusercontent.com/ocornut/imgui/master/backends/imgui_impl_vulkan.cpp
 wget -O imgui_impl_glfw.h     https://raw.githubusercontent.com/ocornut/imgui/master/backends/imgui_impl_glfw.h
 wget -O imgui_impl_glfw.cpp   https://raw.githubusercontent.com/ocornut/imgui/master/backends/imgui_impl_glfw.cpp
-
 popd
+
+echo cloning STB Image...
+mkdir stbimage
+pushd stbimage
+wget -O stb_image.h           https://raw.githubusercontent.com/nothings/stb/master/stb_image.h
+popd
+
+echo cloning tinyobjloader...
+mkdir tinyobjloader
+pushd tinyobjloader
+wget -O tiny_obj_loader.h     https://raw.githubusercontent.com/tinyobjloader/tinyobjloader/release/tiny_obj_loader.h
+popd
+
 popd
 
 echo Cmake initialization...
