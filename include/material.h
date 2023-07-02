@@ -8,7 +8,7 @@
 #include "nve_types.h"
 #include "image.h"
 
-#define TEXTURE_POOL_MAX_TEXTURES 1024
+#define TEXTURE_POOL_MAX_TEXTURES 256
 
 typedef struct Texture
 {

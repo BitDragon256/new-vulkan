@@ -375,7 +375,6 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 	// ---------------------------------------
 
 	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), 1, 0, 0, 0);
-	//vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
 	// ---------------------------------------
 
@@ -616,8 +615,7 @@ void StaticGeometryHandler::update_descriptor_set()
 	writes.push_back(m_texturePool.get_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING));
 	writes.push_back(m_texturePool.get_sampler_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING));
 
-	if (writes.size() > 0)
-		vkUpdateDescriptorSets(m_vulkanObjects.device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+	vkUpdateDescriptorSets(m_vulkanObjects.device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
 
 void StaticGeometryHandler::cleanup()

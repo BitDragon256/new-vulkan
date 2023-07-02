@@ -260,9 +260,10 @@ void end_single_time_cmd_buffer(VkCommandBuffer commandBuffer, VkCommandPool cmd
 
     res = vkQueueSubmit(queue, 1, &submitInfo, fence);
     res = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-    //res = vkQueueWaitIdle(queue);
 
-    //vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
+    vkDestroyFence(device, fence, nullptr);
+
+    vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
 }
 void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {

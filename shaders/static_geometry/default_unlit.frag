@@ -18,6 +18,8 @@ layout(location = 2) in vec2 inUV;
 layout(location = 3) in flat uint inTex;
 layout(location = 4) in Material inMat;
 
+const uint NO_TEX = 0xffffffff;
+
 layout(location = 0) out vec4 outColor;
 
 layout( push_constant ) uniform constants
@@ -26,14 +28,18 @@ layout( push_constant ) uniform constants
     vec3 camPos;
 } CameraPushConstant;
 
-layout(set = 0, binding = 1) uniform texture2D textures[128];
+layout(set = 0, binding = 1) uniform texture2D textures[256];
 layout(set = 0, binding = 2) uniform sampler samp;
 
 vec3 lightPos = vec3(3, 2, 5);
 
 void main()
 {
-    outColor = texture(sampler2D(textures[inTex], samp), inUV);
+    if (inTex != NO_TEX)
+        outColor = texture(sampler2D(textures[inTex], samp), inUV);
+    else
+        outColor = vec4(inMat.diffuse, 1);
+    //outColor = vec4(1);
 
     /*
     vec3 N = normalize(inNormal);

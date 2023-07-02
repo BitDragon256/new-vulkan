@@ -679,7 +679,7 @@ NVE_RESULT Renderer::submit_command_buffers(std::vector<VkCommandBuffer> command
     submitInfo.pSignalSemaphores = signalSems.data();
 
     auto res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_frame]);
-    log_cond_err(res == VK_SUCCESS, "failed to submit command buffers to graphics queue");
+    log_cond(res != VK_SUCCESS, "failed to submit command buffers to graphics queue");
 
     return NVE_SUCCESS;
 }
