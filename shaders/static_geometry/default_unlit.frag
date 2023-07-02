@@ -46,7 +46,6 @@ void main()
     
     outColor = texColor;
 
-    /*
     vec3 N = normalize(inNormal);
     vec3 L = normalize(lightPos - inPos);
     // Lambert's cosine law
@@ -65,5 +64,4 @@ void main()
         inMat.diffuse * lambertian * texColor.xyz +
         inMat.specular * specular
     , 1.0);
-    */
 }
