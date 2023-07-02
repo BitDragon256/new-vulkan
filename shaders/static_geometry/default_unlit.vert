@@ -45,7 +45,7 @@ layout(std140,set = 0, binding = 0) readonly buffer MaterialBuffer
 layout( push_constant ) uniform constants
 {
     mat4 projView;
-    vec3 camPos; // not updated // fragment stage
+    vec3 camPos;
 } CPC;
 
 // vec2 positions[3] = vec2[](

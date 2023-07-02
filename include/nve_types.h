@@ -45,12 +45,9 @@ typedef struct Vertex
 	bool operator== (const Vertex& other) const;
 } Vertex;
 
-struct CameraPushConstantVertex
+struct CameraPushConstant
 {
 	glm::mat4 projView;
-};
-struct CameraPushConstantFragment
-{
 	Vector3 camPos;
 };
 
