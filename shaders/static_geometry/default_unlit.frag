@@ -26,12 +26,11 @@ layout( push_constant ) uniform constants
 {
     mat4 projView;
     vec3 camPos;
+    vec3 lightPos;
 } CPC;
 
 layout(set = 0, binding = 1) uniform texture2D textures[256];
 layout(set = 0, binding = 2) uniform sampler samp;
-
-vec3 lightPos = vec3(0, 0, 1);
 
 void main()
 {
@@ -47,7 +46,7 @@ void main()
     outColor = texColor;
 
     vec3 N = normalize(inNormal);
-    vec3 L = normalize(lightPos - inPos);
+    vec3 L = normalize(CPC.lightPos - inPos);
     // Lambert's cosine law
     float lambertian = max(dot(N, L), 0.0);
     float specular = 0.0;
@@ -60,8 +59,8 @@ void main()
         specular = pow(specAngle, inMat.specularHighlight);
     }
     outColor = vec4(
-        inMat.ambient +
+        inMat.ambient * texColor.xyz +
         inMat.diffuse * lambertian * texColor.xyz +
-        inMat.specular * specular
+        0//inMat.specular * specular
     , 1.0);
 }

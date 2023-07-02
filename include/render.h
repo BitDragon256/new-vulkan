@@ -68,6 +68,8 @@ public:
 
 	void clean_up();
 
+	void set_light_pos(Vector3 pos);
+
 private:
 	void first_frame();
 	bool m_firstFrame;

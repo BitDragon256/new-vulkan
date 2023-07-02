@@ -94,6 +94,11 @@ int Renderer::get_key(int key)
     return glfwGetKey(m_window, key);
 }
 
+void Renderer::set_light_pos(Vector3 pos)
+{
+    m_cameraPushConstant.lightPos = pos;
+}
+
 // PRIVATE METHODS
 
 NVE_RESULT Renderer::create_instance()
@@ -1123,6 +1128,33 @@ std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> Vertex::ge
 bool Vertex::operator== (const Vertex& other) const
 {
     return pos == other.pos && normal == other.normal && color == other.color && uv == other.uv;
+}
+
+bool operator<(const Vector3& l, const Vector3& r)
+{
+    return
+        l.x < r.x &&
+        l.y < r.y &&
+        l.z < r.z
+    ;
+}
+bool operator<(const Vector2& l, const Vector2& r)
+{
+    return
+        l.x < r.x &&
+        l.y < r.y
+    ;
+}
+
+bool Vertex::operator<(const Vertex& other)
+{
+    return
+        pos < other.pos &&
+        normal < other.normal &&
+        color < other.color &&
+        uv < other.uv &&
+        material < other.material
+    ;
 }
 
 // ---------------------------------------

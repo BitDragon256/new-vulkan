@@ -1,5 +1,7 @@
 #include "model-handler.h"
 
+#include <set>
+
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
@@ -702,7 +704,7 @@ void load_mesh(std::string file, ObjData& objData)
 	objData.meshes.clear();
 	objData.meshes.reserve(shapes.size());
 
-	std::unordered_map<Vertex, uint32_t> vertices;
+	std::set<Vertex> vertices;
 	uint32_t i = 0;
 
 	for (auto& shape : shapes)
@@ -745,6 +747,8 @@ void load_mesh(std::string file, ObjData& objData)
 				attrib.colors[3 * index.vertex_index + 1],
 				attrib.colors[3 * index.vertex_index + 2]
 			};
+
+			//vertices.insert(vert);
 
 			mesh.vertices.push_back(vert);
 			mesh.indices.push_back(i);

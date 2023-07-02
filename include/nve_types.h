@@ -43,12 +43,14 @@ typedef struct Vertex
 	static std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> getAttributeDescriptions();
 
 	bool operator== (const Vertex& other) const;
+	bool operator<(const Vertex& other);
 } Vertex;
 
 struct CameraPushConstant
 {
 	glm::mat4 projView;
-	Vector3 camPos;
+	alignas(16) Vector3 camPos;
+	alignas(16) Vector3 lightPos;
 };
 
 #define VECTOR_UP Vector3(0, 0, 1)
