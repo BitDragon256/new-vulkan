@@ -249,7 +249,7 @@ void TexturePool::create_empty_images()
 			m_device,
 			m_physicalDevice,
 			2, 2,
-			VK_FORMAT_R8_SRGB,
+			VK_FORMAT_R8G8B8_SRGB,
 			VK_IMAGE_TILING_LINEAR,
 			VK_IMAGE_USAGE_SAMPLED_BIT
 		);
