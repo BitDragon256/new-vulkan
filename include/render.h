@@ -68,6 +68,8 @@ public:
 
 	void clean_up();
 
+	void set_light_pos(Vector3 pos);
+
 private:
 	void first_frame();
 	bool m_firstFrame;
@@ -131,8 +133,7 @@ private:
 
 	// camera stuff
 	Camera* m_activeCamera;
-	CameraPushConstantVertex m_cameraPushConstantVertex;
-	CameraPushConstantFragment m_cameraPushConstantFragment;
+	CameraPushConstant m_cameraPushConstant;
 
 	// imgui vulkan objects
 	VkDescriptorPool m_imgui_descriptorPool;

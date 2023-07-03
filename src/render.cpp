@@ -94,6 +94,11 @@ int Renderer::get_key(int key)
     return glfwGetKey(m_window, key);
 }
 
+void Renderer::set_light_pos(Vector3 pos)
+{
+    m_cameraPushConstant.lightPos = pos;
+}
+
 // PRIVATE METHODS
 
 NVE_RESULT Renderer::create_instance()
@@ -222,6 +227,7 @@ NVE_RESULT Renderer::create_device()
 
     // physical device stuff
     VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
+    physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
 
     // m_device creation
     VkDeviceCreateInfo deviceCI = {};
@@ -586,8 +592,7 @@ void Renderer::init_static_geometry_handler()
     vulkanObjects.framebuffers = m_swapchainFramebuffers;
     vulkanObjects.firstSubpass = 0;
 
-    vulkanObjects.pCameraPushConstantVertex = &m_cameraPushConstantVertex;
-    vulkanObjects.pCameraPushConstantFragment = &m_cameraPushConstantFragment;
+    vulkanObjects.pCameraPushConstant = &m_cameraPushConstant;
 
     m_staticGeometryHandler.initialize(vulkanObjects);
 }
@@ -713,8 +718,8 @@ NVE_RESULT Renderer::draw_frame()
     vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
 
     // update push constant
-    m_cameraPushConstantVertex.projView = m_activeCamera->projection_matrix() * m_activeCamera->view_matrix();
-    m_cameraPushConstantFragment.camPos = m_activeCamera->m_position;
+    m_cameraPushConstant.projView = m_activeCamera->projection_matrix() * m_activeCamera->view_matrix();
+    m_cameraPushConstant.camPos = m_activeCamera->m_position;
 
     // record command buffers
     m_staticGeometryHandler.record_command_buffers(m_frame);
@@ -1125,11 +1130,38 @@ bool Vertex::operator== (const Vertex& other) const
     return pos == other.pos && normal == other.normal && color == other.color && uv == other.uv;
 }
 
+bool operator<(const Vector3& l, const Vector3& r)
+{
+    return
+        l.x < r.x &&
+        l.y < r.y &&
+        l.z < r.z
+    ;
+}
+bool operator<(const Vector2& l, const Vector2& r)
+{
+    return
+        l.x < r.x &&
+        l.y < r.y
+    ;
+}
+
+bool Vertex::operator<(const Vertex& other)
+{
+    return
+        pos < other.pos &&
+        normal < other.normal &&
+        color < other.color &&
+        uv < other.uv &&
+        material < other.material
+    ;
+}
+
 // ---------------------------------------
 // CAMERA
 // ---------------------------------------
 Camera::Camera() :
-    m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(50.f), m_extent(1080, 1920), renderer(nullptr)
+    m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(100.f), m_extent(1080, 1920), renderer(nullptr)
 {}
 glm::mat4 Camera::view_matrix()
 {

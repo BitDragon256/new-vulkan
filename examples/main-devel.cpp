@@ -5,8 +5,8 @@
 
 #include <nve.h>
 
-float turningSpeed = 0.2f;
-float moveSpeed = 0.01f;
+float turningSpeed = 0.4f;
+float moveSpeed = 0.005f;
 void camera_movement(Renderer& renderer, Camera& camera)
 {
     Vector3 forward = { cos(glm::radians(camera.m_rotation.z)), sin(glm::radians(camera.m_rotation.z)), 0 };
@@ -73,12 +73,15 @@ int main(int argc, char** argv)
     auto lastTime = std::chrono::high_resolution_clock::now();
     uint32_t frame = 0;
 
+    float lightPos[3] = { 0, 0, 0 };
+
     auto testEntity = renderer.m_ecs.create_entity();
     renderer.m_ecs.add_component<Transform>(testEntity);
     renderer.m_ecs.add_component<StaticModel>(testEntity);
     auto& testEntityModel = renderer.m_ecs.get_component<StaticModel>(testEntity);
-    testEntityModel.load_mesh("/test-models/sponza/sponza.obj");
+    testEntityModel.load_mesh("/test-models/sponza-big/sponza.obj");
     renderer.m_ecs.get_component<Transform>(testEntity).rotation = Quaternion({ -PI/2,0,0 });
+    renderer.m_ecs.get_component<Transform>(testEntity).scale = Vector3{ 0.01f, 0.01f, 0.01f };
 
     bool running = true;
     while (running)
@@ -87,18 +90,24 @@ int main(int argc, char** argv)
 
         renderer.gui_begin();
 
-        ImGui::Begin("FPS");
+        ImGui::Begin("General");
 
         if (frame >= fps / 2)
         {
-            fpsText = std::to_string(fps);
-            avgFpsText = std::to_string(avgFps);
+            fpsText = std::to_string(fps) + " fps";
+            avgFpsText = std::to_string(avgFps) + " fps (avg)";
             frame = 0;
 
         }
         ImGui::Text(fpsText.c_str());
         ImGui::Text(avgFpsText.c_str());
         frame++;
+
+        ImGui::SliderFloat("speed", &moveSpeed, 0.f, 0.03f);
+        ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
+
+        ImGui::SliderFloat3("light pos", lightPos, -10, 10);
+        renderer.set_light_pos(Vector3{ lightPos[0], lightPos[1], lightPos[2] });
 
         ImGui::End();
 
@@ -109,9 +118,9 @@ int main(int argc, char** argv)
         // time
         auto now = std::chrono::high_resolution_clock::now();
         deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count();
-        fps = 1000 / deltaTime;
+        fps = 1000.f / deltaTime;
         avgFps += fps;
-        avgFps /= 2;
+        avgFps /= 2.f;
         lastTime = std::chrono::high_resolution_clock::now();
     }
 

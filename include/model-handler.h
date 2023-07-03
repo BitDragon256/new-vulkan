@@ -81,8 +81,7 @@ struct StaticGeometryHandlerVulkanObjects
 	
 	VkDescriptorPool descriptorPool;
 
-	CameraPushConstantVertex* pCameraPushConstantVertex;
-	CameraPushConstantFragment* pCameraPushConstantFragment;
+	CameraPushConstant* pCameraPushConstant;
 };
 
 struct PipelineCreationData

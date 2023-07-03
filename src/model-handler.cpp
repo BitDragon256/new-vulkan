@@ -1,5 +1,7 @@
 #include "model-handler.h"
 
+#include <set>
+
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
@@ -360,8 +362,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// --------------------------------------
 
-	vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(CameraPushConstantVertex), m_vulkanObjects.pCameraPushConstantVertex);
-	vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(CameraPushConstantVertex), sizeof(CameraPushConstantFragment), m_vulkanObjects.pCameraPushConstantFragment);
+	vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(CameraPushConstant), m_vulkanObjects.pCameraPushConstant);
 
 	// ---------------------------------------
 
@@ -451,29 +452,13 @@ void StaticGeometryHandler::create_pipeline_layout()
 	pipelineLayoutCI.pNext = nullptr;
 	pipelineLayoutCI.flags = 0;
 
-	uint32_t rangeOffset = 0;
+	VkPushConstantRange pushConstantRange = {};
+	pushConstantRange.offset = 0;
+	pushConstantRange.size = sizeof(CameraPushConstant);
+	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkPushConstantRange pushConstantRangeVertex = {};
-	pushConstantRangeVertex.offset = 0;
-	pushConstantRangeVertex.size = sizeof(CameraPushConstantVertex);
-	pushConstantRangeVertex.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-	rangeOffset += pushConstantRangeVertex.size;
-
-	VkPushConstantRange pushConstantRangeFragment = {};
-	pushConstantRangeFragment.offset = rangeOffset;
-	pushConstantRangeFragment.size = sizeof(CameraPushConstantFragment);
-	pushConstantRangeFragment.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	rangeOffset += pushConstantRangeFragment.size;
-
-	std::vector<VkPushConstantRange> ranges = {
-		pushConstantRangeVertex,
-		pushConstantRangeFragment
-	};
-
-	pipelineLayoutCI.pPushConstantRanges = ranges.data();
-	pipelineLayoutCI.pushConstantRangeCount = static_cast<uint32_t>(ranges.size());
+	pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+	pipelineLayoutCI.pushConstantRangeCount = 1;
 
 	pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayout;
 	pipelineLayoutCI.setLayoutCount = 1;
@@ -719,7 +704,7 @@ void load_mesh(std::string file, ObjData& objData)
 	objData.meshes.clear();
 	objData.meshes.reserve(shapes.size());
 
-	std::unordered_map<Vertex, uint32_t> vertices;
+	std::set<Vertex> vertices;
 	uint32_t i = 0;
 
 	for (auto& shape : shapes)
@@ -762,6 +747,8 @@ void load_mesh(std::string file, ObjData& objData)
 				attrib.colors[3 * index.vertex_index + 1],
 				attrib.colors[3 * index.vertex_index + 2]
 			};
+
+			//vertices.insert(vert);
 
 			mesh.vertices.push_back(vert);
 			mesh.indices.push_back(i);
