@@ -719,6 +719,8 @@ void load_mesh(std::string file, ObjData& objData)
 			mesh.mat = materials[matIndex];
 		}
 
+		int triIndex = 0;
+		size_t indexIndex = 0;
 		for (tinyobj::index_t index : shape.mesh.indices)
 		{
 			Vertex vert;
@@ -735,6 +737,30 @@ void load_mesh(std::string file, ObjData& objData)
 					attrib.normals[3 * index.normal_index + 2]
 				};
 			}
+			else
+			{
+				int offset = indexIndex % 3;
+				int aIndex = (triIndex + 1) % 3;
+				int bIndex = (triIndex + 2) % 3;
+				tinyobj::index_t aInd = shape.mesh.indices[indexIndex - offset + aIndex];
+				tinyobj::index_t bInd = shape.mesh.indices[indexIndex - offset + bIndex];
+				Vector3 a = {
+					attrib.vertices[3 * aInd.vertex_index + 0],
+					attrib.vertices[3 * aInd.vertex_index + 1],
+					attrib.vertices[3 * aInd.vertex_index + 2]
+				};
+				Vector3 b = {
+					attrib.vertices[3 * bInd.vertex_index + 0],
+					attrib.vertices[3 * bInd.vertex_index + 1],
+					attrib.vertices[3 * bInd.vertex_index + 2]
+				};
+				vert.normal = glm::cross(
+					a - vert.pos,
+					b - vert.pos
+				);
+			}
+			triIndex = (triIndex + 1) % 3;
+			indexIndex++;
 			if (index.texcoord_index >= 0)
 			{
 				vert.uv = Vector2{
