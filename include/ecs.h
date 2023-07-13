@@ -60,36 +60,64 @@ private:
 	std::vector<EntityId> m_entities; // basically a index -> entity map
 };
 
+template<typename T>
+ComponentList<T>* construct_component_list()
+{
+	return new ComponentList<T>();
+}
+
 class ComponentManager
 {
 public:
+	ComponentManager() : 
+		m_newComponentId{ 0 }
+	{
+
+	}
 	~ComponentManager()
 	{
 		for (size_t i = 0; i < m_components.size(); i++)
+			if (m_components[i])
+				delete m_components[i];
+	}
+	template<typename T> void ensure_component()
+	{
+		const char* typeName = typeid(T).name();
+		ensure_component(typeName);
+
+		auto id = type_to_id(typeName);
+		if (m_components.size() <= id)
 		{
-			delete m_components[i];
+			m_components.reserve(id);
+			while (m_components.size() < id)
+				m_components.push_back(0);
+			m_components.push_back(construct_component_list<T>());
+		}
+		else if (m_components[id] == nullptr)
+			m_components[id] = construct_component_list<T>();
+	}
+	void ensure_component(const char* typeName)
+	{
+		if (!m_typeToId.contains(typeName))
+		{
+			m_typeToId[typeName] = m_newComponentId;
+			m_newComponentId++;
 		}
 	}
 	template<typename T> void add_component(EntityId entity)
 	{
+		ensure_component<T>();
+
 		const char* typeName = typeid(T).name();
 
-		if (!m_typeToId.contains(typeName))
-		{
-			m_typeToId[typeName] = m_components.size();
-			m_components.push_back(new ComponentList<T>());
-		}
-
-		ComponentTypeId id = m_typeToId[typeName];
+		ComponentTypeId id = type_to_id(typeName);
 		list<T>(id)->add(entity);
 		m_entityComponents[entity].set(id, true);
 	}
 	template<typename T> void remove_component(EntityId entity)
 	{
 		const char* typeName = typeid(T).name();
-		assert(m_typeToId.contains(typeName));
-
-		auto id = m_typeToId[typeName];
+		auto id = type_to_id(typeName);
 		list<T>(id)->remove(entity);
 		m_entityComponents[entity].set(id, false);
 	}
@@ -97,9 +125,7 @@ public:
 	{
 		const char* typeName = typeid(T).name();
 
-		assert(m_typeToId.contains(typeName));
-
-		auto id = m_typeToId[typeName];
+		auto id = type_to_id(typeName);
 		assert(m_entityComponents[entity].test(id));
 
 		return list<T>(id)->get(entity);
@@ -115,13 +141,22 @@ public:
 	{
 		m_entityComponents.erase(entity);
 	}
+
+	ComponentTypeId type_to_id(const char* typeName)
+	{
+		assert(m_typeToId.contains(typeName));
+		return m_typeToId[typeName];
+	}
 private:
-	std::vector<IComponentList*> m_components; // indexed by ComponentTypeId
 	std::unordered_map<const char*, ComponentTypeId> m_typeToId;
+	ComponentTypeId m_newComponentId;
+	std::vector<IComponentList*> m_components; // indexed by ComponentTypeId
 	std::unordered_map<EntityId, std::bitset<ECS_MAX_COMPONENTS>> m_entityComponents;
 
 	template<typename T> ComponentList<T>* list(ComponentTypeId id)
 	{
+		//if (!m_components[id])
+		//	m_components[id] = construct_component_list<T>();
 		return dynamic_cast<ComponentList<T>*>(m_components[id]);
 	}
 };
@@ -195,8 +230,8 @@ public:
 
 		for (auto typeName : systemTypeNames)
 		{
-			ensure_component(typeName);
-			m_systemComponents.back().set(m_componentTypeToId[typeName], true);
+			m_componentManager.ensure_component(typeName);
+			m_systemComponents.back().set(m_componentManager.type_to_id(typeName), true);
 		}
 
 		m_systems.back()->start(*this);
@@ -229,9 +264,8 @@ public:
 		m_componentManager.add_component<T>(entity);
 
 		const char* typeName = typeid(T).name();
-		ensure_component(typeName);
 
-		ComponentTypeId id = m_componentTypeToId[typeName];
+		ComponentTypeId id = m_componentManager.type_to_id(typeName);
 		auto entityComponents = used_components(entity);
 
 		for (SystemId systemId = 0; systemId < m_systems.size(); systemId++)
@@ -240,7 +274,7 @@ public:
 	}
 	template<typename T> void remove_component(EntityId entity)
 	{
-		ComponentTypeId id = m_componentTypeToId[typeid(T).name()];
+		ComponentTypeId id = m_componentManager.type_to_id(typeid(T).name());
 		auto entityComponents = used_components(entity);
 		for (SystemId systemId = 0; systemId < m_systems.size(); systemId++)
 			if ((entityComponents & m_systemComponents[systemId]) == m_systemComponents[systemId])
@@ -275,7 +309,7 @@ public:
 private:
 	std::vector<ISystem*> m_systems;
 	std::vector<std::bitset<ECS_MAX_COMPONENTS>> m_systemComponents; // bitset for all systems for used components
-	std::unordered_map<const char*, ComponentTypeId> m_componentTypeToId;
+	// std::unordered_map<const char*, ComponentTypeId> m_componentTypeToId;
 
 	std::vector<EntityId> m_newEntities;
 	void awake_entities()
@@ -306,9 +340,8 @@ private:
 
 	ComponentManager m_componentManager;
 
-	void ensure_component(const char* typeName)
-	{
-		if (!m_componentTypeToId.contains(typeName))
-			m_componentTypeToId[typeName] = m_componentTypeToId.size();
-	}
+	//void ensure_component(const char* typeName)
+	//{
+	//	m_componentManager.ensure_component(typeName);
+	//}
 };

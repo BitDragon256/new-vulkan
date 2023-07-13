@@ -11,11 +11,13 @@
 #include "ecs.h"
 #include "material.h"
 
-#define STATIC_GEOMETRY_HANDLER_MAX_MATERIALS 128
+#define GEOMETRY_HANDLER_MAX_MATERIALS 128
 
-#define STATIC_GEOMETRY_HANDLER_MATERIAL_BINDING 0
-#define STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING 1
-#define STATIC_GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING 2
+#define GEOMETRY_HANDLER_MATERIAL_BINDING 0
+#define GEOMETRY_HANDLER_TEXTURE_BINDING 1
+#define GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING 2
+
+#define DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING 3
 
 struct Transform
 {
@@ -134,6 +136,10 @@ protected:
 	VkPipelineLayout m_pipelineLayout;
 	VkDescriptorSet m_descriptorSet;
 
+	BufferConfig default_buffer_config();
+
+	virtual std::vector<VkDescriptorSetLayoutBinding> other_descriptors() = 0;
+
 private:
 
 	MeshGroup* find_group(GraphicsShader*& shader, size_t& index);
@@ -158,8 +164,6 @@ private:
 	void reload_meshes();
 	void reload_mesh_group(MeshGroup& meshGroup);
 
-	BufferConfig default_buffer_config();
-
 	VkDescriptorSetLayout m_descriptorSetLayout;
 
 	void create_descriptor_set();
@@ -183,8 +187,34 @@ public:
 protected:
 
 	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup) override;
+	std::vector<VkDescriptorSetLayoutBinding> other_descriptors() override;
 
 private:
 
 	void add_model(StaticModel& model, Transform transform);
+};
+
+struct DynamicModel : Model
+{
+
+};
+
+class DynamicGeometryHandler : public GeometryHandler, System<DynamicModel, Transform>
+{
+public:
+
+	void start(ECSManager& ecs) override;
+	void awake(EntityId entity, ECSManager& ecs) override;
+	void update(float dt, ECSManager& ecs) override;
+
+protected:
+
+	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup) override;
+	std::vector<VkDescriptorSetLayoutBinding> other_descriptors() override;
+
+private:
+
+	void add_model(DynamicModel& model, Transform transform);
+
+	Buffer<Transform> m_transformBuffer;
 };

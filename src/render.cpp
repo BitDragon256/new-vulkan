@@ -57,8 +57,6 @@ NVE_RESULT Renderer::init(RenderConfig config)
 
     m_frame = 0;
 
-    m_ecs.register_system<StaticGeometryHandler>(&m_staticGeometryHandler);
-
     m_firstFrame = true;
     
     return NVE_SUCCESS;
@@ -563,23 +561,6 @@ void Renderer::create_descriptor_pool()
 
 void Renderer::initialize_geometry_handlers()
 {
-    init_static_geometry_handler();
-}
-void Renderer::create_geometry_pipelines()
-{
-    std::vector<VkGraphicsPipelineCreateInfo> pipelineCIs;
-    
-    m_staticGeometryHandler.create_pipeline_create_infos(pipelineCIs);
-
-    std::vector<VkPipeline> pipelines(pipelineCIs.size());
-    auto res = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, pipelineCIs.size(), pipelineCIs.data(), nullptr, pipelines.data());
-    log_cond_err(res == VK_SUCCESS, "failed to create geometry handler pipelines");
-    
-    m_staticGeometryHandler.set_pipelines(pipelines);
-}
-
-void Renderer::init_static_geometry_handler()
-{
     GeometryHandlerVulkanObjects vulkanObjects;
     vulkanObjects.device = m_device;
     vulkanObjects.physicalDevice = m_physicalDevice;
@@ -594,7 +575,36 @@ void Renderer::init_static_geometry_handler()
 
     vulkanObjects.pCameraPushConstant = &m_cameraPushConstant;
 
-    m_staticGeometryHandler.initialize(vulkanObjects);
+    auto handlers = all_geometry_handlers();
+    for (auto handler : handlers)
+        handler->initialize(vulkanObjects);
+
+    m_ecs.register_system<StaticGeometryHandler>(&m_staticGeometryHandler);
+    m_ecs.register_system<DynamicGeometryHandler>(&m_dynamicGeometryHandler);
+}
+void Renderer::create_geometry_pipelines()
+{
+    auto handlers = all_geometry_handlers();
+
+    for (GeometryHandler* geometryHandler : handlers)
+    {
+        std::vector<VkGraphicsPipelineCreateInfo> pipelineCIs;
+
+        geometryHandler->create_pipeline_create_infos(pipelineCIs);
+
+        std::vector<VkPipeline> pipelines(pipelineCIs.size());
+        auto res = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, pipelineCIs.size(), pipelineCIs.data(), nullptr, pipelines.data());
+        log_cond_err(res == VK_SUCCESS, "failed to create geometry handler pipelines");
+
+        geometryHandler->set_pipelines(pipelines);
+    }
+}
+std::vector<GeometryHandler*> Renderer::all_geometry_handlers()
+{
+    return {
+        &m_staticGeometryHandler,
+        &m_dynamicGeometryHandler,
+    };
 }
 
 void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
@@ -603,6 +613,14 @@ void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessenge
     if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
     }
+}
+
+template<typename T>
+void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
+{
+    if (appendage.empty())
+        return;
+    origin.insert(origin.end(), appendage.begin(), appendage.end());
 }
 
 void Renderer::record_main_command_buffer(uint32_t frame)
@@ -647,7 +665,14 @@ void Renderer::record_main_command_buffer(uint32_t frame)
 
     // -------------------------------------------
 
-    std::vector<VkCommandBuffer> secondaryCommandBuffers = m_staticGeometryHandler.get_command_buffers(frame);
+    std::vector<VkCommandBuffer> secondaryCommandBuffers;
+    auto geometryHandlers = all_geometry_handlers();
+    for (auto geometryHandler : geometryHandlers)
+    {
+        auto geometryHandlerCommandBuffers = geometryHandler->get_command_buffers(frame);
+        append_vector(secondaryCommandBuffers, geometryHandlerCommandBuffers);
+    }
+
     uint32_t subpassCount = secondaryCommandBuffers.size();
     for (uint32_t subpass = 0; subpass < subpassCount; subpass++)
     {
@@ -722,7 +747,10 @@ NVE_RESULT Renderer::draw_frame()
     m_cameraPushConstant.camPos = m_activeCamera->m_position;
 
     // record command buffers
-    m_staticGeometryHandler.record_command_buffers(m_frame);
+    auto geometryHandlers = all_geometry_handlers();
+    for (auto geometryHandler : geometryHandlers)
+        geometryHandler->record_command_buffers(m_frame);
+
     record_main_command_buffer(m_frame);
 
     if (!m_imguiDraw)
@@ -796,12 +824,18 @@ void Renderer::clean_up()
 }
 void Renderer::geometry_handler_cleanup()
 {
-    m_staticGeometryHandler.cleanup();
+    auto handlers = all_geometry_handlers();
+    for (auto handler : handlers)
+        handler->cleanup();
 }
 
 uint32_t Renderer::geometry_handler_subpass_count()
 {
-    return m_staticGeometryHandler.subpass_count();
+    auto handlers = all_geometry_handlers();
+    uint32_t subpassCount = 0;
+    for (auto handler : handlers)
+        subpassCount += handler->subpass_count();
+    return subpassCount;
 }
 
 //void Renderer::add_descriptors()

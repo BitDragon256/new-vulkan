@@ -112,7 +112,9 @@ private:
 
 	// model handling
 	StaticGeometryHandler m_staticGeometryHandler;
-	void init_static_geometry_handler();
+	DynamicGeometryHandler m_dynamicGeometryHandler;
+
+	std::vector<GeometryHandler*> all_geometry_handlers();
 
 	void create_geometry_pipelines();
 	void initialize_geometry_handlers();

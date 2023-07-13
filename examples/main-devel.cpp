@@ -77,8 +77,8 @@ int main(int argc, char** argv)
 
     auto testEntity = renderer.m_ecs.create_entity();
     renderer.m_ecs.add_component<Transform>(testEntity);
-    renderer.m_ecs.add_component<StaticModel>(testEntity);
-    auto& testEntityModel = renderer.m_ecs.get_component<StaticModel>(testEntity);
+    renderer.m_ecs.add_component<DynamicModel>(testEntity);
+    auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
     testEntityModel.load_mesh("/test-models/sponza/sponza.obj");
     renderer.m_ecs.get_component<Transform>(testEntity).rotation = Quaternion({ -PI/2,0,0 });
     //renderer.m_ecs.get_component<Transform>(testEntity).scale = Vector3{ 0.01f, 0.01f, 0.01f };

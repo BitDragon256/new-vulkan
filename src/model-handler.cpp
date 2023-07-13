@@ -14,6 +14,8 @@
 template<typename T>
 void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
 {
+	if (appendage.empty())
+		return;
 	origin.insert(origin.end(), appendage.begin(), appendage.end());
 }
 void bake_transform(StaticMesh& mesh, Transform transform)
@@ -458,7 +460,7 @@ VkWriteDescriptorSet GeometryHandler::material_buffer_descriptor_set_write()
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstSet = m_descriptorSet;
-	write.dstBinding = STATIC_GEOMETRY_HANDLER_MATERIAL_BINDING;
+	write.dstBinding = GEOMETRY_HANDLER_MATERIAL_BINDING;
 	write.dstArrayElement = 0;
 	write.descriptorCount = 1;
 	write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -471,21 +473,21 @@ void GeometryHandler::create_descriptor_set()
 {
 	VkDescriptorSetLayoutBinding materialBufferBinding = {};
 	materialBufferBinding.descriptorCount = 1;
-	materialBufferBinding.binding = STATIC_GEOMETRY_HANDLER_MATERIAL_BINDING;
+	materialBufferBinding.binding = GEOMETRY_HANDLER_MATERIAL_BINDING;
 	materialBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	materialBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	materialBufferBinding.pImmutableSamplers = nullptr;
 
 	VkDescriptorSetLayoutBinding texturePoolBinding = {};
 	texturePoolBinding.descriptorCount = TEXTURE_POOL_MAX_TEXTURES;
-	texturePoolBinding.binding = STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING;
+	texturePoolBinding.binding = GEOMETRY_HANDLER_TEXTURE_BINDING;
 	texturePoolBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	texturePoolBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	texturePoolBinding.pImmutableSamplers = nullptr;
 	
 	VkDescriptorSetLayoutBinding samplerBinding = {};
 	samplerBinding.descriptorCount = 1;
-	samplerBinding.binding = STATIC_GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING;
+	samplerBinding.binding = GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING;
 	samplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 	samplerBinding.pImmutableSamplers = nullptr;
@@ -495,6 +497,8 @@ void GeometryHandler::create_descriptor_set()
 		texturePoolBinding,
 		samplerBinding,
 	};
+	auto otherDescriptors = other_descriptors();
+	append_vector(layoutBindings, otherDescriptors);
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = {};
 	descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -527,8 +531,8 @@ void GeometryHandler::update_descriptor_set()
 	std::vector<VkWriteDescriptorSet> writes;
 
 	writes.push_back(material_buffer_descriptor_set_write());
-	writes.push_back(m_texturePool.get_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_BINDING));
-	writes.push_back(m_texturePool.get_sampler_descriptor_set_write(m_descriptorSet, STATIC_GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING));
+	writes.push_back(m_texturePool.get_descriptor_set_write(m_descriptorSet, GEOMETRY_HANDLER_TEXTURE_BINDING));
+	writes.push_back(m_texturePool.get_sampler_descriptor_set_write(m_descriptorSet, GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING));
 
 	vkUpdateDescriptorSets(m_vulkanObjects.device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
@@ -632,6 +636,10 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// ---------------------------------------
 }
+std::vector<VkDescriptorSetLayoutBinding> StaticGeometryHandler::other_descriptors()
+{
+	return {};
+}
 
 void StaticGeometryHandler::awake(EntityId entity, ECSManager& ecs)
 {
@@ -642,6 +650,123 @@ void StaticGeometryHandler::awake(EntityId entity, ECSManager& ecs)
 void StaticGeometryHandler::update(float dt, ECSManager& ecs)
 {
 	GeometryHandler::update();
+}
+
+// ------------------------------------------
+// DYNAMIC MODEL HANDLER
+// ------------------------------------------
+
+void DynamicGeometryHandler::start(ECSManager& ecs)
+{
+	BufferConfig bufferConfig = default_buffer_config();
+	bufferConfig.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	m_transformBuffer.initialize(bufferConfig);
+}
+void DynamicGeometryHandler::awake(EntityId entity, ECSManager& ecs)
+{
+	auto transform = ecs.get_component<Transform>(entity);
+	auto& model = ecs.get_component<DynamicModel>(entity);
+	add_model(model, transform);
+}
+void DynamicGeometryHandler::update(float dt, ECSManager& ecs)
+{
+	// get all transforms
+	std::vector<Transform> transforms(m_entities.size());
+	for (size_t i = 0; i < m_entities.size(); i++)
+		transforms[i] = ecs.get_component<Transform>(m_entities[i]);
+
+	// push transforms
+	m_transformBuffer.set(transforms);
+	GeometryHandler::update();
+
+	// update descriptor set
+	VkWriteDescriptorSet transformBufferWrite = {};
+	transformBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	transformBufferWrite.pNext = nullptr;
+
+	VkDescriptorBufferInfo transformBufferInfo = {};
+	transformBufferInfo.buffer = m_transformBuffer.m_buffer;
+	transformBufferInfo.offset = 0;
+	transformBufferInfo.range = sizeof(Transform) * transforms.size();
+
+	transformBufferWrite.descriptorCount = 1;
+	transformBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	transformBufferWrite.dstBinding = DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING;
+	transformBufferWrite.dstSet = 0;
+	transformBufferWrite.pBufferInfo = &transformBufferInfo;
+
+	vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
+}
+
+void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup)
+{
+	VkCommandBuffer commandBuffer = meshGroup.commandBuffers[frame];
+	vkResetCommandBuffer(commandBuffer, 0);
+
+	// ---------------------------------------
+
+	VkCommandBufferInheritanceInfo inheritanceInfo;
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+
+	{
+		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
+		log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording for the static geometry handler");
+	}
+
+	// ---------------------------------------
+
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
+
+	// ---------------------------------------
+
+	set_dynamic_state(commandBuffer, m_vulkanObjects.swapchainExtent);
+
+	// ---------------------------------------
+
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSet, 0, nullptr);
+
+	// --------------------------------------
+
+	vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(CameraPushConstant), m_vulkanObjects.pCameraPushConstant);
+
+	// ---------------------------------------
+
+	VkDeviceSize offsets[1] = { 0 };
+	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &meshGroup.vertexBuffer.m_buffer, offsets);
+
+	// ---------------------------------------
+
+	vkCmdBindIndexBuffer(commandBuffer, meshGroup.indexBuffer.m_buffer, 0, NVE_INDEX_TYPE);
+
+	// ---------------------------------------
+
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), 1, 0, 0, 0);
+
+	// ---------------------------------------
+
+	{
+		auto res = vkEndCommandBuffer(commandBuffer);
+		log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording for the static geometry handler");
+	}
+
+	// ---------------------------------------
+}
+void DynamicGeometryHandler::add_model(DynamicModel& model, Transform transform)
+{
+	GeometryHandler::add_model(model, transform);
+}
+std::vector<VkDescriptorSetLayoutBinding> DynamicGeometryHandler::other_descriptors()
+{
+	VkDescriptorSetLayoutBinding transformBufferBinding = {};
+	transformBufferBinding.descriptorCount = 1;
+	transformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	transformBufferBinding.pImmutableSamplers = nullptr;
+	transformBufferBinding.binding = DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING;
+	transformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	return {
+		transformBufferBinding,
+	};
 }
 
 // ------------------------------------------
