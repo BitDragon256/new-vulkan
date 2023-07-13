@@ -580,7 +580,7 @@ void Renderer::create_geometry_pipelines()
 
 void Renderer::init_static_geometry_handler()
 {
-    StaticGeometryHandlerVulkanObjects vulkanObjects;
+    GeometryHandlerVulkanObjects vulkanObjects;
     vulkanObjects.device = m_device;
     vulkanObjects.physicalDevice = m_physicalDevice;
     vulkanObjects.commandPool = m_commandPool;

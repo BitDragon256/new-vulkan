@@ -34,7 +34,7 @@ struct StaticMesh
 
 	Material material;
 };
-struct StaticModel
+struct Model
 {
 	std::vector<StaticMesh> m_children;
 
@@ -66,7 +66,7 @@ struct MeshGroup // group with individual shaders
 	std::vector<VkCommandBuffer> commandBuffers;
 };
 
-struct StaticGeometryHandlerVulkanObjects
+struct GeometryHandlerVulkanObjects
 {
 	VkDevice device;
 	VkCommandPool commandPool;
@@ -106,7 +106,7 @@ struct PipelineCreationData
 	std::vector<VkDynamicState>				dynamicStates;
 };
 
-class StaticGeometryHandler : System<StaticModel, Transform>
+class GeometryHandler
 {
 public:
 	// void create_command_buffers();
@@ -116,24 +116,30 @@ public:
 	void create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
 	void set_pipelines(std::vector<VkPipeline>& pipelines);
 
-	void initialize(StaticGeometryHandlerVulkanObjects vulkanObjects);
+	void initialize(GeometryHandlerVulkanObjects vulkanObjects);
 	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
-
-	void awake(EntityId entity, ECSManager& ecs) override;
-	void update(float dt, ECSManager& ecs) override;
 
 	uint32_t subpass_count();
 
 	void cleanup();
 
+protected:
+
+	void add_model(Model& model, Transform transform);
+	virtual void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup) = 0;
+	
+	void update();
+
+	GeometryHandlerVulkanObjects m_vulkanObjects;
+	VkPipelineLayout m_pipelineLayout;
+	VkDescriptorSet m_descriptorSet;
+
 private:
-	void add_model(StaticModel& model, Transform transform);
+
 	MeshGroup* find_group(GraphicsShader*& shader, size_t& index);
 	MeshGroup* push_mesh_group(GraphicsShader*& shader);
 
 	void create_group_command_buffers(MeshGroup& meshGroup);
-
-	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup);
 
 	VkGraphicsPipelineCreateInfo create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex);
 	void create_pipeline_layout();
@@ -146,7 +152,6 @@ private:
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
 
 	std::vector<PipelineCreationData> m_pipelineCreationData;
-	VkPipelineLayout m_pipelineLayout;
 
 	bool reloadMeshBuffers;
 
@@ -154,13 +159,32 @@ private:
 	void reload_mesh_group(MeshGroup& meshGroup);
 
 	BufferConfig default_buffer_config();
-	StaticGeometryHandlerVulkanObjects m_vulkanObjects;
 
 	VkDescriptorSetLayout m_descriptorSetLayout;
-	VkDescriptorSet m_descriptorSet;
 
 	void create_descriptor_set();
 	void update_descriptor_set();
 
 	TexturePool m_texturePool;
+};
+
+struct StaticModel : Model
+{
+	
+};
+
+class StaticGeometryHandler : public GeometryHandler, System<StaticModel, Transform>
+{
+public:
+
+	void awake(EntityId entity, ECSManager& ecs) override;
+	void update(float dt, ECSManager& ecs) override;
+
+protected:
+
+	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup) override;
+
+private:
+
+	void add_model(StaticModel& model, Transform transform);
 };
