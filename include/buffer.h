@@ -65,6 +65,10 @@ public:
             m_created = false;
         }
     }
+    VkDeviceSize range()
+    {
+        return m_realSize;
+    }
 
     VkBuffer m_buffer;
 protected:
@@ -72,6 +76,8 @@ protected:
     {
         m_config = config;
         m_initialized = true;
+
+        set({ T() }); // one dummy element
     }
     void create()
     {

@@ -591,6 +591,8 @@ void Renderer::create_geometry_pipelines()
         std::vector<VkGraphicsPipelineCreateInfo> pipelineCIs;
 
         geometryHandler->create_pipeline_create_infos(pipelineCIs);
+        if (pipelineCIs.empty())
+            continue;
 
         std::vector<VkPipeline> pipelines(pipelineCIs.size());
         auto res = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, pipelineCIs.size(), pipelineCIs.data(), nullptr, pipelines.data());
@@ -677,8 +679,8 @@ void Renderer::record_main_command_buffer(uint32_t frame)
     for (uint32_t subpass = 0; subpass < subpassCount; subpass++)
     {
         vkCmdExecuteCommands(commandBuffer, 1, &secondaryCommandBuffers[subpass]);
-        if (subpass != subpassCount - 1)
-            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+        //if (subpass != subpassCount - 1)
+        //    vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     }
 
     // -------------------------------------------
@@ -831,6 +833,8 @@ void Renderer::geometry_handler_cleanup()
 
 uint32_t Renderer::geometry_handler_subpass_count()
 {
+    return 1;
+
     auto handlers = all_geometry_handlers();
     uint32_t subpassCount = 0;
     for (auto handler : handlers)

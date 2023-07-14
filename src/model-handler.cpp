@@ -455,7 +455,7 @@ VkWriteDescriptorSet GeometryHandler::material_buffer_descriptor_set_write()
 	m_materialBufferDescriptorInfo = {};
 	m_materialBufferDescriptorInfo.buffer = m_materialBuffer.m_buffer;
 	m_materialBufferDescriptorInfo.offset = 0;
-	m_materialBufferDescriptorInfo.range = sizeof(MaterialSSBO) * m_materials.size();
+	m_materialBufferDescriptorInfo.range = m_materialBuffer.range();
 
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -687,12 +687,12 @@ void DynamicGeometryHandler::update(float dt, ECSManager& ecs)
 	VkDescriptorBufferInfo transformBufferInfo = {};
 	transformBufferInfo.buffer = m_transformBuffer.m_buffer;
 	transformBufferInfo.offset = 0;
-	transformBufferInfo.range = sizeof(Transform) * transforms.size();
+	transformBufferInfo.range = m_transformBuffer.range();
 
 	transformBufferWrite.descriptorCount = 1;
 	transformBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	transformBufferWrite.dstBinding = DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING;
-	transformBufferWrite.dstSet = 0;
+	transformBufferWrite.dstSet = m_descriptorSet;
 	transformBufferWrite.pBufferInfo = &transformBufferInfo;
 
 	vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
