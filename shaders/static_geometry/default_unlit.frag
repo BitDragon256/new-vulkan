@@ -29,7 +29,7 @@ layout( push_constant ) uniform constants
     vec3 lightPos;
 } CPC;
 
-layout(set = 0, binding = 1) uniform texture2D textures[256];
+layout(set = 0, binding = 1) uniform texture2D textures[128];
 layout(set = 0, binding = 2) uniform sampler samp;
 
 void main()
