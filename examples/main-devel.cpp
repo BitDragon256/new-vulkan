@@ -80,8 +80,10 @@ int main(int argc, char** argv)
     renderer.m_ecs.add_component<DynamicModel>(testEntity);
     auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
     testEntityModel.load_mesh("/test-models/sponza/sponza.obj");
-    renderer.m_ecs.get_component<Transform>(testEntity).rotation = Quaternion({ -PI/2,0,0 });
-    //renderer.m_ecs.get_component<Transform>(testEntity).scale = Vector3{ 0.01f, 0.01f, 0.01f };
+    auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
+    //testEntityTransform.rotation = Quaternion({ -PI/2,0,0 });
+
+    float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 1,1,1 };
 
     bool running = true;
     while (running)
@@ -108,6 +110,13 @@ int main(int argc, char** argv)
 
         ImGui::SliderFloat3("light pos", lightPos, -10, 10);
         renderer.set_light_pos(Vector3{ lightPos[0], lightPos[1], lightPos[2] });
+
+        ImGui::SliderFloat3("model pos", modelPos, -10, 10);
+        ImGui::SliderFloat3("model rot", modelRot, -180, 180);
+        ImGui::SliderFloat3("model scale", modelScale, 0.01, 10);
+        testEntityTransform.position = { modelPos[0], modelPos[1] , modelPos[2] };
+        testEntityTransform.scale = { modelScale[0], modelScale[1] , modelScale[2] };
+        testEntityTransform.rotation.euler(Vector3{ modelRot[0], modelRot[1] , modelRot[2] });
 
         ImGui::End();
 

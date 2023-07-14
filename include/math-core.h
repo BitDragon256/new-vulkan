@@ -2,6 +2,8 @@
 
 #include "nve_types.h"
 
+#define DEG_TO_RAD PI / 180.f
+
 namespace math
 {
 	class quaternion

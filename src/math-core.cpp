@@ -98,6 +98,10 @@ namespace math
 	{
 		set(complex.x, complex.y, complex.z, real);
 	}
+	void quaternion::euler(Vector3 rot)
+	{
+		*this = quaternion(rot * DEG_TO_RAD);
+	}
 
 	const float quaternion::m_normalizeThreshold { 0.05f };
 	bool quaternion::is_normalized()

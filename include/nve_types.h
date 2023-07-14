@@ -61,4 +61,4 @@ struct CameraPushConstant
 #define VECTOR_BACK Vector3(-1, 0, 0)
 #define VECTOR_LEFT Vector3(0, -1, 0)
 
-#define PI 3.14159265
+#define PI 3.14159265f
