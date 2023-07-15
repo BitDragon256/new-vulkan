@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <functional>
 #include <string>
 
@@ -73,6 +74,9 @@ public:
 private:
 	void first_frame();
 	bool m_firstFrame;
+
+	float m_deltaTime;
+	std::chrono::time_point<std::chrono::high_resolution_clock> m_lastFrameTime;
 
 	RenderConfig m_config;
 

@@ -58,6 +58,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     m_frame = 0;
 
     m_firstFrame = true;
+    m_deltaTime = 0;
     
     return NVE_SUCCESS;
 }
@@ -69,7 +70,11 @@ NVE_RESULT Renderer::render()
         return NVE_RENDER_EXIT_SUCCESS;
     }
 
-    m_ecs.update_systems(0.016666f);
+    std::chrono::time_point<std::chrono::high_resolution_clock> now = std::chrono::high_resolution_clock::now();
+    m_deltaTime = std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_lastFrameTime).count() / 1000000000.f;
+    m_lastFrameTime = now;
+
+    m_ecs.update_systems(m_deltaTime);
 
     glfwPollEvents();
 

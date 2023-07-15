@@ -393,7 +393,7 @@ MaterialSSBO& MaterialSSBO::operator= (const Material& mat)
 	return *this;
 }
 
-Material Material::default_unlit()
+Material Material::default_lit()
 {
 	Material material;
 
@@ -403,7 +403,7 @@ Material Material::default_unlit()
 }
 
 Material::Material() :
-	m_dissolve{ 1 }, m_shader{ nullptr }
+	m_dissolve{ 1 }, m_shader{ nullptr }, m_diffuseTex{ "" }
 {
 	
 }

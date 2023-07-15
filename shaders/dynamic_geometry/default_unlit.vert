@@ -90,7 +90,7 @@ vec3 even_faster_rot(vec3 v, vec4 q)
 
 void main()
 {
-    Transform transform = ObjectInfoBuffer.objects[gl_BaseInstance];
+    Transform transform = ObjectInfoBuffer.objects[gl_InstanceIndex];
     vec3 vertexPos = even_faster_rot(inPosition * transform.scale, transform.rotation) + transform.position;
     gl_Position = CPC.projView * vec4(vertexPos, 1.0);
 

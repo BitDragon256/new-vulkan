@@ -39,13 +39,31 @@ void camera_movement(Renderer& renderer, Camera& camera)
 
     camera.m_rotation.y = math::clamp(camera.m_rotation.y, -50, 50);
 }
+struct CheckMovement {};
+class MovementChecker : System<CheckMovement, Transform>
+{
+public:
+    void update(float dt, EntityId entity, ECSManager& ecs) override
+    {
+        auto& transform = ecs.get_component<Transform>(entity);
+
+        if (totalTime > 2 * PI || totalTime < 0)
+            totalTime = 0;
+
+        transform.position.z = sin(totalTime + transform.position.y / 10);
+        totalTime += dt / 50;
+    }
+
+private:
+    float totalTime;
+};
 
 int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1920;
-    renderConfig.height = 1080;
+    renderConfig.width = 1200;
+    renderConfig.height = 800;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
@@ -75,15 +93,35 @@ int main(int argc, char** argv)
 
     float lightPos[3] = { 0, 0, 0 };
 
-    auto testEntity = renderer.m_ecs.create_entity();
-    renderer.m_ecs.add_component<Transform>(testEntity);
-    renderer.m_ecs.add_component<DynamicModel>(testEntity);
-    auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
-    testEntityModel.load_mesh("/test-models/sponza/sponza.obj");
-    auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
-    //testEntityTransform.rotation = Quaternion({ -PI/2,0,0 });
+    //auto testEntity = renderer.m_ecs.create_entity();
+    //renderer.m_ecs.add_component<Transform>(testEntity);
+    //renderer.m_ecs.add_component<DynamicModel>(testEntity);
+    //auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
+    //testEntityModel.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
+    //auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
+    ////testEntityTransform.rotation = Quaternion({ -PI/2,0,0 });
 
-    float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 1,1,1 };
+    //float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 0.005,0.005,0.005 };
+
+    MovementChecker movementChecker;
+    renderer.m_ecs.register_system<MovementChecker>(&movementChecker);
+
+    const int testEntityCount = 100;
+
+    std::vector<EntityId> testEntities(testEntityCount);
+    for (int i = 0; i < testEntityCount; i++)
+    {
+        testEntities[i] = renderer.m_ecs.create_entity();
+        renderer.m_ecs.add_component<Transform>(testEntities[i]);
+        renderer.m_ecs.add_component<DynamicModel>(testEntities[i]);
+        renderer.m_ecs.add_component<CheckMovement>(testEntities[i]);
+
+        renderer.m_ecs.get_component<Transform>(testEntities[i]).position = Vector3(0, i, 0);
+        renderer.m_ecs.get_component<Transform>(testEntities[i]).scale = Vector3(0.002f);
+
+        auto& model = renderer.m_ecs.get_component<DynamicModel>(testEntities[i]);
+        model.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
+    }
 
     bool running = true;
     while (running)
@@ -111,12 +149,12 @@ int main(int argc, char** argv)
         ImGui::SliderFloat3("light pos", lightPos, -10, 10);
         renderer.set_light_pos(Vector3{ lightPos[0], lightPos[1], lightPos[2] });
 
-        ImGui::SliderFloat3("model pos", modelPos, -10, 10);
-        ImGui::SliderFloat3("model rot", modelRot, -180, 180);
-        ImGui::SliderFloat3("model scale", modelScale, 0.01, 10);
-        testEntityTransform.position = { modelPos[0], modelPos[1] , modelPos[2] };
-        testEntityTransform.scale = { modelScale[0], modelScale[1] , modelScale[2] };
-        testEntityTransform.rotation.euler(Vector3{ modelRot[0], modelRot[1] , modelRot[2] });
+        //ImGui::SliderFloat3("model pos", modelPos, -10, 10);
+        //ImGui::SliderFloat3("model rot", modelRot, -180, 180);
+        //ImGui::SliderFloat3("model scale", modelScale, 0.01, 10);
+        //testEntityTransform.position = { modelPos[0], modelPos[1] , modelPos[2] };
+        //testEntityTransform.scale = { modelScale[0], modelScale[1] , modelScale[2] };
+        //testEntityTransform.rotation.euler(Vector3{ modelRot[0], modelRot[1] , modelRot[2] });
 
         ImGui::End();
 

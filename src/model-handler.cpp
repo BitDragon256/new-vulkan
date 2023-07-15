@@ -287,9 +287,9 @@ void GeometryHandler::record_command_buffers(uint32_t frame)
 {
 	// record command buffers
 	uint32_t subpass = m_vulkanObjects.firstSubpass;
-	for (MeshGroup& meshGroup : m_meshGroups)
+	for (size_t i = 0; i < m_meshGroups.size(); i++)
 	{
-		record_command_buffer(subpass, frame, meshGroup);
+		record_command_buffer(subpass, frame, m_meshGroups[i], i);
 		subpass++;
 	}
 }
@@ -376,13 +376,13 @@ void GeometryHandler::create_pipeline_layout()
 	}
 }
 
-void GeometryHandler::add_model(Model& model, Transform transform)
+void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 {
 	for (auto& mesh : model.m_children)
 	{
 		size_t index;
 		MeshGroup* meshGroup = find_group(mesh.material.m_shader, index);
-		if (!meshGroup) // no group found
+		if (!meshGroup || forceNewMeshGroup) // no group found or a new group must be created
 			meshGroup = push_mesh_group(mesh.material.m_shader);
 
 		// material
@@ -581,9 +581,9 @@ void StaticGeometryHandler::add_model(StaticModel& model, Transform transform)
 		bake_transform(mesh, transform);
 	}
 
-	GeometryHandler::add_model(model, transform);
+	GeometryHandler::add_model(model);
 }
-void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup)
+void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex)
 {
 	VkCommandBuffer commandBuffer = meshGroup.commandBuffers[frame];
 	vkResetCommandBuffer(commandBuffer, 0);
@@ -661,6 +661,8 @@ void DynamicGeometryHandler::start(ECSManager& ecs)
 	BufferConfig bufferConfig = default_buffer_config();
 	bufferConfig.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	m_transformBuffer.initialize(bufferConfig);
+
+	m_modelCount = 0;
 }
 void DynamicGeometryHandler::awake(EntityId entity, ECSManager& ecs)
 {
@@ -698,7 +700,7 @@ void DynamicGeometryHandler::update(float dt, ECSManager& ecs)
 	vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
 }
 
-void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup)
+void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex)
 {
 	VkCommandBuffer commandBuffer = meshGroup.commandBuffers[frame];
 	vkResetCommandBuffer(commandBuffer, 0);
@@ -740,7 +742,8 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	// ---------------------------------------
 
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), 1, 0, 0, 0);
+	auto modelInfo = m_individualModels[meshGroupIndex];
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), modelInfo.instanceCount, 0, 0, modelInfo.startIndex);
 
 	// ---------------------------------------
 
@@ -753,7 +756,29 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 }
 void DynamicGeometryHandler::add_model(DynamicModel& model, Transform transform)
 {
-	GeometryHandler::add_model(model, transform);
+	auto hashSum = hash_model(model);
+
+	bool newMeshGroup = true;
+	for (auto& modelInfo : m_individualModels)
+	{
+		if (hashSum == modelInfo.hashSum)
+		{
+			modelInfo.instanceCount++;
+			newMeshGroup = false;
+			break;
+		}
+	}
+	if (newMeshGroup)
+	{
+		GeometryHandler::add_model(model);
+		DynamicModelInfo newModelInfo = {};
+		newModelInfo.hashSum = hashSum;
+		newModelInfo.instanceCount = 1;
+		newModelInfo.startIndex = m_modelCount;
+		m_individualModels.push_back(newModelInfo);
+	}
+
+	m_modelCount++;
 }
 std::vector<VkDescriptorSetLayoutBinding> DynamicGeometryHandler::other_descriptors()
 {
@@ -767,6 +792,21 @@ std::vector<VkDescriptorSetLayoutBinding> DynamicGeometryHandler::other_descript
 	return {
 		transformBufferBinding,
 	};
+}
+
+DynamicModelHashSum hash_model(const DynamicModel& model)
+{
+	DynamicModelHashSum hashSum = 0;
+	for (auto child : model.m_children)
+	{
+		for (auto index : child.indices)
+		{
+			hashSum += (child.vertices[index].pos.x + child.vertices[index].pos.y + child.vertices[index].pos.z) * index;
+			hashSum >>= 4;
+		}
+		hashSum ^= (DynamicModelHashSum) child.material.m_shader;
+	}
+	return hashSum;
 }
 
 // ------------------------------------------
@@ -857,8 +897,11 @@ void load_mesh(std::string file, ObjData& objData)
 		if (shape.mesh.material_ids.size() > 0)
 		{
 			auto matIndex = shape.mesh.material_ids[0];
-			mesh.mat.m_texBaseDir = directory;
-			mesh.mat = materials[matIndex];
+			if (matIndex >= 0)
+			{
+				mesh.mat.m_texBaseDir = directory;
+				mesh.mat = materials[matIndex];
+			}
 		}
 
 		int triIndex = 0;

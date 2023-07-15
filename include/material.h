@@ -102,7 +102,7 @@ public:
 	bool operator== (const Material& mat);
 	Material& operator= (const tinyobj::material_t& other);
 
-	static Material default_unlit();
+	static Material default_lit();
 	Material();
 };
 

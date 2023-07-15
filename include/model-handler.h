@@ -127,8 +127,8 @@ public:
 
 protected:
 
-	void add_model(Model& model, Transform transform);
-	virtual void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup) = 0;
+	void add_model(Model& model, bool forceNewMeshGroup = false);
+	virtual void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) = 0;
 	
 	void update();
 
@@ -186,7 +186,7 @@ public:
 
 protected:
 
-	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup) override;
+	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) override;
 	std::vector<VkDescriptorSetLayoutBinding> other_descriptors() override;
 
 private:
@@ -194,9 +194,20 @@ private:
 	void add_model(StaticModel& model, Transform transform);
 };
 
+typedef uint64_t DynamicModelHashSum;
+
 struct DynamicModel : Model
 {
+	DynamicModelHashSum hashSum;
+};
 
+DynamicModelHashSum hash_model(const DynamicModel& model);
+
+struct DynamicModelInfo
+{
+	uint32_t startIndex;
+	uint32_t instanceCount;
+	DynamicModelHashSum hashSum;
 };
 
 class DynamicGeometryHandler : public GeometryHandler, System<DynamicModel, Transform>
@@ -209,7 +220,7 @@ public:
 
 protected:
 
-	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup) override;
+	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) override;
 	std::vector<VkDescriptorSetLayoutBinding> other_descriptors() override;
 
 private:
@@ -217,4 +228,7 @@ private:
 	void add_model(DynamicModel& model, Transform transform);
 
 	Buffer<Transform> m_transformBuffer;
+
+	std::vector<DynamicModelInfo> m_individualModels;
+	uint32_t m_modelCount;
 };
