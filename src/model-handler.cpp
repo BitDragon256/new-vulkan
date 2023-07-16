@@ -6,6 +6,7 @@
 #include "tiny_obj_loader.h"
 
 #include "math-core.h"
+#include "profiler.h"
 
 // ------------------------------------------
 // NON-MEMBER FUNCTIONS
@@ -820,8 +821,6 @@ Transform::Transform(Vector3 position, Vector3 scale, Quaternion rotation) :
 	position{ position }, scale{ scale }, rotation{ rotation }
 {}
 
-
-
 // ------------------------------------------
 // TINY OBJ LOADER HELPER
 // ------------------------------------------
@@ -857,8 +856,13 @@ struct std::hash<Vertex>
 	}
 };
 
+Profiler meshProfiler;
+
 void load_mesh(std::string file, ObjData& objData)
 {
+	meshProfiler.start_measure("total loading time");
+	meshProfiler.start_measure("tiny obj loader loading time");
+
 	file = ROOT_DIRECTORY + file;
 	std::string directory;
 	const size_t lastSlash = file.find_last_of("\\/");
@@ -880,6 +884,8 @@ void load_mesh(std::string file, ObjData& objData)
 	auto& attrib = reader.GetAttrib();
 	auto& shapes = reader.GetShapes();
 	auto& materials = reader.GetMaterials();
+
+	meshProfiler.end_measure("tiny obj loader loading time");
 
 	// transferring data
 
@@ -977,6 +983,11 @@ void load_mesh(std::string file, ObjData& objData)
 		}
 	}
 
+	meshProfiler.end_measure("total loading time");
+
+	meshProfiler.print_last_measure("tiny obj loader loading time");
+	meshProfiler.print_last_measure("total loading time");
+
 	//objData.vertices.reserve(vertices.size());
 	//for (const auto& kv : vertices)
 	//	objData.vertices.push_back(kv.first);
@@ -1000,5 +1011,7 @@ void Model::load_mesh(std::string file)
 		mesh.material = objMesh.mat;
 		mesh.vertices = objMesh.vertices;
 		mesh.indices = objMesh.indices;
+		meshProfiler.passing_measure("model loading");
+		meshProfiler.print_last_measure("model loading");
 	}
 }

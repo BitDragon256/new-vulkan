@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <nve.h>
+#include <profiler.h>
 
 float turningSpeed = 0.4f;
 float moveSpeed = 0.005f;
@@ -108,6 +109,13 @@ int main(int argc, char** argv)
 
     const int testEntityCount = 100;
 
+    Profiler profiler;
+
+    profiler.start_measure("complete model loading");
+
+    DynamicModel prefab;
+    prefab.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
+
     std::vector<EntityId> testEntities(testEntityCount);
     for (int i = 0; i < testEntityCount; i++)
     {
@@ -119,9 +127,11 @@ int main(int argc, char** argv)
         renderer.m_ecs.get_component<Transform>(testEntities[i]).position = Vector3(0, i, 0);
         renderer.m_ecs.get_component<Transform>(testEntities[i]).scale = Vector3(0.002f);
 
-        auto& model = renderer.m_ecs.get_component<DynamicModel>(testEntities[i]);
-        model.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
+        renderer.m_ecs.get_component<DynamicModel>(testEntities[i]) = prefab;
     }
+
+    profiler.end_measure("complete model loading");
+    profiler.print_last_measure("complete model loading");
 
     bool running = true;
     while (running)

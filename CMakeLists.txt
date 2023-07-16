@@ -27,6 +27,7 @@ set(
 	${SOURCE_DIR}/vulkan_helpers.cpp
 	${SOURCE_DIR}/material.cpp
 	${SOURCE_DIR}/image.cpp
+	${SOURCE_DIR}/profiler.cpp
 )
 
 set(
@@ -42,6 +43,7 @@ set(
 	${INCLUDE_DIR}/vulkan_helpers.h
 	${INCLUDE_DIR}/material.h
 	${INCLUDE_DIR}/image.h
+	${INCLUDE_DIR}/profiler.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
