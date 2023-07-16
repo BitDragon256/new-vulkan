@@ -550,14 +550,14 @@ void GeometryHandler::cleanup()
 		vkDestroyPipeline(m_vulkanObjects.device, meshGroup.pipeline, nullptr);
 		vkDestroyPipelineLayout(m_vulkanObjects.device, m_pipelineLayout, nullptr);
 
-		vkFreeDescriptorSets(m_vulkanObjects.device, m_vulkanObjects.descriptorPool, 1, &m_descriptorSet);
-		vkDestroyDescriptorSetLayout(m_vulkanObjects.device, m_descriptorSetLayout, nullptr);
-
 		vkFreeCommandBuffers(m_vulkanObjects.device, m_vulkanObjects.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 
 		meshGroup.shader.fragment.destroy();
 		meshGroup.shader.vertex.destroy();
 	}
+
+	vkFreeDescriptorSets(m_vulkanObjects.device, m_vulkanObjects.descriptorPool, 1, &m_descriptorSet);
+	vkDestroyDescriptorSetLayout(m_vulkanObjects.device, m_descriptorSetLayout, nullptr);
 
 	m_texturePool.cleanup();
 }
@@ -699,6 +699,13 @@ void DynamicGeometryHandler::update(float dt, ECSManager& ecs)
 	transformBufferWrite.pBufferInfo = &transformBufferInfo;
 
 	vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
+}
+
+void DynamicGeometryHandler::cleanup()
+{
+	m_transformBuffer.destroy();
+
+	GeometryHandler::cleanup();
 }
 
 void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex)
@@ -1004,6 +1011,8 @@ void Model::load_mesh(std::string file)
 
 	m_children.clear();
 	m_children.reserve(objData.meshes.size());
+
+	meshProfiler.passing_measure("model transfer");
 	for (const auto& objMesh : objData.meshes)
 	{
 		m_children.push_back(StaticMesh{});
@@ -1011,7 +1020,7 @@ void Model::load_mesh(std::string file)
 		mesh.material = objMesh.mat;
 		mesh.vertices = objMesh.vertices;
 		mesh.indices = objMesh.indices;
-		meshProfiler.passing_measure("model loading");
-		meshProfiler.print_last_measure("model loading");
+		meshProfiler.passing_measure("model transfer");
+		meshProfiler.print_last_measure("model transfer");
 	}
 }

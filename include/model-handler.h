@@ -123,7 +123,7 @@ public:
 
 	uint32_t subpass_count();
 
-	void cleanup();
+	virtual void cleanup();
 
 protected:
 
@@ -217,6 +217,8 @@ public:
 	void start(ECSManager& ecs) override;
 	void awake(EntityId entity, ECSManager& ecs) override;
 	void update(float dt, ECSManager& ecs) override;
+
+	void cleanup() override;
 
 protected:
 

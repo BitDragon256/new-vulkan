@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstring>
+
+#include <iostream>
 #include <vector>
 
 #include <vulkan/vulkan.h>
@@ -28,6 +30,30 @@ typedef struct {
     VkMemoryPropertyFlags memoryFlags;
     VkBufferUsageFlags usage;
 } RawBufferConfig;
+
+typedef struct {
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+    VkDevice device;
+} BufferDestructionInfo;
+
+inline bool operator==(const BufferDestructionInfo& a, const BufferDestructionInfo& b)
+{
+    return a.buffer == b.buffer && a.memory == b.memory && a.device == b.device;
+}
+
+static std::vector<BufferDestructionInfo> AllBuffers;
+inline void destroy_all_corresponding_buffers(VkDevice device)
+{
+    for (auto& buffer : AllBuffers)
+    {
+        if (buffer.device == device)
+        {
+            vkDestroyBuffer(buffer.device, buffer.buffer, nullptr);
+            vkFreeMemory(buffer.device, buffer.memory, nullptr);
+        }
+    }
+}
 
 template<class T>
 class RawBuffer
@@ -63,6 +89,7 @@ public:
             vkFreeMemory(m_config.device, m_memory, nullptr);
 
             m_created = false;
+            std::erase(AllBuffers, destruction_info());
         }
     }
     VkDeviceSize range()
@@ -71,6 +98,7 @@ public:
     }
 
     VkBuffer m_buffer;
+
 protected:
     void initialize(RawBufferConfig config)
     {
@@ -86,6 +114,7 @@ protected:
         create_buffer(m_realSize, m_config.usage, m_config.memoryFlags, m_buffer, m_memory);
 
         m_created = true;
+        AllBuffers.push_back(destruction_info());
     }
     virtual void reload_data()
     {
@@ -141,6 +170,14 @@ protected:
 
         vkBindBufferMemory(m_config.device, buffer, memory, 0);
     }
+
+private:
+
+    BufferDestructionInfo destruction_info()
+    {
+        return BufferDestructionInfo{ m_buffer, m_memory, m_config.device };
+    }
+
 };
 
 template<class T>
