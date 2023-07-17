@@ -306,6 +306,8 @@ std::vector<VkCommandBuffer> GeometryHandler::get_command_buffers(uint32_t frame
 
 void GeometryHandler::create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos)
 {
+	create_pipeline_layout();
+
 	m_pipelineCreationData.resize(m_meshGroups.size());
 
 	size_t index = 0;
@@ -338,7 +340,6 @@ VkGraphicsPipelineCreateInfo GeometryHandler::create_pipeline_create_info(uint32
 
 	// ---------------------------------------
 
-	create_pipeline_layout();
 	graphicsPipelineCI.layout = m_pipelineLayout;
 
 	// ---------------------------------------
@@ -545,10 +546,7 @@ void GeometryHandler::cleanup()
 		meshGroup.indexBuffer.destroy();
 		meshGroup.vertexBuffer.destroy();
 
-		m_materialBuffer.destroy();
-
 		vkDestroyPipeline(m_vulkanObjects.device, meshGroup.pipeline, nullptr);
-		vkDestroyPipelineLayout(m_vulkanObjects.device, m_pipelineLayout, nullptr);
 
 		vkFreeCommandBuffers(m_vulkanObjects.device, m_vulkanObjects.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 
@@ -556,6 +554,9 @@ void GeometryHandler::cleanup()
 		meshGroup.shader.vertex.destroy();
 	}
 
+	m_materialBuffer.destroy();
+
+	vkDestroyPipelineLayout(m_vulkanObjects.device, m_pipelineLayout, nullptr);
 	vkFreeDescriptorSets(m_vulkanObjects.device, m_vulkanObjects.descriptorPool, 1, &m_descriptorSet);
 	vkDestroyDescriptorSetLayout(m_vulkanObjects.device, m_descriptorSetLayout, nullptr);
 
