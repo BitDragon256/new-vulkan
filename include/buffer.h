@@ -109,6 +109,8 @@ protected:
     }
     void create()
     {
+        vkDeviceWaitIdle(m_config.device); // TODO better syncing
+
         destroy();
 
         create_buffer(m_realSize, m_config.usage, m_config.memoryFlags, m_buffer, m_memory);

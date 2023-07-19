@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include <nve.h>
-#include <profiler.h>
 
 float turningSpeed = 0.4f;
 float moveSpeed = 0.005f;
@@ -19,24 +18,24 @@ void camera_movement(Renderer& renderer, Camera& camera)
         camera.m_position -= forward * moveSpeed;
 
     if (renderer.get_key(GLFW_KEY_A) == GLFW_PRESS)
-        camera.m_position += right * moveSpeed;
-    if (renderer.get_key(GLFW_KEY_D) == GLFW_PRESS)
         camera.m_position -= right * moveSpeed;
+    if (renderer.get_key(GLFW_KEY_D) == GLFW_PRESS)
+        camera.m_position += right * moveSpeed;
 
     if (renderer.get_key(GLFW_KEY_E) == GLFW_PRESS)
-        camera.m_position.z -= moveSpeed;
-    if (renderer.get_key(GLFW_KEY_Q) == GLFW_PRESS)
         camera.m_position.z += moveSpeed;
+    if (renderer.get_key(GLFW_KEY_Q) == GLFW_PRESS)
+        camera.m_position.z -= moveSpeed;
 
     if (renderer.get_key(GLFW_KEY_UP) == GLFW_PRESS)
-        camera.m_rotation.y += turningSpeed;
-    if (renderer.get_key(GLFW_KEY_DOWN) == GLFW_PRESS)
         camera.m_rotation.y -= turningSpeed;
+    if (renderer.get_key(GLFW_KEY_DOWN) == GLFW_PRESS)
+        camera.m_rotation.y += turningSpeed;
 
     if (renderer.get_key(GLFW_KEY_LEFT) == GLFW_PRESS)
-        camera.m_rotation.z += turningSpeed;
-    if (renderer.get_key(GLFW_KEY_RIGHT) == GLFW_PRESS)
         camera.m_rotation.z -= turningSpeed;
+    if (renderer.get_key(GLFW_KEY_RIGHT) == GLFW_PRESS)
+        camera.m_rotation.z += turningSpeed;
 
     camera.m_rotation.y = math::clamp(camera.m_rotation.y, -50, 50);
 }
@@ -44,9 +43,9 @@ struct CheckMovement {};
 class MovementChecker : System<CheckMovement, Transform>
 {
 public:
-    void update(float dt, EntityId entity, ECSManager& ecs) override
+    void update(float dt, EntityId entity) override
     {
-        auto& transform = ecs.get_component<Transform>(entity);
+        auto& transform = m_ecs->get_component<Transform>(entity);
 
         if (totalTime > 2 * PI || totalTime < 0)
             totalTime = 0;
@@ -70,13 +69,14 @@ int main(int argc, char** argv)
     renderConfig.enableValidationLayers = true;
     renderConfig.clearColor = Vector3(0, 187, 233);
     renderConfig.cameraEnabled = true;
+    renderConfig.autoECSUpdate = false;
 
     renderer.init(renderConfig);
 
     // Camera
 
     Camera camera;
-    camera.m_position = Vector3(-1, 0, -1);
+    camera.m_position = Vector3(-2.5, 0, 0);
     camera.m_rotation = Vector3(0, 0, 0);
     renderer.set_active_camera(&camera);
 
@@ -104,10 +104,13 @@ int main(int argc, char** argv)
 
     //float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 0.005,0.005,0.005 };
 
-    MovementChecker movementChecker;
-    renderer.m_ecs.register_system<MovementChecker>(&movementChecker);
+    //MovementChecker movementChecker;
+    //renderer.m_ecs.register_system<MovementChecker>(&movementChecker);
 
-    const int testEntityCount = 100;
+    PhysicsSystem physicsSystem;
+    renderer.m_ecs.register_system(&physicsSystem);
+
+    const int testEntityCount = 1;
 
     Profiler profiler;
 
@@ -116,22 +119,46 @@ int main(int argc, char** argv)
     DynamicModel prefab;
     prefab.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
 
-    std::vector<EntityId> testEntities(testEntityCount);
-    for (int i = 0; i < testEntityCount; i++)
-    {
-        testEntities[i] = renderer.m_ecs.create_entity();
-        renderer.m_ecs.add_component<Transform>(testEntities[i]);
-        renderer.m_ecs.add_component<DynamicModel>(testEntities[i]);
-        renderer.m_ecs.add_component<CheckMovement>(testEntities[i]);
+    //std::vector<EntityId> testEntities(testEntityCount);
+    //for (int i = 0; i < testEntityCount; i++)
+    //{
+    //    testEntities[i] = renderer.m_ecs.create_entity();
+    //    renderer.m_ecs.add_component<Transform>(testEntities[i]);
+    //    renderer.m_ecs.add_component<DynamicModel>(testEntities[i]);
+    //    //renderer.m_ecs.add_component<CheckMovement>(testEntities[i]);
+    //    renderer.m_ecs.add_component<Rigidbody>(testEntities[i]);
 
-        renderer.m_ecs.get_component<Transform>(testEntities[i]).position = Vector3(0, i, 0);
-        renderer.m_ecs.get_component<Transform>(testEntities[i]).scale = Vector3(0.002f);
+    //    renderer.m_ecs.get_component<Rigidbody>(testEntities[i]).radius = .1f;
 
-        renderer.m_ecs.get_component<DynamicModel>(testEntities[i]) = prefab;
-    }
+    //    renderer.m_ecs.get_component<Transform>(testEntities[i]).position = Vector3(0, 1, 0);
+    //    renderer.m_ecs.get_component<Transform>(testEntities[i]).scale = Vector3(0.001f);
+
+    //    renderer.m_ecs.get_component<DynamicModel>(testEntities[i]) = prefab;
+    //}
+
+    float ballRadius = .115f;
+
+    std::vector<EntityId> entities;
+    auto add_object = [&renderer, prefab, ballRadius, &entities] {
+        EntityId entity = renderer.m_ecs.create_entity();
+        renderer.m_ecs.add_component<Transform>(entity);
+        renderer.m_ecs.add_component<DynamicModel>(entity);
+        renderer.m_ecs.add_component<Rigidbody>(entity);
+
+        renderer.m_ecs.get_component<Rigidbody>(entity).radius = ballRadius;
+
+        renderer.m_ecs.get_component<Transform>(entity).position = Vector3(0, 1, 0);
+        renderer.m_ecs.get_component<Transform>(entity).scale = Vector3(0.001f);
+
+        renderer.m_ecs.get_component<DynamicModel>(entity) = prefab;
+
+        entities.push_back(entity);
+    };
 
     profiler.end_measure("complete model loading");
     profiler.print_last_measure("complete model loading");
+
+    bool updateECS = true;
 
     bool running = true;
     while (running)
@@ -165,6 +192,24 @@ int main(int argc, char** argv)
         //testEntityTransform.position = { modelPos[0], modelPos[1] , modelPos[2] };
         //testEntityTransform.scale = { modelScale[0], modelScale[1] , modelScale[2] };
         //testEntityTransform.rotation.euler(Vector3{ modelRot[0], modelRot[1] , modelRot[2] });
+
+        ImGui::DragFloat("ball radius", &ballRadius);
+        for (auto entity : entities)
+            renderer.m_ecs.get_component<Rigidbody>(entity).radius = ballRadius;
+
+        if (ImGui::Button("add object"))
+            add_object();
+
+        bool singleUpdateECS = ImGui::Button("step ecs");
+        if (ImGui::Button("update ecs"))
+            updateECS = !updateECS;
+        if (updateECS || singleUpdateECS)
+            renderer.m_ecs.update_systems(1.f / 144.f);
+
+        if (updateECS)
+            ImGui::Text("ECS activated");
+        else
+            ImGui::Text("ECS deactivated");
 
         ImGui::End();
 

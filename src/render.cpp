@@ -59,6 +59,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
 
     m_firstFrame = true;
     m_deltaTime = 0;
+    m_lastFrameTime = std::chrono::high_resolution_clock::now();
     
     return NVE_SUCCESS;
 }
@@ -74,7 +75,8 @@ NVE_RESULT Renderer::render()
     m_deltaTime = std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_lastFrameTime).count() / 1000000000.f;
     m_lastFrameTime = now;
 
-    m_ecs.update_systems(m_deltaTime);
+    if (m_firstFrame || m_config.autoECSUpdate)
+        m_ecs.update_systems(m_deltaTime);
 
     glfwPollEvents();
 
@@ -1210,7 +1212,7 @@ Camera::Camera() :
 {}
 glm::mat4 Camera::view_matrix()
 {
-    return glm::lookAt(m_position, m_position + glm::rotate(glm::qua(glm::radians(m_rotation)), VECTOR_FORWARD), VECTOR_UP);
+    return glm::lookAt(m_position, m_position + glm::rotate(glm::qua(glm::radians(m_rotation)), VECTOR_FORWARD), VECTOR_DOWN);
 }
 glm::mat4 Camera::projection_matrix()
 {

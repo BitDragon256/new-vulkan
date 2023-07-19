@@ -149,6 +149,9 @@ private:
 
 	VkGraphicsPipelineCreateInfo create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex);
 	void create_pipeline_layout();
+	void create_pipeline(size_t meshGroupIndex);
+
+	bool m_rendererPipelinesCreated;
 
 	std::vector<MeshGroup> m_meshGroups;
 	std::vector<MeshDataInfo> m_meshes;
@@ -181,8 +184,8 @@ class StaticGeometryHandler : public GeometryHandler, System<StaticModel, Transf
 {
 public:
 
-	void awake(EntityId entity, ECSManager& ecs) override;
-	void update(float dt, ECSManager& ecs) override;
+	void awake(EntityId entity) override;
+	void update(float dt) override;
 
 protected:
 
@@ -214,9 +217,9 @@ class DynamicGeometryHandler : public GeometryHandler, System<DynamicModel, Tran
 {
 public:
 
-	void start(ECSManager& ecs) override;
-	void awake(EntityId entity, ECSManager& ecs) override;
-	void update(float dt, ECSManager& ecs) override;
+	void start() override;
+	void awake(EntityId entity) override;
+	void update(float dt) override;
 
 	void cleanup() override;
 

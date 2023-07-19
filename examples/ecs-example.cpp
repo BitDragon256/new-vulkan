@@ -14,7 +14,7 @@ struct FooComponentB
 class FooSys : public System<FooComponentA, FooComponentB>
 {
 public:
-    void update(float dt, EntityId entity, ECSManager& ecs) override
+    void update(float dt, EntityId entity) override
     {
         auto& fa = ecs.get_component<FooComponentA>(entity);
         auto& fb = ecs.get_component<FooComponentB>(entity);

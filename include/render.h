@@ -41,12 +41,15 @@ struct RenderConfig
 	bool enableValidationLayers;
 	std::vector<const char*> enabledInstanceLayers;
 
+	bool autoECSUpdate;
+
 	RenderConfig() :
 		width{ 600 }, height{ 400 }, title{ "DEFAULT TITLE" },
 		dataMode{ TestTri }, cameraEnabled{ false },
 		clearColor{ 0, 0, 0 },
 		enableValidationLayers{ true },
-		enabledInstanceLayers {}
+		enabledInstanceLayers{ },
+		autoECSUpdate{ true }
 	{}
 };
 

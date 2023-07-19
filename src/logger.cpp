@@ -19,6 +19,10 @@ void log_now(std::string str)
 {
     std::cout << str << std::endl;
 }
+void log(Vector3 vec)
+{
+    std::cout << "x: " << vec.x << " y: " << vec.y << " z: " << vec.z << '\n';
+}
 void log_cond(bool cond, std::string str)
 {
     if (cond)

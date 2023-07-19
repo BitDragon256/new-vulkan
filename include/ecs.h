@@ -187,12 +187,14 @@ class ECSManager;
 class ISystem
 {
 public:
-	virtual void start(ECSManager& ecs) {}
-	virtual void awake(EntityId entity, ECSManager& ecs) {}
-	virtual void update(float dt, ECSManager& ecs) {}
-	virtual void update(float dt, EntityId entity, ECSManager& ecs) {}
+	virtual void start() {}
+	virtual void awake(EntityId entity) {}
+	virtual void update(float dt) {}
+	virtual void update(float dt, EntityId entity) {}
 	virtual std::vector<const char*> component_types() = 0;
 	std::vector<EntityId> m_entities;
+
+	ECSManager* m_ecs;
 };
 
 template<typename... Types>
@@ -234,7 +236,8 @@ public:
 			m_systemComponents.back().set(m_componentManager.type_to_id(typeName), true);
 		}
 
-		m_systems.back()->start(*this);
+		m_systems.back()->m_ecs = this;
+		m_systems.back()->start();
 	}
 	EntityId create_entity()
 	{
@@ -269,7 +272,7 @@ public:
 		auto entityComponents = used_components(entity);
 
 		for (SystemId systemId = 0; systemId < m_systems.size(); systemId++)
-			if ((entityComponents & m_systemComponents[systemId]) == m_systemComponents[systemId])
+			if (((entityComponents & m_systemComponents[systemId]) == m_systemComponents[systemId]) && std::find(m_systems[systemId]->m_entities.begin(), m_systems[systemId]->m_entities.end(), entity) == m_systems[systemId]->m_entities.end())
 				m_systems[systemId]->m_entities.push_back(entity);
 	}
 	template<typename T> void remove_component(EntityId entity)
@@ -301,9 +304,9 @@ public:
 
 		for (auto system : m_systems)
 		{
-			system->update(dt, *this);
+			system->update(dt);
 			for (EntityId entity : system->m_entities)
-				system->update(dt, entity, *this);
+				system->update(dt, entity);
 		}
 	}
 private:
@@ -325,7 +328,7 @@ private:
 				std::back_inserter(newEntities)
 			);
 			for (EntityId entity : newEntities)
-				system->awake(entity, *this);
+				system->awake(entity);
 		}
 	}
 

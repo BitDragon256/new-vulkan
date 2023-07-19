@@ -28,6 +28,7 @@ set(
 	${SOURCE_DIR}/material.cpp
 	${SOURCE_DIR}/image.cpp
 	${SOURCE_DIR}/profiler.cpp
+	${SOURCE_DIR}/physics.cpp
 )
 
 set(
@@ -44,6 +45,7 @@ set(
 	${INCLUDE_DIR}/material.h
 	${INCLUDE_DIR}/image.h
 	${INCLUDE_DIR}/profiler.h
+	${INCLUDE_DIR}/physics.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)

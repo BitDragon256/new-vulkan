@@ -210,6 +210,8 @@ void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects)
 	m_vulkanObjects = vulkanObjects;
 	reloadMeshBuffers = true;
 
+	m_rendererPipelinesCreated = false;
+
 	BufferConfig matBufConf = default_buffer_config();
 	matBufConf.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	m_materialBuffer.initialize(matBufConf);
@@ -217,6 +219,7 @@ void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects)
 	m_texturePool.init(m_vulkanObjects.device, m_vulkanObjects.physicalDevice, m_vulkanObjects.commandPool, m_vulkanObjects.transferQueue);
 
 	create_descriptor_set();
+	create_pipeline_layout();
 }
 void GeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent)
 {
@@ -261,6 +264,8 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
 	meshGroup.indexBuffer.initialize(config);
 
 	create_group_command_buffers(meshGroup);
+	if (m_rendererPipelinesCreated)
+		create_pipeline(m_meshGroups.size() - 1);
 
 	return &meshGroup;
 }
@@ -306,8 +311,6 @@ std::vector<VkCommandBuffer> GeometryHandler::get_command_buffers(uint32_t frame
 
 void GeometryHandler::create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos)
 {
-	create_pipeline_layout();
-
 	m_pipelineCreationData.resize(m_meshGroups.size());
 
 	size_t index = 0;
@@ -319,6 +322,8 @@ void GeometryHandler::create_pipeline_create_infos(std::vector<VkGraphicsPipelin
 		index++;
 		subpass++;
 	}
+
+	m_rendererPipelinesCreated = true;
 }
 void GeometryHandler::set_pipelines(std::vector<VkPipeline>& pipelines)
 {
@@ -376,6 +381,15 @@ void GeometryHandler::create_pipeline_layout()
 		auto res = vkCreatePipelineLayout(m_vulkanObjects.device, &pipelineLayoutCI, nullptr, &m_pipelineLayout);
 		log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
 	}
+}
+void GeometryHandler::create_pipeline(size_t meshGroupIndex)
+{
+	m_pipelineCreationData.push_back({});
+
+	uint32_t subpass = m_vulkanObjects.firstSubpass;
+	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
+
+	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
 }
 
 void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
@@ -643,13 +657,13 @@ std::vector<VkDescriptorSetLayoutBinding> StaticGeometryHandler::other_descripto
 	return {};
 }
 
-void StaticGeometryHandler::awake(EntityId entity, ECSManager& ecs)
+void StaticGeometryHandler::awake(EntityId entity)
 {
-	auto transform = ecs.get_component<Transform>(entity);
-	auto& model = ecs.get_component<StaticModel>(entity);
+	auto transform = m_ecs->get_component<Transform>(entity);
+	auto& model = m_ecs->get_component<StaticModel>(entity);
 	add_model(model, transform);
 }
-void StaticGeometryHandler::update(float dt, ECSManager& ecs)
+void StaticGeometryHandler::update(float dt)
 {
 	GeometryHandler::update();
 }
@@ -658,7 +672,7 @@ void StaticGeometryHandler::update(float dt, ECSManager& ecs)
 // DYNAMIC MODEL HANDLER
 // ------------------------------------------
 
-void DynamicGeometryHandler::start(ECSManager& ecs)
+void DynamicGeometryHandler::start()
 {
 	BufferConfig bufferConfig = default_buffer_config();
 	bufferConfig.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -666,18 +680,18 @@ void DynamicGeometryHandler::start(ECSManager& ecs)
 
 	m_modelCount = 0;
 }
-void DynamicGeometryHandler::awake(EntityId entity, ECSManager& ecs)
+void DynamicGeometryHandler::awake(EntityId entity)
 {
-	auto transform = ecs.get_component<Transform>(entity);
-	auto& model = ecs.get_component<DynamicModel>(entity);
+	auto transform = m_ecs->get_component<Transform>(entity);
+	auto& model = m_ecs->get_component<DynamicModel>(entity);
 	add_model(model, transform);
 }
-void DynamicGeometryHandler::update(float dt, ECSManager& ecs)
+void DynamicGeometryHandler::update(float dt)
 {
 	// get all transforms
 	std::vector<Transform> transforms(m_entities.size());
 	for (size_t i = 0; i < m_entities.size(); i++)
-		transforms[i] = ecs.get_component<Transform>(m_entities[i]);
+		transforms[i] = m_ecs->get_component<Transform>(m_entities[i]);
 
 	// push transforms
 	m_transformBuffer.set(transforms);
