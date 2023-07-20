@@ -29,6 +29,8 @@ set(
 	${SOURCE_DIR}/image.cpp
 	${SOURCE_DIR}/profiler.cpp
 	${SOURCE_DIR}/physics.cpp
+	${SOURCE_DIR}/gui.cpp
+	${SOURCE_DIR}/flags.cpp
 )
 
 set(
@@ -46,6 +48,8 @@ set(
 	${INCLUDE_DIR}/image.h
 	${INCLUDE_DIR}/profiler.h
 	${INCLUDE_DIR}/physics.h
+	${INCLUDE_DIR}/gui.h
+	${INCLUDE_DIR}/flags.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
@@ -82,6 +86,7 @@ set(
 	${IMGUI_FILES}
 	external/tinyobjloader/tiny_obj_loader.h
 	external/stbimage/stb_image.h
+	external/mini/ini.h
 )
 
 add_library(nve ${SOURCE_FILES} ${INCLUDE_FILES} ${EXTERNAL_LIBRARY_FILES})
@@ -92,6 +97,7 @@ target_include_directories(nve PUBLIC include)
 target_include_directories(nve PUBLIC external/imgui)
 target_include_directories(nve PUBLIC external/tinyobjloader)
 target_include_directories(nve PUBLIC external/stbimage)
+target_include_directories(nve PUBLIC external/mini)
 target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw)
 
 add_definitions(-DROOT_DIRECTORY=\"${CMAKE_SOURCE_DIR}\")

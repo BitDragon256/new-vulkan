@@ -42,6 +42,12 @@ pushd tinyobjloader
 wget -O tiny_obj_loader.h     https://raw.githubusercontent.com/tinyobjloader/tinyobjloader/release/tiny_obj_loader.h
 popd
 
+echo cloning mINI...
+mkdir mini
+pushd mini
+wget -O ini.h               https://raw.githubusercontent.com/pulzed/mINI/master/src/mini/ini.h
+popd
+
 popd
 
 echo Cmake initialization...
