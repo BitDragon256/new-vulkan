@@ -62,8 +62,8 @@ int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1200;
-    renderConfig.height = 800;
+    renderConfig.width = 1920;
+    renderConfig.height = 1080;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
@@ -166,6 +166,8 @@ int main(int argc, char** argv)
         camera_movement(renderer, camera);
 
         renderer.gui_begin();
+        
+        ImGui::ShowDemoWindow();
 
         ImGui::Begin("General");
 
