@@ -166,6 +166,8 @@ int main(int argc, char** argv)
         camera_movement(renderer, camera);
 
         renderer.gui_begin();
+
+        renderer.draw_engine_gui();
         
         ImGui::ShowDemoWindow();
 

@@ -27,13 +27,13 @@ void bake_transform(StaticMesh& mesh, Transform transform)
 	}
 }
 
-void set_dynamic_state(VkCommandBuffer commandBuffer, VkExtent2D swapChainExtent)
+void set_dynamic_state(VkCommandBuffer commandBuffer, VkExtent2D swapChainExtent, std::array<float, 4> viewportSize)
 {
 	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = static_cast<float>(swapChainExtent.width);
-	viewport.height = static_cast<float>(swapChainExtent.height);
+	viewport.x = viewportSize[0];
+	viewport.y = viewportSize[1];
+	viewport.width = viewportSize[2];
+	viewport.height = viewportSize[3];
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -205,7 +205,7 @@ void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelin
 // GEOMETRY HANDLER
 // ------------------------------------------
 
-void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects)
+void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager)
 {
 	m_vulkanObjects = vulkanObjects;
 	reloadMeshBuffers = true;
@@ -220,6 +220,8 @@ void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects)
 
 	create_descriptor_set();
 	create_pipeline_layout();
+
+	m_guiManager = guiManager;
 }
 void GeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent)
 {
@@ -620,7 +622,14 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// ---------------------------------------
 
-	set_dynamic_state(commandBuffer, m_vulkanObjects.swapchainExtent);
+	set_dynamic_state(
+		commandBuffer,
+		m_vulkanObjects.swapchainExtent,
+		m_guiManager->viewport({
+			0, 0,
+			static_cast<float>(m_vulkanObjects.swapchainExtent.width),
+			static_cast<float>(m_vulkanObjects.swapchainExtent.height)
+		}));
 
 	// ---------------------------------------
 
@@ -744,7 +753,14 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	// ---------------------------------------
 
-	set_dynamic_state(commandBuffer, m_vulkanObjects.swapchainExtent);
+	set_dynamic_state(
+		commandBuffer,
+		m_vulkanObjects.swapchainExtent,
+		m_guiManager->viewport({
+			0, 0,
+			static_cast<float>(m_vulkanObjects.swapchainExtent.width),
+			static_cast<float>(m_vulkanObjects.swapchainExtent.height)
+		}));
 
 	// ---------------------------------------
 

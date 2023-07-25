@@ -29,6 +29,7 @@ namespace math
 		quaternion conjugated();
 		Vector3 vector_part();
 
+		Vector3 to_euler() const;
 		void euler(Vector3 euler);
 		void set(float i, float j, float k, float w);
 		void set(Vector3 complex, float real);

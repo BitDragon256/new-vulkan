@@ -1,5 +1,7 @@
 #pragma once
 
+struct Rigidbody;
+
 #include "ecs.h"
 #include "render.h"
 

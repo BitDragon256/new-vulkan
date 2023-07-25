@@ -10,6 +10,15 @@
 #include <tuple>
 #include <vector>
 
+class IComponentList;
+template<typename T> class ComponentList;
+class ComponentManager;
+class ISystem;
+template<typename... Types> class System;
+class ECSManager;
+
+#include "gui.h"
+
 #ifndef ECS_START_ENTITIES
 #define ECS_START_ENTITIES 5000
 #endif
@@ -22,7 +31,12 @@ typedef uint32_t EntityId;
 typedef uint32_t ComponentTypeId;
 typedef uint32_t SystemId;
 
-class IComponentList { virtual void polymorphism_proof() {} };
+class IComponentList
+{
+public:
+	virtual std::string print_component(EntityId entity) = 0;
+	virtual std::string print_type() = 0;
+};
 
 template<typename T>
 class ComponentList : public IComponentList
@@ -53,6 +67,18 @@ public:
 		assert(m_entityToIndex.contains(entity));
 
 		return m_components[m_entityToIndex[entity]];
+	}
+
+	std::string print_component(EntityId entity) override
+	{
+		std::stringstream ss;
+		gui_print_component<T> g;
+		ss << g(m_components[entity]);
+		return ss.str();
+	}
+	std::string print_type() override
+	{
+		return typeid(T).name();
 	}
 private:
 	std::vector<T> m_components;
@@ -159,6 +185,8 @@ private:
 		//	m_components[id] = construct_component_list<T>();
 		return dynamic_cast<ComponentList<T>*>(m_components[id]);
 	}
+
+	friend class GUIManager;
 };
 
 template<typename... Types>
@@ -181,8 +209,6 @@ std::vector<const char*> get_type_names(typelist<Head>& t)
 	types.push_back(typeid(Head).name());
 	return types;
 }
-
-class ECSManager;
 
 class ISystem
 {
@@ -246,6 +272,7 @@ public:
 
 		EntityId entity = m_availableEntities.front();
 		m_availableEntities.pop();
+		m_entities.push_back(entity);
 
 		m_newEntities.push_back(entity);
 
@@ -254,6 +281,7 @@ public:
 	void delete_entity(EntityId entity)
 	{
 		m_availableEntities.push(entity);
+		std::erase(m_entities, entity);
 
 		for (size_t i = 0; i < m_systems.size(); i++)
 			std::erase(m_systems[i]->m_entities, entity);
@@ -294,6 +322,11 @@ public:
 		return m_componentManager.used_components(entity);
 	}
 
+	const std::vector<EntityId>& entities()
+	{
+		return m_entities;
+	}
+
 	void update_systems(float dt)
 	{
 		if (m_newEntities.size() > 0)
@@ -314,6 +347,7 @@ private:
 	std::vector<std::bitset<ECS_MAX_COMPONENTS>> m_systemComponents; // bitset for all systems for used components
 	// std::unordered_map<const char*, ComponentTypeId> m_componentTypeToId;
 
+	std::vector<EntityId> m_entities;
 	std::vector<EntityId> m_newEntities;
 	void awake_entities()
 	{
@@ -342,6 +376,8 @@ private:
 	}
 
 	ComponentManager m_componentManager;
+
+	friend class GUIManager;
 
 	//void ensure_component(const char* typeName)
 	//{

@@ -1,23 +1,12 @@
 #pragma once
 
+#include <sstream>
 #include <vector>
 
 #include <vulkan/vulkan.h>
 
 #include "nve_types.h"
 #include "math-core.h"
-
-#include "buffer.h"
-#include "ecs.h"
-#include "material.h"
-
-#define GEOMETRY_HANDLER_MAX_MATERIALS 128
-
-#define GEOMETRY_HANDLER_MATERIAL_BINDING 0
-#define GEOMETRY_HANDLER_TEXTURE_BINDING 1
-#define GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING 2
-
-#define DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING 3
 
 struct Transform
 {
@@ -28,6 +17,19 @@ struct Transform
 	Transform();
 	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
 };
+
+#include "buffer.h"
+#include "ecs.h"
+#include "material.h"
+#include "math-core.h"
+
+#define GEOMETRY_HANDLER_MAX_MATERIALS 128
+
+#define GEOMETRY_HANDLER_MATERIAL_BINDING 0
+#define GEOMETRY_HANDLER_TEXTURE_BINDING 1
+#define GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING 2
+
+#define DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING 3
 
 struct StaticMesh
 {
@@ -118,7 +120,7 @@ public:
 	void create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
 	void set_pipelines(std::vector<VkPipeline>& pipelines);
 
-	void initialize(GeometryHandlerVulkanObjects vulkanObjects);
+	void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
 	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
 
 	uint32_t subpass_count();
@@ -139,6 +141,8 @@ protected:
 	BufferConfig default_buffer_config();
 
 	virtual std::vector<VkDescriptorSetLayoutBinding> other_descriptors() = 0;
+
+	GUIManager* m_guiManager;
 
 private:
 

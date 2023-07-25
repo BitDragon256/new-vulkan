@@ -60,6 +60,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
     m_firstFrame = true;
     m_deltaTime = 0;
     m_lastFrameTime = std::chrono::high_resolution_clock::now();
+
+    m_guiManager.initialize(&m_ecs);
     
     return NVE_SUCCESS;
 }
@@ -584,7 +586,7 @@ void Renderer::initialize_geometry_handlers()
 
     auto handlers = all_geometry_handlers();
     for (auto handler : handlers)
-        handler->initialize(vulkanObjects);
+        handler->initialize(vulkanObjects, &m_guiManager);
 
     m_ecs.register_system<StaticGeometryHandler>(&m_staticGeometryHandler);
     m_ecs.register_system<DynamicGeometryHandler>(&m_dynamicGeometryHandler);
@@ -1074,11 +1076,21 @@ NVE_RESULT Renderer::imgui_create_command_buffers()
 
 void Renderer::gui_begin()
 {
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    if (!m_imguiDraw)
+    {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
-    m_imguiDraw = true;
+        m_imguiDraw = true;
+    }
+}
+void Renderer::draw_engine_gui()
+{
+    gui_begin();
+
+    m_guiManager.activate();
+    m_guiManager.draw_entity_info();
 }
 void Renderer::imgui_draw(uint32_t imageIndex)
 {
