@@ -1,9 +1,15 @@
 #pragma once
 
+#include <sstream>
+
 struct Rigidbody;
 
 #include "ecs.h"
-#include "render.h"
+#include "nve_types.h"
+#include "model-handler.h"
+
+#include "gui.h"
+//#include "render.h"
 
 #define GRAVITY_FORCE 5.f
 #define CONSTRAINT_BALL_RADIUS 2.f
@@ -18,6 +24,17 @@ struct Rigidbody
 	Vector3 acc;
 	float mass;
 };
+
+GUI_PRINT_COMPONENT_START(Rigidbody)
+
+std::stringstream ss;
+ss << "pos: " << component.pos
+<< "vel: " << component.vel
+<< "acc: " << component.acc
+<< "mass: " << component.mass;
+return ss.str();
+
+GUI_PRINT_COMPONENT_END
 
 class PhysicsSystem : System<Transform, Rigidbody>
 {

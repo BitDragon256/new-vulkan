@@ -2,6 +2,8 @@
 
 #include <imgui.h>
 
+#include "ecs.h"
+
 void GUIManager::initialize(ECSManager* ecs)
 {
 	m_ecs = ecs;
@@ -64,4 +66,5 @@ std::array<float, 4> GUIManager::viewport(std::array<float, 4> defaultViewport)
 std::ostream& operator<< (std::ostream& ostream, const Vector3& vec)
 {
 	ostream << vec.x << " | " << vec.y << " | " << vec.z << '\n';
+	return ostream;
 }

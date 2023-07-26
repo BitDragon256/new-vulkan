@@ -3,13 +3,12 @@
 #include <array>
 #include <sstream>
 
+#include "nve_types.h"
+
 template<typename T> struct gui_print_component;
 
 #define GUI_PRINT_COMPONENT_START(TYPE) template<> struct gui_print_component<TYPE> { std::string operator()(const TYPE & component) {
 #define GUI_PRINT_COMPONENT_END }};
-
-#include "ecs.h"
-#include "physics.h"
 
 template<typename T>
 struct gui_print_component
@@ -22,31 +21,7 @@ struct gui_print_component
 
 std::ostream& operator<< (std::ostream& os, const Vector3& vec);
 
-template<>
-struct gui_print_component<Transform>
-{
-	std::string operator()(const Transform& transform)
-	{
-		std::stringstream ss;
-		ss << "position: " << transform.position.x << " | " << transform.position.y << " | " << transform.position.z << '\n';
-		auto rot = transform.rotation.to_euler();
-		ss << "rotation: " << rot.x << " | " << rot.y << " | " << rot.z << '\n';
-		ss << "scale: " << transform.scale.x << " | " << transform.scale.y << " | " << transform.scale.z << '\n';
-
-		return ss.str();
-	}
-};
-
-GUI_PRINT_COMPONENT_START(Rigidbody)
-
-std::stringstream ss;
-ss	<< "pos: " << component.pos
-	<< "vel: " << component.vel
-	<< "acc: " << component.acc
-	<< "mass: " << component.mass;
-return ss.str();
-
-GUI_PRINT_COMPONENT_END
+class ECSManager;
 
 class GUIManager
 {

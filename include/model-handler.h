@@ -7,6 +7,7 @@
 
 #include "nve_types.h"
 #include "math-core.h"
+#include "gui.h"
 
 struct Transform
 {
@@ -17,6 +18,16 @@ struct Transform
 	Transform();
 	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
 };
+
+GUI_PRINT_COMPONENT_START(Transform)
+
+std::stringstream ss;
+ss << "position: " << component.position;
+ss << "rotation: " << component.rotation.to_euler();
+ss << "scale: " << component.scale;
+return ss.str();
+
+GUI_PRINT_COMPONENT_END
 
 #include "buffer.h"
 #include "ecs.h"

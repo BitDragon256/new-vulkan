@@ -17,8 +17,6 @@ class ISystem;
 template<typename... Types> class System;
 class ECSManager;
 
-#include "gui.h"
-
 #ifndef ECS_START_ENTITIES
 #define ECS_START_ENTITIES 5000
 #endif
@@ -30,6 +28,8 @@ class ECSManager;
 typedef uint32_t EntityId;
 typedef uint32_t ComponentTypeId;
 typedef uint32_t SystemId;
+
+#include "gui.h"
 
 class IComponentList
 {
