@@ -1091,6 +1091,7 @@ void Renderer::draw_engine_gui()
 
     m_guiManager.activate();
     m_guiManager.draw_entity_info();
+    m_guiManager.draw_system_info();
 }
 void Renderer::imgui_draw(uint32_t imageIndex)
 {

@@ -218,6 +218,10 @@ public:
 	virtual void update(float dt) {}
 	virtual void update(float dt, EntityId entity) {}
 	virtual std::vector<const char*> component_types() = 0;
+	virtual const char* type_name()
+	{
+		return typeid(*this).name();
+	}
 	std::vector<EntityId> m_entities;
 
 	ECSManager* m_ecs;

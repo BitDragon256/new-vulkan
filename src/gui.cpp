@@ -19,18 +19,15 @@ void GUIManager::draw_entity_info()
 	if (!m_activated)
 		return;
 
-	std::string label;
+	ImGui::Begin("Entity Info");
 
 	const auto& allEntities = m_ecs->entities();
-
-	ImGui::Begin("Entity Info");
-	ImGui::Text("Entity Info");
 
 	size_t labelIndex = 0;
 	for (auto entity : allEntities)
 	{
 		std::stringstream labelSS;
-		labelSS << "Entity " << entity << "##" << labelIndex;
+		labelSS << "Entity " << entity;
 		labelIndex++;
 
 		if (ImGui::TreeNode(labelSS.str().c_str()))
@@ -49,6 +46,48 @@ void GUIManager::draw_entity_info()
 					}
 				}
 			}
+			ImGui::TreePop();
+		}
+	}
+
+	ImGui::End();
+}
+void GUIManager::draw_system_info()
+{
+	if (!m_activated)
+		return;
+
+	ImGui::Begin("System Info");
+
+	const auto& systems = m_ecs->m_systems;
+	for (auto system : systems)
+	{
+		if (ImGui::TreeNode(system->type_name()))
+		{
+			ImGui::SeparatorText("Entities");
+
+			const auto& entities = system->m_entities;
+			if (entities.empty())
+				ImGui::Text("No Entities");
+
+			for (auto entity : entities)
+			{
+				std::stringstream label; label << "Entity " << entity;
+				if (ImGui::TreeNode(label.str().c_str()))
+				{
+					for (auto typeName : system->component_types())
+					{
+						if (ImGui::TreeNode(typeName))
+						{
+							ImGui::Text(m_ecs->m_componentManager.m_components[m_ecs->m_componentManager.m_typeToId[typeName]]->print_component(entity).c_str());
+							ImGui::TreePop();
+						}
+					}
+
+					ImGui::TreePop();
+				}
+			}
+
 			ImGui::TreePop();
 		}
 	}

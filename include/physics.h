@@ -28,10 +28,10 @@ struct Rigidbody
 GUI_PRINT_COMPONENT_START(Rigidbody)
 
 std::stringstream ss;
-ss << "pos: " << component.pos
-<< "vel: " << component.vel
-<< "acc: " << component.acc
-<< "mass: " << component.mass;
+ss << "pos: " << component.pos;
+ss << "vel: " << component.vel;
+ss << "acc: " << component.acc;
+ss << "mass: " << component.mass;
 return ss.str();
 
 GUI_PRINT_COMPONENT_END

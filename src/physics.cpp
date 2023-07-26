@@ -101,6 +101,11 @@ void PhysicsSystem::classic_verlet(EntityId entity, float dt)
 
 	rb.lastPos = rb.pos;
 	rb.pos = nextPos;
+
+	// for informatory reasons
+	auto vel = (rb.lastPos - rb.pos) / dt;
+	rb.acc = (rb.vel - vel) / dt;
+	rb.vel = vel;
 }
 
 Rigidbody& PhysicsSystem::get_rigidbody(EntityId entity)
