@@ -42,11 +42,8 @@ GUI_PRINT_COMPONENT_END
 
 #define DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING 3
 
-struct StaticMesh
+struct StaticMesh : Mesh
 {
-	std::vector<Vertex> vertices;
-	std::vector<Index> indices;
-
 	Material material;
 };
 struct Model

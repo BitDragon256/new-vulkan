@@ -62,3 +62,9 @@ struct CameraPushConstant
 #define VECTOR_LEFT Vector3(0, -1, 0)
 
 #define PI 3.14159265f
+
+struct Mesh
+{
+	std::vector<Vertex> vertices;
+	std::vector<Index> indices;
+};

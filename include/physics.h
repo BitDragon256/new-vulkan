@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <sstream>
 
 struct Rigidbody;
@@ -22,7 +23,9 @@ struct Rigidbody
 	Vector3 lastPos;
 	Vector3 vel;
 	Vector3 acc;
+
 	float mass;
+	Mesh mesh;
 };
 
 GUI_PRINT_COMPONENT_START(Rigidbody)
@@ -36,11 +39,32 @@ return ss.str();
 
 GUI_PRINT_COMPONENT_END
 
+struct Triangle
+{
+	Mesh* mesh;
+	uint32_t index;
+
+	Vector3 a, b, c;
+};
+
+struct RayhitInfo
+{
+	Vector3 start;
+	Vector3 direction;
+	Vector3 impact;
+	float dist;
+	bool hit;
+	Rigidbody* rb;
+	Triangle tri;
+};
+
 class PhysicsSystem : System<Transform, Rigidbody>
 {
 public:
 	void awake(EntityId entity) override;
 	void update(float dt) override;
+
+	bool raycast(Vector3 start, Vector3 direction, RayhitInfo* hitInfo = nullptr, float maxDist = std::numeric_limits<float>::max());
 private:
 	void sync_transform();
 	void sync_rigidbody();

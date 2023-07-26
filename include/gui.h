@@ -31,7 +31,6 @@ public:
 
 	void draw_entity_info(); // all entities with their respective components
 	void draw_system_info(); // all systems and all affected entities
-	void draw_scene_info(); // all transforms
 
 	std::array<float, 4> viewport(std::array<float, 4> defaultViewport);
 private:

@@ -168,8 +168,6 @@ int main(int argc, char** argv)
         renderer.gui_begin();
 
         renderer.draw_engine_gui();
-        
-        ImGui::ShowDemoWindow();
 
         ImGui::Begin("General");
 
