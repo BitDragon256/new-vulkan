@@ -252,3 +252,12 @@ bool PhysicsSystem::raycast(Vector3 start, Vector3 direction, RayhitInfo* hitInf
 
 	return false;
 }
+
+void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
+{
+	info.intersect = false;
+	info.start = { 0,0,0 };
+	info.end = { 0,0,0 };
+
+
+}

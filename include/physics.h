@@ -58,6 +58,15 @@ struct RayhitInfo
 	Triangle tri;
 };
 
+struct TriangleIntersection
+{
+	bool intersect;
+
+	// line of intersection
+	Vector3 start;
+	Vector3 end;
+};
+
 class PhysicsSystem : System<Transform, Rigidbody>
 {
 public:
