@@ -11,15 +11,15 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
 #include "buffer.h"
+#include "ecs.h"
 #include "nve_types.h"
 #include "model-handler.h"
-#include "ecs.h"
 #include "image.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
@@ -69,6 +69,7 @@ public:
 
 	// gui
 	void gui_begin();
+	void draw_engine_gui();
 
 	void clean_up();
 
@@ -193,6 +194,8 @@ private:
 	NVE_RESULT submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems);
 	void present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageIndex, std::vector<VkSemaphore> signalSems);
 	NVE_RESULT draw_frame();
+
+	GUIManager m_guiManager;
 };
 
 void imgui_error_handle(VkResult err);

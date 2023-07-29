@@ -103,6 +103,28 @@ namespace math
 		*this = quaternion(rot * DEG_TO_RAD);
 	}
 
+	Vector3 quaternion::to_euler() const
+	{
+		Vector3 angles;
+
+		// roll (x-axis rotation)
+		double sinr_cosp = 2 * (w * x + y * z);
+		double cosr_cosp = 1 - 2 * (x * x + y * y);
+		angles.x = std::atan2(sinr_cosp, cosr_cosp);
+
+		// pitch (y-axis rotation)
+		double sinp = std::sqrt(1 + 2 * (w * y - x * z));
+		double cosp = std::sqrt(1 - 2 * (w * y - x * z));
+		angles.y = 2 * std::atan2(sinp, cosp) - PI / 2;
+
+		// yaw (z-axis rotation)
+		double siny_cosp = 2 * (w * z + x * y);
+		double cosy_cosp = 1 - 2 * (y * y + z * z);
+		angles.z = std::atan2(siny_cosp, cosy_cosp);
+
+		return angles;
+	}
+
 	const float quaternion::m_normalizeThreshold { 0.05f };
 	bool quaternion::is_normalized()
 	{
@@ -116,10 +138,10 @@ namespace math
 	quaternion quaternion::operator*(const quaternion& q)
 	{
 		quaternion ret;
-		ret.x = (w*q.x + x*q.w + y*q.z - z*q.y);
-		ret.y = (w*q.y - x*q.z + y*q.w + z*q.x);
-		ret.z = (w*q.z + x*q.y - y*q.x + z*q.w);
-		ret.w = (w*q.w - x*q.x - y*q.y - z*q.z);
+		ret.x = (w*x + x*w + y*z - z*y);
+		ret.y = (w*y - x*z + y*w + z*x);
+		ret.z = (w*z + x*y - y*x + z*w);
+		ret.w = (w*w - x*x - y*y - z*z);
 
 		return ret;
 	}

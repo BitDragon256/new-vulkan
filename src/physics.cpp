@@ -111,6 +111,11 @@ void PhysicsSystem::classic_verlet(EntityId entity, float dt)
 
 	rb.lastPos = rb.pos;
 	rb.pos = nextPos;
+
+	// for informatory reasons
+	auto vel = (rb.lastPos - rb.pos) / dt;
+	rb.acc = (rb.vel - vel) / dt;
+	rb.vel = vel;
 }
 
 Rigidbody& PhysicsSystem::get_rigidbody(EntityId entity)
@@ -148,4 +153,121 @@ void PhysicsSystem::reset_rigidbody(EntityId entity)
 {
 	sync_rigidbody(entity);
 	get_rigidbody(entity).lastPos = get_rigidbody(entity).pos;
+}
+
+Triangle make_tri()
+{
+	Triangle tri;
+
+	tri.mesh = nullptr;
+	tri.index = 0;
+	tri.a = { 0, 0, 0 };
+	tri.b = { 0, 0, 0 };
+	tri.c = { 0, 0, 0 };
+
+	return tri;
+}
+RayhitInfo make_hit_info(Vector3 start, Vector3 direction)
+{
+	RayhitInfo hit;
+
+	hit.start = start;
+	hit.direction = direction;
+	hit.impact = { 0, 0, 0 };
+	hit.dist = std::numeric_limits<float>::max();
+	hit.hit = false;
+	hit.rb = nullptr;
+	hit.tri = make_tri();
+
+	return hit;
+}
+
+const float Epsilon = 0.0000001f;
+
+void intersect_tri_ray(RayhitInfo& hit)
+{
+	Vector3 e1, e2, h, s, q;
+	float a, f, u, v;
+
+	e1 = hit.tri.b - hit.tri.a;
+	e2 = hit.tri.c - hit.tri.a;
+	h = glm::cross(hit.direction, e2);
+	a = glm::dot(e1, h);
+
+	// parallel
+	if (a > -Epsilon && a < Epsilon)
+		return;
+
+	f = 1.f / a;
+	s = hit.start - hit.tri.a;
+	u = f * glm::dot(s, h);
+
+	// no idea
+	if (u < 0.f || u > 1.f)
+		return;
+
+	q = glm::cross(s, e1);
+	v = f * glm::dot(hit.direction, q);
+
+	// just think up something
+	if (v < 0.f || u + v > 1.f)
+		return;
+
+	float t = f * glm::dot(e2, q);
+
+	// hit
+	if (t > Epsilon)
+	{
+		hit.hit = true;
+		hit.impact = hit.start + hit.direction * t;
+		hit.dist = glm::length(hit.impact - hit.start);
+
+		return;
+	}
+	else // line intersection, no ray intersection
+		return;
+}
+
+bool PhysicsSystem::raycast(Vector3 start, Vector3 direction, RayhitInfo* hitInfo, float maxDist)
+{
+	RayhitInfo hit = make_hit_info(start, direction);
+
+	for (EntityId entity : m_entities)
+	{
+		auto& rb = get_rigidbody(entity);
+
+		for (size_t triIndex = 0; triIndex < rb.mesh.indices.size(); triIndex += 3)
+		{
+			hit.tri = make_tri();
+			hit.tri.a = rb.mesh.vertices[triIndex + 0].pos;
+			hit.tri.b = rb.mesh.vertices[triIndex + 1].pos;
+			hit.tri.c = rb.mesh.vertices[triIndex + 2].pos;
+
+			intersect_tri_ray(hit);
+
+			if (hit.hit)
+			{
+				hit.rb = &rb;
+
+				if (hitInfo)
+					*hitInfo = hit;
+
+				return true;
+			}
+		}
+	}
+
+	if (hitInfo)
+		*hitInfo = hit;
+
+	return false;
+}
+
+void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
+{
+	info.intersect = false;
+	info.start = { 0,0,0 };
+	info.end = { 0,0,0 };
+
+
 }
