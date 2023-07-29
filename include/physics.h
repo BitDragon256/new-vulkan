@@ -17,6 +17,13 @@ struct Rigidbody
 	float mass;
 };
 
+struct AxisAlignedBoundingBox
+{
+	Vector3 min;
+	Vector3 max;
+};
+bool colliding(AxisAlignedBoundingBox a, AxisAlignedBoundingBox b);
+
 class PhysicsSystem : System<Transform, Rigidbody>
 {
 public:
@@ -44,4 +51,15 @@ private:
 
 	Rigidbody& get_rigidbody(EntityId entity);
 	Transform& get_transform(EntityId entity);
+};
+
+class SpacialAccelerationStructure
+{
+public:
+	void set_point(EntityId entity, Vector3 point);
+	EntityId get_nearest(Vector3 point, std::vector<EntityId> ignore = {});
+	std::vector<EntityId> get_all_nearest(Vector3 point, std::vector<EntityId> ignore = {});
+
+private:
+	std::unordered_map<EntityId, Vector3> m_points;
 };

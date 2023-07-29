@@ -39,24 +39,6 @@ void camera_movement(Renderer& renderer, Camera& camera)
 
     camera.m_rotation.y = math::clamp(camera.m_rotation.y, -50, 50);
 }
-struct CheckMovement {};
-class MovementChecker : System<CheckMovement, Transform>
-{
-public:
-    void update(float dt, EntityId entity) override
-    {
-        auto& transform = m_ecs->get_component<Transform>(entity);
-
-        if (totalTime > 2 * PI || totalTime < 0)
-            totalTime = 0;
-
-        transform.position.z = sin(totalTime + transform.position.y / 10);
-        totalTime += dt / 50;
-    }
-
-private:
-    float totalTime;
-};
 
 int main(int argc, char** argv)
 {
@@ -104,9 +86,6 @@ int main(int argc, char** argv)
 
     //float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 0.005,0.005,0.005 };
 
-    //MovementChecker movementChecker;
-    //renderer.m_ecs.register_system<MovementChecker>(&movementChecker);
-
     PhysicsSystem physicsSystem;
     renderer.m_ecs.register_system(&physicsSystem);
 
@@ -147,7 +126,7 @@ int main(int argc, char** argv)
 
         renderer.m_ecs.get_component<Rigidbody>(entity).radius = ballRadius;
 
-        renderer.m_ecs.get_component<Transform>(entity).position = Vector3(0, 1, 0);
+        renderer.m_ecs.get_component<Transform>(entity).position = Vector3((float) rand() / INT32_MAX * 2 - 1, 1, 0);
         renderer.m_ecs.get_component<Transform>(entity).scale = Vector3(0.001f);
 
         renderer.m_ecs.get_component<DynamicModel>(entity) = prefab;
@@ -204,7 +183,7 @@ int main(int argc, char** argv)
         if (ImGui::Button("update ecs"))
             updateECS = !updateECS;
         if (updateECS || singleUpdateECS)
-            renderer.m_ecs.update_systems(1.f / 144.f);
+            renderer.m_ecs.update_systems(1.f / 50.f);
 
         if (updateECS)
             ImGui::Text("ECS activated");

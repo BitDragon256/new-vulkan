@@ -1,5 +1,15 @@
 #include "physics.h"
 
+bool operator> (Vector3 a, Vector3 b)
+{
+	return a.x > b.x && a.y > b.y && a.z > b.z;
+}
+
+bool colliding(AxisAlignedBoundingBox a, AxisAlignedBoundingBox b)
+{
+	return a.max > b.min && b.max > a.min;
+}
+
 void PhysicsSystem::awake(EntityId entity)
 {
 	reset_rigidbody(entity);
