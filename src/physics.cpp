@@ -1,5 +1,7 @@
 #include "physics.h"
 
+const float Epsilon = 0.0000001f;
+
 bool operator> (Vector3 a, Vector3 b)
 {
 	return a.x > b.x && a.y > b.y && a.z > b.z;
@@ -263,11 +265,95 @@ bool PhysicsSystem::raycast(Vector3 start, Vector3 direction, RayhitInfo* hitInf
 	return false;
 }
 
+float intersect_edge_edge(Vector3 p, Vector3 q, Vector3 v, Vector3 w)
+{
+	int is[] = { 0, 0, 1, 1, 2, 2 };
+	int js[] = { 1, 2, 0, 2, 0, 1 };
+
+	int i, j;
+	float divider;
+
+	bool valid = false;
+	for (int index = 0; index < 6; index++)
+	{
+		i = is[index]; j = js[index];
+		divider = q[i] * w[j] - v[i] * q[j];
+		if (abs(divider) <= Epsilon)
+			continue;
+		valid = true;
+		break;
+	}
+	if (!valid)
+		return std::numeric_limits<float>::max();
+
+	return (v[i] - p[i] + v[i] * (p[j] - v[j])) / divider;
+}
+
 void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 {
 	info.intersect = false;
 	info.start = { 0,0,0 };
 	info.end = { 0,0,0 };
 
+	Vector3 aDl, aDr;
+	aDl = a.b - a.a;
+	aDr = a.c - a.a;
 
+	Vector3 p, q, v;
+	q = b.a;
+	p = b.b - b.a;
+	v = b.c - b.a;
+
+	// normals
+	Vector3 nA = glm::cross(aDl, aDr);
+	Vector3 nB = glm::cross(p, v);
+
+	// if parallel
+	if (glm::dot(nA, p) == 0)
+		return;
+
+	// coordinate representations | d = dot(normal, point)
+	float d = glm::dot(nA, a.a);
+
+	// intersection of planes
+	Vector3 place = q;
+	Vector3 dir = p + v * (d - glm::dot(nA, q) + glm::dot(nA, p)) / glm::dot(nA, v);
+	dir = glm::normalize(dir);
+
+	// intersection edge in triangles
+	Vector3 aT, bT;
+	
+	aT[0] = intersect_edge_edge(a.a, aDl, place, dir);
+	aT[1] = intersect_edge_edge(a.a, aDr, place, dir);
+	aT[2] = intersect_edge_edge(a.b, a.c - a.b, place, dir);
+
+	bT[0] = intersect_edge_edge(q, p, place, dir);
+	bT[1] = intersect_edge_edge(q, v, place, dir);
+	bT[2] = intersect_edge_edge(b.b, b.c - b.b, place, dir);
+
+	auto get_intersects = [](Vector3 ts) {
+		Vector2 intersects(std::numeric_limits<float>::max());
+		for (int i = 0; i < 3; i++)
+		{
+			if (ts[i] < 0 || ts[i] > 1)
+				continue;
+			if (ts[i] < intersects[0])
+			{
+				intersects[1] = intersects[0];
+				intersects[0] = ts[i];
+				continue;
+			}
+			if (ts[i] < intersects[1])
+				intersects[1] = ts[i];
+		}
+		return intersects;
+	};
+
+	Vector2 aIntersectT, bIntersectT;
+	aIntersectT = get_intersects(aT);
+	bIntersectT = get_intersects(bT);
+
+	const float MaxFloat = std::numeric_limits<float>::max();
+	if (aIntersectT[0] == MaxFloat || aIntersectT[1] == MaxFloat)
+		return;
 }
