@@ -3,21 +3,25 @@
 #include <array>
 #include <sstream>
 
+#include <imgui.h>
+
 #include "nve_types.h"
 
 template<typename T> struct gui_print_component;
 
-#define GUI_PRINT_COMPONENT_START(TYPE) template<> struct gui_print_component<TYPE> { std::string operator()(const TYPE & component) {
+#define GUI_PRINT_COMPONENT_START(TYPE) template<> struct gui_print_component<TYPE> { void operator()(TYPE & component) {
 #define GUI_PRINT_COMPONENT_END }};
 
 template<typename T>
 struct gui_print_component
 {
-	std::string operator()(const T& component) const
+	void operator()(T& component)
 	{
-		return "no data";
+		ImGui::Text("no data");
 	}
 };
+
+void ImGui_DragVector(const char* label, Vector3& vec);
 
 std::ostream& operator<< (std::ostream& os, const Vector3& vec);
 

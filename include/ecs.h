@@ -34,7 +34,7 @@ typedef uint32_t SystemId;
 class IComponentList
 {
 public:
-	virtual std::string print_component(EntityId entity) = 0;
+	virtual void gui_show_component(EntityId entity) = 0;
 	virtual std::string print_type() = 0;
 };
 
@@ -69,12 +69,11 @@ public:
 		return m_components[m_entityToIndex[entity]];
 	}
 
-	std::string print_component(EntityId entity) override
+	void gui_show_component(EntityId entity) override
 	{
 		std::stringstream ss;
 		gui_print_component<T> g;
-		ss << g(m_components[entity]);
-		return ss.str();
+		g(m_components[entity]);
 	}
 	std::string print_type() override
 	{

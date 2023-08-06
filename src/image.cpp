@@ -39,7 +39,7 @@ void VImage::create(
 
 	{
 		auto res = vkCreateImage(device, &imageCI, nullptr, &m_image);
-		log_cond_err(res == VK_SUCCESS, "failed to create image");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to create image");
 	}
 
 	VkMemoryRequirements memoryRequirements;
@@ -52,7 +52,7 @@ void VImage::create(
 
 	{
 		auto res = vkAllocateMemory(device, &memoryAI, nullptr, &m_memory);
-		log_cond_err(res == VK_SUCCESS, "failed to allocate image memory");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to allocate image memory");
 	}
 
 	vkBindImageMemory(device, m_image, m_memory, 0);
@@ -73,7 +73,7 @@ void VImage::create(
 
 	{
 		auto res = vkCreateImageView(device, &imageViewCI, nullptr, &m_imageView);
-		log_cond_err(res == VK_SUCCESS, "failed to create image view");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to create image view");
 	}
 }
 void VImage::destroy()

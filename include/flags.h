@@ -27,7 +27,7 @@ public:
 		else if (typeName == "float")
 			m_floats[name] = value;
 		else
-			log("FlagHandler: no valid type");
+			logger::log("FlagHandler: no valid type");
 	}
 	template<typename T> T get(std::string name)
 	{
@@ -40,7 +40,7 @@ public:
 		if (typeName == "float")
 			return m_floats[name];
 		
-		log("FlagHandler: no valid type");
+		logger::log("FlagHandler: no valid type");
 		return T();
 	}
 	void save(std::string filename = FLAG_DEFAULT_FILE);

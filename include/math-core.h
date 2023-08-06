@@ -3,6 +3,7 @@
 #include "nve_types.h"
 
 #define DEG_TO_RAD PI / 180.f
+#define RAD_TO_DEG 180.f / PI
 
 namespace math
 {

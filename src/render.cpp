@@ -30,24 +30,24 @@ NVE_RESULT Renderer::init(RenderConfig config)
     // add_descriptors();
 
     glfwInit();
-    log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
-    log_cond(create_instance() == NVE_SUCCESS, "instance created");
-    // log_cond(create_debug_messenger() == NVE_SUCCESS, "debug messenger created");
-    log_cond(get_surface() == NVE_SUCCESS, "surface created");
-    log_cond(get_physical_device() == NVE_SUCCESS, "found physical device");
-    log_cond(create_device() == NVE_SUCCESS, "logical device created");
-    log_cond(create_swapchain() == NVE_SUCCESS, "swapchain created");
-    log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
-    create_depth_images();              log("depth images created");
-    log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
-    log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
-    log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
-    log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
-    log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
+    logger::log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
+    logger::log_cond(create_instance() == NVE_SUCCESS, "instance created");
+    // logger::log_cond(create_debug_messenger() == NVE_SUCCESS, "debug messenger created");
+    logger::log_cond(get_surface() == NVE_SUCCESS, "surface created");
+    logger::log_cond(get_physical_device() == NVE_SUCCESS, "found physical device");
+    logger::log_cond(create_device() == NVE_SUCCESS, "logical device created");
+    logger::log_cond(create_swapchain() == NVE_SUCCESS, "swapchain created");
+    logger::log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
+    create_depth_images();              logger::log("depth images created");
+    logger::log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
+    logger::log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
+    logger::log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
+    logger::log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
+    logger::log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
-    create_descriptor_pool();           log("descriptor pool created");
+    create_descriptor_pool();           logger::log("descriptor pool created");
 
-    initialize_geometry_handlers();     log("geometry handlers initialized");
+    initialize_geometry_handlers();     logger::log("geometry handlers initialized");
 
     // TODO delete this
     Shader::s_device = m_device;
@@ -136,9 +136,9 @@ NVE_RESULT Renderer::create_instance()
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions;
 
-    log("acquiring GLFW extensions...");
+    logger::log("acquiring GLFW extensions...");
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    log("acquired GLFW extensions");
+    logger::log("acquired GLFW extensions");
     
     std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
     //std::vector<const char*> extensions{ "VK_KHR_surface" };
@@ -150,11 +150,11 @@ NVE_RESULT Renderer::create_instance()
     instanceCI.ppEnabledExtensionNames = extensions.data();
     instanceCI.flags = 0;
     
-    log("creating instance...");
+    logger::log("creating instance...");
     VkResult res = vkCreateInstance(&instanceCI, nullptr, &m_instance);
     if (res != VK_SUCCESS)
     {
-        log("instance creation failed: " + res);
+        logger::log("instance creation failed: " + res);
         return NVE_FAILURE;
     }
     
@@ -165,7 +165,7 @@ NVE_RESULT Renderer::get_physical_device()
     // get all available physical devices
     uint32_t deviceCount;
     vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
-    log_cond_err(deviceCount != 0, "no valid physical devices found");
+    logger::log_cond_err(deviceCount != 0, "no valid physical devices found");
     std::vector<VkPhysicalDevice> availableDevices(deviceCount);
     vkEnumeratePhysicalDevices(m_instance, &deviceCount, availableDevices.data());
     
@@ -178,7 +178,7 @@ NVE_RESULT Renderer::get_physical_device()
         ratedDevices.insert(std::make_pair(score, device));
     }
 
-    log_cond_err(ratedDevices.rbegin()->first > 0, "no acceptable physical device found");
+    logger::log_cond_err(ratedDevices.rbegin()->first > 0, "no acceptable physical device found");
 
     m_physicalDevice = ratedDevices.rbegin()->second;
 
@@ -193,7 +193,7 @@ NVE_RESULT Renderer::get_physical_device()
             break;
         }
     }
-    log_cond_err(m_physicalDevice != VK_NULL_HANDLE, "no acceptable physical device found");
+    logger::log_cond_err(m_physicalDevice != VK_NULL_HANDLE, "no acceptable physical device found");
     
 #endif
     
@@ -208,7 +208,7 @@ NVE_RESULT Renderer::create_debug_messenger()
     populate_debug_messenger_create_info(debugMessengerCI);
     
     auto res = vkCreateDebugUtilsMessengerEXT(m_instance, &debugMessengerCI, nullptr, &m_debugMessenger);
-    log_cond_err(res == VK_SUCCESS, "failed to create debug messenger");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create debug messenger");
     
     return NVE_SUCCESS;
 }
@@ -253,7 +253,7 @@ NVE_RESULT Renderer::create_device()
     deviceCI.pNext = &shaderDrawParametersFeatures;
 
     auto res = vkCreateDevice(m_physicalDevice, &deviceCI, nullptr, &m_device);
-    log_cond_err(res == VK_SUCCESS, "physical device creation failed");
+    logger::log_cond_err(res == VK_SUCCESS, "physical device creation failed");
 
     vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
     vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentationFamily.value(), 0, &m_presentationQueue);
@@ -271,7 +271,7 @@ NVE_RESULT Renderer::create_window(int width, int height, std::string title)
 NVE_RESULT Renderer::get_surface()
 {
     auto res = glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface);
-    log_cond_err(res == VK_SUCCESS, "creation of window surface failed");
+    logger::log_cond_err(res == VK_SUCCESS, "creation of window surface failed");
 
     return NVE_SUCCESS;
 }
@@ -318,7 +318,7 @@ NVE_RESULT Renderer::create_swapchain()
 
     auto res = vkCreateSwapchainKHR(m_device, &swapchainCI, nullptr, &m_swapchain);
 
-    log_cond_err(res == VK_SUCCESS, "creation of swapchain failed");
+    logger::log_cond_err(res == VK_SUCCESS, "creation of swapchain failed");
 
     vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, nullptr);
     m_swapchainImages.resize(imageCount);
@@ -351,7 +351,7 @@ NVE_RESULT Renderer::create_swapchain_image_views()
         imageViewCI.subresourceRange.layerCount = 1;
 
         auto res = vkCreateImageView(m_device, &imageViewCI, nullptr, &m_swapchainImageViews[i]);
-        log_cond_err(res == VK_SUCCESS, "failed to create image view no " + i);
+        logger::log_cond_err(res == VK_SUCCESS, "failed to create image view no " + i);
     }
 
     return NVE_SUCCESS;
@@ -433,7 +433,7 @@ NVE_RESULT Renderer::create_render_pass()
     renderPassInfo.pDependencies = dependencies.data();
 
     auto res = vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
-    log_cond_err(res == VK_SUCCESS, "failed to create render pass");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create render pass");
 
     return NVE_SUCCESS;
 }
@@ -457,7 +457,7 @@ NVE_RESULT Renderer::create_framebuffers()
         framebufferInfo.layers = 1;
 
         auto res = vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapchainFramebuffers[i]);
-        log_cond_err(res == VK_SUCCESS, "failed to create framebuffer no " + i);
+        logger::log_cond_err(res == VK_SUCCESS, "failed to create framebuffer no " + i);
     }
 
     return NVE_SUCCESS;
@@ -471,7 +471,7 @@ NVE_RESULT Renderer::create_commandpool()
 
     auto res = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
 
-    log_cond_err(res == VK_SUCCESS, "failed to create command pool");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create command pool");
 
     return NVE_SUCCESS;
 }
@@ -487,7 +487,7 @@ NVE_RESULT Renderer::create_commandbuffers()
     allocInfo.commandBufferCount = m_swapchainFramebuffers.size();
 
     auto res = vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data());
-    log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer");
 
     return NVE_SUCCESS;
 }
@@ -510,13 +510,13 @@ NVE_RESULT Renderer::create_sync_objects()
         auto res = VK_SUCCESS;
 
         res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_imageAvailableSemaphores[frame]);
-        log_cond_err(res == VK_SUCCESS, "failed to create imageAvailable semaphore");
+        logger::log_cond_err(res == VK_SUCCESS, "failed to create imageAvailable semaphore");
 
         res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_renderFinishedSemaphores[frame]);
-        log_cond_err(res == VK_SUCCESS, "failed to create renderFinished semaphore");
+        logger::log_cond_err(res == VK_SUCCESS, "failed to create renderFinished semaphore");
 
         res = vkCreateFence(m_device, &fenceCI, nullptr, &m_inFlightFences[frame]);
-        log_cond_err(res == VK_SUCCESS, "failed to create inFlight fence");
+        logger::log_cond_err(res == VK_SUCCESS, "failed to create inFlight fence");
     }
 
     return NVE_SUCCESS;
@@ -565,7 +565,7 @@ void Renderer::create_descriptor_pool()
     descPoolCI.pPoolSizes = poolSizes;
 
     auto res = vkCreateDescriptorPool(m_device, &descPoolCI, nullptr, &m_descriptorPool);
-    log_cond_err(res == VK_SUCCESS, "failed to create descriptor pool");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create descriptor pool");
 }
 
 void Renderer::initialize_geometry_handlers()
@@ -605,7 +605,7 @@ void Renderer::create_geometry_pipelines()
 
         std::vector<VkPipeline> pipelines(pipelineCIs.size());
         auto res = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, pipelineCIs.size(), pipelineCIs.data(), nullptr, pipelines.data());
-        log_cond_err(res == VK_SUCCESS, "failed to create geometry handler pipelines");
+        logger::log_cond_err(res == VK_SUCCESS, "failed to create geometry handler pipelines");
 
         geometryHandler->set_pipelines(pipelines);
     }
@@ -654,7 +654,7 @@ void Renderer::record_main_command_buffer(uint32_t frame)
 
     {
         auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
-        log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording");
+        logger::log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording");
     }
 
     // -------------------------------------------
@@ -698,7 +698,7 @@ void Renderer::record_main_command_buffer(uint32_t frame)
 
     {
         auto res = vkEndCommandBuffer(commandBuffer);
-        log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording");
+        logger::log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording");
     }
 
     // -------------------------------------------
@@ -720,7 +720,7 @@ NVE_RESULT Renderer::submit_command_buffers(std::vector<VkCommandBuffer> command
     submitInfo.pSignalSemaphores = signalSems.data();
 
     auto res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_frame]);
-    log_cond(res != VK_SUCCESS, "failed to submit command buffers to graphics queue");
+    logger::log_cond(res != VK_SUCCESS, "failed to submit command buffers to graphics queue");
 
     return NVE_SUCCESS;
 }
@@ -932,7 +932,7 @@ NVE_RESULT Renderer::imgui_init()
     imgui_upload_fonts();
     m_imguiDraw = false;
 
-    log("imgui initialized");
+    logger::log("imgui initialized");
 
     return NVE_SUCCESS;
 }
@@ -982,7 +982,7 @@ NVE_RESULT Renderer::imgui_create_render_pass()
     renderPassCI.pDependencies = &dependency;
 
     auto res = vkCreateRenderPass(m_device, &renderPassCI, nullptr, &m_imgui_renderPass);
-    log_cond_err(res == VK_SUCCESS, "failed to create imgui render pass");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create imgui render pass");
 
     return NVE_SUCCESS;
 }
@@ -1003,7 +1003,7 @@ NVE_RESULT Renderer::imgui_create_framebuffers()
     {
         attachment[0] = m_swapchainImageViews[i];
         auto res = vkCreateFramebuffer(m_device, &info, nullptr, &m_imgui_framebuffers[i]);
-        log_cond_err(res == VK_SUCCESS, "failed to create imgui framebuffer no " + i);
+        logger::log_cond_err(res == VK_SUCCESS, "failed to create imgui framebuffer no " + i);
     }
 
     return NVE_SUCCESS;
@@ -1034,7 +1034,7 @@ NVE_RESULT Renderer::imgui_create_descriptor_pool()
     descPoolCI.pPoolSizes = poolSizes;
 
     auto res = vkCreateDescriptorPool(m_device, &descPoolCI, nullptr, &m_imgui_descriptorPool);
-    log_cond_err(res == VK_SUCCESS, "failed to create imgui descriptor pool");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create imgui descriptor pool");
 
     return NVE_SUCCESS;
 }
@@ -1054,7 +1054,7 @@ NVE_RESULT Renderer::imgui_create_command_pool()
     cmdPoolCI.queueFamilyIndex = m_queueFamilyIndices.graphicsFamily.value();
 
     auto res = vkCreateCommandPool(m_device, &cmdPoolCI, nullptr, &m_imgui_commandPool);
-    log_cond_err(res == VK_SUCCESS, "failed to create imgui command pool");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create imgui command pool");
 
     return NVE_SUCCESS;
 }
@@ -1069,7 +1069,7 @@ NVE_RESULT Renderer::imgui_create_command_buffers()
     cmdBufferAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
     auto res = vkAllocateCommandBuffers(m_device, &cmdBufferAI, m_imgui_commandBuffers.data());
-    log_cond_err(res == VK_SUCCESS, "failed to create imgui command buffers");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create imgui command buffers");
 
     return NVE_SUCCESS;
 }
@@ -1104,7 +1104,7 @@ void Renderer::imgui_draw(uint32_t imageIndex)
         info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         auto res = vkBeginCommandBuffer(m_imgui_commandBuffers[imageIndex], &info);
-        log_cond_err(res == VK_SUCCESS, "failed to begin imgui command buffer on image index " + imageIndex);
+        logger::log_cond_err(res == VK_SUCCESS, "failed to begin imgui command buffer on image index " + imageIndex);
     }
 
     {
@@ -1123,7 +1123,7 @@ void Renderer::imgui_draw(uint32_t imageIndex)
     
     vkCmdEndRenderPass(m_imgui_commandBuffers[imageIndex]);
     auto res = vkEndCommandBuffer(m_imgui_commandBuffers[imageIndex]);
-    log_cond_err(res == VK_SUCCESS, "failed to end imgui command buffer no " + imageIndex);
+    logger::log_cond_err(res == VK_SUCCESS, "failed to end imgui command buffer no " + imageIndex);
 }
 void Renderer::imgui_cleanup()
 {

@@ -30,12 +30,10 @@ struct Rigidbody
 
 GUI_PRINT_COMPONENT_START(Rigidbody)
 
-std::stringstream ss;
-ss << "pos: " << component.pos;
-ss << "vel: " << component.vel;
-ss << "acc: " << component.acc;
-ss << "mass: " << component.mass;
-return ss.str();
+ImGui_DragVector("position", component.pos);
+ImGui_DragVector("velocity", component.vel);
+ImGui_DragVector("acceleration", component.acc);
+ImGui::DragFloat("mass", &component.mass);
 
 GUI_PRINT_COMPONENT_END
 

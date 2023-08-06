@@ -176,7 +176,7 @@ std::vector<char> read_file(const std::string& filename)
     if (!file.is_open()) {
         throw std::runtime_error("failed to open file!");
     }
-    log_cond_err(file.is_open(), "failed to open file");
+    logger::log_cond_err(file.is_open(), "failed to open file");
 
     size_t fileSize = (size_t)file.tellg();
     std::vector<char> buffer(fileSize);
@@ -202,7 +202,7 @@ VkShaderModule create_shader_module(const std::string& file, VkDevice device)
 
     VkShaderModule shaderModule;
     auto res = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
-    log_cond_err(res == VK_SUCCESS, "failed to create shader module");
+    logger::log_cond_err(res == VK_SUCCESS, "failed to create shader module");
 
     return shaderModule;
 }
@@ -218,7 +218,7 @@ uint32_t find_memory_type(VkPhysicalDevice physicalDevice, uint32_t typeFilter, 
         }
     }
 
-    log_err("failed to find suitable memory type");
+    logger::log_err("failed to find suitable memory type");
     return 0;
 }
 
@@ -278,7 +278,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData) {
 
-    log("validation layer: " + std::string(pCallbackData->pMessage));
+    logger::log("validation layer: " + std::string(pCallbackData->pMessage));
 
     return VK_FALSE;
 }
@@ -305,7 +305,7 @@ VkFormat find_supported_format(const std::vector<VkFormat>& candidates, VkImageT
         }
     }
 
-    log_err("failed to find supported format");
+    logger::log_err("failed to find supported format");
 }
 VkFormat find_depth_format(VkPhysicalDevice physicalDevice) {
     return find_supported_format(

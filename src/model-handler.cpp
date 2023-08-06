@@ -289,7 +289,7 @@ void GeometryHandler::create_group_command_buffers(MeshGroup& meshGroup)
 	commandBufferAI.commandPool = m_vulkanObjects.commandPool;
 	commandBufferAI.commandBufferCount = static_cast<uint32_t>(m_vulkanObjects.framebuffers.size());
 	auto res = vkAllocateCommandBuffers(m_vulkanObjects.device, &commandBufferAI, meshGroup.commandBuffers.data());
-	log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer for the static geometry handler");
+	logger::log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer for the static geometry handler");
 }
 void GeometryHandler::record_command_buffers(uint32_t frame)
 {
@@ -381,7 +381,7 @@ void GeometryHandler::create_pipeline_layout()
 
 	{
 		auto res = vkCreatePipelineLayout(m_vulkanObjects.device, &pipelineLayoutCI, nullptr, &m_pipelineLayout);
-		log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
 	}
 }
 void GeometryHandler::create_pipeline(size_t meshGroupIndex)
@@ -527,7 +527,7 @@ void GeometryHandler::create_descriptor_set()
 
 	{
 		auto res = vkCreateDescriptorSetLayout(m_vulkanObjects.device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayout);
-		log_cond_err(res == VK_SUCCESS, "failed to create static geometry handler descriptor set layout");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to create static geometry handler descriptor set layout");
 	}
 
 	// ----------------------------------------------------
@@ -541,7 +541,7 @@ void GeometryHandler::create_descriptor_set()
 
 	{
 		auto res = vkAllocateDescriptorSets(m_vulkanObjects.device, &descriptorSetAI, &m_descriptorSet);
-		log_cond_err(res == VK_SUCCESS, "failed to allocate static geometry handler descriptor set");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to allocate static geometry handler descriptor set");
 	}
 }
 void GeometryHandler::update_descriptor_set()
@@ -613,7 +613,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
-		log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording for the static geometry handler");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording for the static geometry handler");
 	}
 
 	// ---------------------------------------
@@ -656,7 +656,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	{
 		auto res = vkEndCommandBuffer(commandBuffer);
-		log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording for the static geometry handler");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording for the static geometry handler");
 	}
 
 	// ---------------------------------------
@@ -744,7 +744,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
-		log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording for the static geometry handler");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording for the static geometry handler");
 	}
 
 	// ---------------------------------------
@@ -788,7 +788,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	{
 		auto res = vkEndCommandBuffer(commandBuffer);
-		log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording for the static geometry handler");
+		logger::log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording for the static geometry handler");
 	}
 
 	// ---------------------------------------
@@ -840,6 +840,8 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 	{
 		for (auto index : child.indices)
 		{
+			if (index >= child.vertices.size())
+				continue;
 			hashSum += (child.vertices[index].pos.x + child.vertices[index].pos.y + child.vertices[index].pos.z) * index;
 			hashSum >>= 4;
 		}
@@ -914,10 +916,10 @@ void load_mesh(std::string file, ObjData& objData)
 
 	if (!reader.ParseFromFile(file, readerConfig))
 		if (!reader.Error().empty())
-			log_err(reader.Error());
+			logger::log_err(reader.Error());
 
 	if (!reader.Warning().empty())
-		log(reader.Warning());
+		logger::log(reader.Warning());
 
 	auto& attrib = reader.GetAttrib();
 	auto& shapes = reader.GetShapes();

@@ -76,13 +76,13 @@ int main(int argc, char** argv)
 
     float lightPos[3] = { 0, 0, 0 };
 
-    //auto testEntity = renderer.m_ecs.create_entity();
-    //renderer.m_ecs.add_component<Transform>(testEntity);
-    //renderer.m_ecs.add_component<DynamicModel>(testEntity);
-    //auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
-    //testEntityModel.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
-    //auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
-    ////testEntityTransform.rotation = Quaternion({ -PI/2,0,0 });
+    auto testEntity = renderer.m_ecs.create_entity();
+    renderer.m_ecs.add_component<Transform>(testEntity);
+    renderer.m_ecs.add_component<DynamicModel>(testEntity);
+    auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
+    testEntityModel.load_mesh("/test-models/sportscar/sportsCar.obj");
+    auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
+    //testEntityTransform.rotation = Quaternion({ -PI/2,0,0 });
 
     //float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 0.005,0.005,0.005 };
 
@@ -95,8 +95,8 @@ int main(int argc, char** argv)
 
     profiler.start_measure("complete model loading");
 
-    DynamicModel prefab;
-    prefab.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
+    //DynamicModel prefab;
+    //prefab.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
 
     //std::vector<EntityId> testEntities(testEntityCount);
     //for (int i = 0; i < testEntityCount; i++)
@@ -115,6 +115,7 @@ int main(int argc, char** argv)
     //    renderer.m_ecs.get_component<DynamicModel>(testEntities[i]) = prefab;
     //}
 
+    /*
     float ballRadius = .115f;
 
     std::vector<EntityId> entities;
@@ -133,12 +134,25 @@ int main(int argc, char** argv)
 
         entities.push_back(entity);
     };
+    */
 
-    profiler.end_measure("complete model loading");
-    profiler.print_last_measure("complete model loading");
+    //profiler.end_measure("complete model loading");
+    //profiler.print_last_measure("complete model loading");
+
+    //DynamicModel triangle;
+    //triangle.load_mesh("/test-models/triangle/triangle.obj");
+
+    //EntityId triA = renderer.m_ecs.create_entity();
+    //renderer.m_ecs.add_component<Transform>(triA);
+    //renderer.m_ecs.add_component<DynamicModel>(triA);
+    //renderer.m_ecs.get_component<DynamicModel>(triA) = triangle;
+    //
+    //EntityId triB = renderer.m_ecs.create_entity();
+    //renderer.m_ecs.add_component<Transform>(triB);
+    //renderer.m_ecs.add_component<DynamicModel>(triB);
+    //renderer.m_ecs.get_component<DynamicModel>(triB) = triangle;
 
     bool updateECS = true;
-
     bool running = true;
     while (running)
     {
@@ -174,12 +188,8 @@ int main(int argc, char** argv)
         //testEntityTransform.scale = { modelScale[0], modelScale[1] , modelScale[2] };
         //testEntityTransform.rotation.euler(Vector3{ modelRot[0], modelRot[1] , modelRot[2] });
 
-        ImGui::DragFloat("ball radius", &ballRadius);
-        for (auto entity : entities)
-            renderer.m_ecs.get_component<Rigidbody>(entity).radius = ballRadius;
-
-        if (ImGui::Button("add object"))
-            add_object();
+        //if (ImGui::Button("add object"))
+        //    add_object();
 
         bool singleUpdateECS = ImGui::Button("step ecs");
         if (ImGui::Button("update ecs"))

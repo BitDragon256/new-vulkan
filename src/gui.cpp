@@ -37,11 +37,10 @@ void GUIManager::draw_entity_info()
 			{
 				if (usedComponents[i])
 				{
-					auto componentData = m_ecs->m_componentManager.m_components[i]->print_component(entity);
 					auto componentType = m_ecs->m_componentManager.m_components[i]->print_type();
 					if (ImGui::TreeNode(componentType.c_str()))
 					{
-						ImGui::Text(componentData.c_str());
+						m_ecs->m_componentManager.m_components[i]->gui_show_component(entity);
 						ImGui::TreePop();
 					}
 				}
@@ -79,7 +78,7 @@ void GUIManager::draw_system_info()
 					{
 						if (ImGui::TreeNode(typeName))
 						{
-							ImGui::Text(m_ecs->m_componentManager.m_components[m_ecs->m_componentManager.m_typeToId[typeName]]->print_component(entity).c_str());
+							m_ecs->m_componentManager.m_components[m_ecs->m_componentManager.m_typeToId[typeName]]->gui_show_component(entity);
 							ImGui::TreePop();
 						}
 					}
@@ -106,4 +105,10 @@ std::ostream& operator<< (std::ostream& ostream, const Vector3& vec)
 {
 	ostream << vec.x << " | " << vec.y << " | " << vec.z << '\n';
 	return ostream;
+}
+
+void ImGui_DragVector(const char* label, Vector3& vec) {
+	float vector[] = { vec.x, vec.y, vec.z };
+	ImGui::DragFloat3(label, vector);
+	vec = { vector[0], vector[1], vector[2] };
 }

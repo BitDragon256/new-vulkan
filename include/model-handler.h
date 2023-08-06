@@ -8,6 +8,7 @@
 #include "nve_types.h"
 #include "math-core.h"
 #include "gui.h"
+#include "logger.h"
 
 struct Transform
 {
@@ -21,11 +22,13 @@ struct Transform
 
 GUI_PRINT_COMPONENT_START(Transform)
 
-std::stringstream ss;
-ss << "position: " << component.position;
-ss << "rotation: " << component.rotation.to_euler();
-ss << "scale: " << component.scale;
-return ss.str();
+ImGui_DragVector("position", component.position);
+Vector3 rot = component.rotation.to_euler();
+Vector3 lastRot = rot;
+ImGui_DragVector("rotation", rot);
+if (lastRot != rot)
+	component.rotation.euler(rot);
+ImGui_DragVector("scale", component.scale);
 
 GUI_PRINT_COMPONENT_END
 

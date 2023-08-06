@@ -152,7 +152,7 @@ protected:
 
         {
             auto res = vkCreateBuffer(m_config.device, &bufferCI, nullptr, &buffer);
-            log_cond_err(res == VK_SUCCESS, "failed to create buffer");
+            logger::log_cond_err(res == VK_SUCCESS, "failed to create buffer");
         }
 
         // allocate buffer
@@ -167,7 +167,7 @@ protected:
 
         {
             auto res = vkAllocateMemory(m_config.device, &allocInfo, nullptr, &m_memory);
-            log_cond_err(res == VK_SUCCESS, "failed to allocate buffer memory");
+            logger::log_cond_err(res == VK_SUCCESS, "failed to allocate buffer memory");
         }
 
         vkBindBufferMemory(m_config.device, buffer, memory, 0);

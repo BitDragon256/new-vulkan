@@ -184,8 +184,6 @@ RayhitInfo make_hit_info(Vector3 start, Vector3 direction)
 	return hit;
 }
 
-const float Epsilon = 0.0000001f;
-
 void intersect_tri_ray(RayhitInfo& hit)
 {
 	Vector3 e1, e2, h, s, q;
@@ -353,7 +351,9 @@ void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 	aIntersectT = get_intersects(aT);
 	bIntersectT = get_intersects(bT);
 
-	const float MaxFloat = std::numeric_limits<float>::max();
+	constexpr float MaxFloat = std::numeric_limits<float>::max();
 	if (aIntersectT[0] == MaxFloat || aIntersectT[1] == MaxFloat)
 		return;
+
+	logger::log(Vector2{ aIntersectT[0], aIntersectT[1] });
 }
