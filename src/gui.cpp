@@ -96,7 +96,7 @@ void GUIManager::draw_system_info()
 
 std::array<float, 4> GUIManager::viewport(std::array<float, 4> defaultViewport)
 {
-	if (m_activated)
+	if (!m_activated)
 		return defaultViewport;
 	return { 0, 0, defaultViewport[2] * 0.7f, defaultViewport[3] * 0.7f};
 }

@@ -37,8 +37,8 @@ namespace math
 	quaternion::quaternion(float angle, Vector3 axis)
 	{
 		angle *= DEG_TO_RAD;
-		if (angle > PI)
-			angle -= ((int)angle / PI) * PI;
+		if (angle > 2 * PI)
+			angle -= ((int)angle / (2 * PI)) * 2 * PI;
 		angle /= 2;
 
 		w = cos(angle);

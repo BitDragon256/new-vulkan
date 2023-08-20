@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 
 #include <vulkan/vulkan.h>
@@ -20,12 +21,20 @@ struct Transform
 	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
 };
 
+static std::unordered_map<Transform*, Vector3> absRotations;
+
 GUI_PRINT_COMPONENT_START(Transform)
 
 ImGui_DragVector("position", component.position);
-Vector3 rot = component.rotation.to_euler();
+Vector3 rot;
+if (!absRotations.contains(&component))
+	rot = component.rotation.to_euler();
+else
+	rot = absRotations[&component];
+
 Vector3 lastRot = rot;
 ImGui_DragVector("rotation", rot);
+absRotations[&component] = rot;
 if (lastRot != rot)
 	component.rotation.euler(rot);
 ImGui_DragVector("scale", component.scale);

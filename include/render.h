@@ -152,7 +152,7 @@ private:
 	VkCommandPool m_imgui_commandPool;
 	std::vector<VkCommandBuffer> m_imgui_commandBuffers;
 
-	const VkClearValue m_imgui_clearColor = { {{ 0.45f, 0.55f, 0.60f, 1.00f }} };
+	const VkClearValue m_imgui_clearColor = { {{ 0, 0, 0, 1.00f }} };
 
 	// imgui methods
 	NVE_RESULT imgui_init();
