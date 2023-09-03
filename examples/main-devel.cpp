@@ -5,8 +5,8 @@
 
 #include <nve.h>
 
-float turningSpeed = 0.4f;
-float moveSpeed = 0.005f;
+float turningSpeed = 0.7f;
+float moveSpeed = 0.3f;
 void camera_movement(Renderer& renderer, Camera& camera)
 {
     Vector3 forward = { cos(glm::radians(camera.m_rotation.z)), sin(glm::radians(camera.m_rotation.z)), 0 };
@@ -44,8 +44,8 @@ int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1920;
-    renderConfig.height = 1080;
+    renderConfig.width = 1000;
+    renderConfig.height = 700;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
@@ -76,12 +76,12 @@ int main(int argc, char** argv)
 
     float lightPos[3] = { 0, 0, 0 };
 
-    auto testEntity = renderer.m_ecs.create_entity();
-    renderer.m_ecs.add_component<Transform>(testEntity);
-    renderer.m_ecs.add_component<DynamicModel>(testEntity);
-    auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
-    testEntityModel.load_mesh("/test-models/sportscar/sportsCar.obj");
-    auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
+    //auto testEntity = renderer.m_ecs.create_entity();
+    //renderer.m_ecs.add_component<Transform>(testEntity);
+    //renderer.m_ecs.add_component<DynamicModel>(testEntity);
+    //auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
+    //testEntityModel.load_mesh("/test-models/sportscar/sportsCar.obj");
+    //auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
     //testEntityTransform.rotation = Quaternion({ -PI/2,0,0 });
 
     //float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 0.005,0.005,0.005 };
@@ -139,18 +139,18 @@ int main(int argc, char** argv)
     //profiler.end_measure("complete model loading");
     //profiler.print_last_measure("complete model loading");
 
-    //DynamicModel triangle;
-    //triangle.load_mesh("/test-models/triangle/triangle.obj");
+    DynamicModel triangle;
+    triangle.load_mesh("/test-models/triangle/triangle.obj");
 
-    //EntityId triA = renderer.m_ecs.create_entity();
-    //renderer.m_ecs.add_component<Transform>(triA);
-    //renderer.m_ecs.add_component<DynamicModel>(triA);
-    //renderer.m_ecs.get_component<DynamicModel>(triA) = triangle;
-    //
-    //EntityId triB = renderer.m_ecs.create_entity();
-    //renderer.m_ecs.add_component<Transform>(triB);
-    //renderer.m_ecs.add_component<DynamicModel>(triB);
-    //renderer.m_ecs.get_component<DynamicModel>(triB) = triangle;
+    EntityId triA = renderer.m_ecs.create_entity();
+    renderer.m_ecs.add_component<Transform>(triA);
+    renderer.m_ecs.add_component<DynamicModel>(triA);
+    renderer.m_ecs.get_component<DynamicModel>(triA) = triangle;
+    
+    EntityId triB = renderer.m_ecs.create_entity();
+    renderer.m_ecs.add_component<Transform>(triB);
+    renderer.m_ecs.add_component<DynamicModel>(triB);
+    renderer.m_ecs.get_component<DynamicModel>(triB) = triangle;
 
     bool updateECS = true;
     bool running = true;
@@ -163,6 +163,31 @@ int main(int argc, char** argv)
         renderer.draw_engine_gui();
 
         ImGui::Begin("General");
+
+        Triangle a;
+        a.a = renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].vertices[0].pos;
+        a.b = renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].vertices[1].pos;
+        a.c = renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].vertices[2].pos;
+        
+        Triangle b;
+        b.a = renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].vertices[0].pos;
+        b.b = renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].vertices[1].pos;
+        b.c = renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].vertices[2].pos;
+
+        Transform aTransform = renderer.m_ecs.get_component<Transform>(triA);
+        Transform bTransform = renderer.m_ecs.get_component<Transform>(triB);
+
+        a.a = Quaternion::rotate(a.a, aTransform.rotation) + aTransform.position;
+        a.b = Quaternion::rotate(a.b, aTransform.rotation) + aTransform.position;
+        a.c = Quaternion::rotate(a.c, aTransform.rotation) + aTransform.position;
+
+        b.a = Quaternion::rotate(b.a, bTransform.rotation) + bTransform.position;
+        b.b = Quaternion::rotate(b.b, bTransform.rotation) + bTransform.position;
+        b.c = Quaternion::rotate(b.c, bTransform.rotation) + bTransform.position;
+
+        TriangleIntersection info;
+        intersect_tri_tri(a, b, info);
+        std::cout << info.intersect << '\n';
 
         if (frame >= fps / 2)
         {

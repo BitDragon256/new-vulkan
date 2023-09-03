@@ -72,6 +72,8 @@ struct AxisAlignedBoundingBox
 };
 bool colliding(AxisAlignedBoundingBox a, AxisAlignedBoundingBox b);
 
+void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info);
+
 class PhysicsSystem : System<Transform, Rigidbody>
 {
 public:

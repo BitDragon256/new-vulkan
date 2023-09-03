@@ -855,7 +855,7 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 // ------------------------------------------
 
 Transform::Transform() :
-	position{ 1, 1, 1 }, scale{ 1, 1, 1 }, rotation{}
+	position{ 0, 0, 0 }, scale{ 1, 1, 1 }, rotation{}
 {}
 Transform::Transform(Vector3 position, Vector3 scale, Quaternion rotation) :
 	position{ position }, scale{ scale }, rotation{ rotation }

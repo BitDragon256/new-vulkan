@@ -287,6 +287,12 @@ float intersect_edge_edge(Vector3 p, Vector3 q, Vector3 v, Vector3 w)
 	return (v[i] - p[i] + v[i] * (p[j] - v[j])) / divider;
 }
 
+bool same_dir(Vector3 a, Vector3 b)
+{
+	Vector3 diff = a - b;
+	return glm::dot(diff, diff) < Epsilon;
+}
+
 void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 {
 	info.intersect = false;
@@ -307,7 +313,7 @@ void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 	Vector3 nB = glm::cross(p, v);
 
 	// if parallel
-	if (glm::dot(nA, p) == 0)
+	if (same_dir(nA, nB))
 		return;
 
 	// coordinate representations | d = dot(normal, point)
@@ -356,4 +362,5 @@ void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 		return;
 
 	logger::log(Vector2{ aIntersectT[0], aIntersectT[1] });
+	logger::log(Vector2{ bIntersectT[0], bIntersectT[1] });
 }
