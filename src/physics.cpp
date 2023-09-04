@@ -299,68 +299,16 @@ void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 	info.start = { 0,0,0 };
 	info.end = { 0,0,0 };
 
-	Vector3 aDl, aDr;
-	aDl = a.b - a.a;
-	aDr = a.c - a.a;
+	auto U = a.b - a.a;
+	auto V = a.c - a.a;
+	auto S = b.b - b.a;
+	auto T = b.c - b.a;
 
-	Vector3 p, q, v;
-	q = b.a;
-	p = b.b - b.a;
-	v = b.c - b.a;
+	auto UxV = glm::cross(U, V);
+	float sigma = glm::dot(UxV, UxV);
+	Vector3 alpha = glm::cross(S, UxV) / sigma;
+	Vector3 beta = glm::cross(T, UxV) / sigma;
+	Vector3 gamma = glm::cross(b.a - a.a, UxV) / sigma;
 
-	// normals
-	Vector3 nA = glm::cross(aDl, aDr);
-	Vector3 nB = glm::cross(p, v);
 
-	// if parallel
-	if (same_dir(nA, nB))
-		return;
-
-	// coordinate representations | d = dot(normal, point)
-	float d = glm::dot(nA, a.a);
-
-	// intersection of planes
-	Vector3 place = q;
-	Vector3 dir = p + v * (d - glm::dot(nA, q) + glm::dot(nA, p)) / glm::dot(nA, v);
-	dir = glm::normalize(dir);
-
-	// intersection edge in triangles
-	Vector3 aT, bT;
-	
-	aT[0] = intersect_edge_edge(a.a, aDl, place, dir);
-	aT[1] = intersect_edge_edge(a.a, aDr, place, dir);
-	aT[2] = intersect_edge_edge(a.b, a.c - a.b, place, dir);
-
-	bT[0] = intersect_edge_edge(q, p, place, dir);
-	bT[1] = intersect_edge_edge(q, v, place, dir);
-	bT[2] = intersect_edge_edge(b.b, b.c - b.b, place, dir);
-
-	auto get_intersects = [](Vector3 ts) {
-		Vector2 intersects(std::numeric_limits<float>::max());
-		for (int i = 0; i < 3; i++)
-		{
-			if (ts[i] < 0 || ts[i] > 1)
-				continue;
-			if (ts[i] < intersects[0])
-			{
-				intersects[1] = intersects[0];
-				intersects[0] = ts[i];
-				continue;
-			}
-			if (ts[i] < intersects[1])
-				intersects[1] = ts[i];
-		}
-		return intersects;
-	};
-
-	Vector2 aIntersectT, bIntersectT;
-	aIntersectT = get_intersects(aT);
-	bIntersectT = get_intersects(bT);
-
-	constexpr float MaxFloat = std::numeric_limits<float>::max();
-	if (aIntersectT[0] == MaxFloat || aIntersectT[1] == MaxFloat)
-		return;
-
-	logger::log(Vector2{ aIntersectT[0], aIntersectT[1] });
-	logger::log(Vector2{ bIntersectT[0], bIntersectT[1] });
 }

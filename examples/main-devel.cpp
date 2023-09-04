@@ -44,8 +44,8 @@ int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1000;
-    renderConfig.height = 700;
+    renderConfig.width = 1920;
+    renderConfig.height = 1080;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
