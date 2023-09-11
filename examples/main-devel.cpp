@@ -6,7 +6,7 @@
 #include <nve.h>
 
 float turningSpeed = 0.7f;
-float moveSpeed = 0.3f;
+float moveSpeed = 0.03f;
 void camera_movement(Renderer& renderer, Camera& camera)
 {
     Vector3 forward = { cos(glm::radians(camera.m_rotation.z)), sin(glm::radians(camera.m_rotation.z)), 0 };
@@ -44,8 +44,8 @@ int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1920;
-    renderConfig.height = 1080;
+    renderConfig.width = 1000;
+    renderConfig.height = 800;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;

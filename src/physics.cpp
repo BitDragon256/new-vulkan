@@ -1,6 +1,6 @@
 #include "physics.h"
 
-const float Epsilon = 0.0000001f;
+const float Epsilon = 0.0001f;
 
 bool operator> (Vector3 a, Vector3 b)
 {
@@ -169,6 +169,18 @@ Triangle make_tri()
 
 	return tri;
 }
+Triangle make_tri(Vector3 a, Vector3 b, Vector3 c)
+{
+	Triangle tri;
+
+	tri.mesh = nullptr;
+	tri.index = 0;
+	tri.a = a;
+	tri.b = b;
+	tri.c = c;
+
+	return tri;
+}
 RayhitInfo make_hit_info(Vector3 start, Vector3 direction)
 {
 	RayhitInfo hit;
@@ -293,13 +305,50 @@ bool same_dir(Vector3 a, Vector3 b)
 	return glm::dot(diff, diff) < Epsilon;
 }
 
+float area_tri(Triangle tri)
+{
+	// calculate area after heron
+	Vector3 edges = {
+		glm::length(tri.b - tri.a),
+		glm::length(tri.c - tri.a),
+		glm::length(tri.c - tri.b)
+	};
+	float s = 0.5f * (edges.x + edges.y + edges.z);
+	return sqrt(s * (s - edges.x) * (s - edges.y) * (s - edges.z));
+}
+
+#define FALSE_VECTOR Vector3{ 10000, 10000, 10000 }
+Vector3 intersect_edge_plane(Vector3 u, Vector3 v, Vector3 p, Vector3 q, Vector3 o)
+{
+	Vector3 n = glm::cross(q, o);
+
+	float divisor = glm::dot(v, n);
+	if (divisor == 0)
+		return FALSE_VECTOR;
+
+	float t = glm::dot(u - p, n) / divisor * -1;
+	return u + t * v;
+}
+
+bool tri_contains_point(Triangle tri, Vector3 point)
+{
+	float triArea = area_tri(tri);
+
+	float totalArea = 0;
+	totalArea += area_tri(make_tri(point, tri.a, tri.b));
+	totalArea += area_tri(make_tri(point, tri.a, tri.c));
+	totalArea += area_tri(make_tri(point, tri.b, tri.c));
+
+	return totalArea <= triArea + Epsilon;
+}
+
 void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 {
 	info.intersect = false;
 	info.start = { 0,0,0 };
 	info.end = { 0,0,0 };
 
-	auto U = a.b - a.a;
+	/*auto U = a.b - a.a;
 	auto V = a.c - a.a;
 	auto S = b.b - b.a;
 	auto T = b.c - b.a;
@@ -309,6 +358,58 @@ void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 	Vector3 alpha = glm::cross(S, UxV) / sigma;
 	Vector3 beta = glm::cross(T, UxV) / sigma;
 	Vector3 gamma = glm::cross(b.a - a.a, UxV) / sigma;
+*/
+	float areaA = area_tri(a);
+	float areaB = area_tri(b);
 
+	std::array<Vector3, 6> edgesA = {
+		a.a, a.b - a.a,
+		a.a, a.c - a.a,
+		a.b, a.c - a.b
+	};
+	std::array<Vector3, 6> edgesB = {
+		b.a, b.b - b.a,
+		b.a, b.c - b.a,
+		b.b, b.c - b.b
+	};
 
+	// intersect edges of a with b
+	for (int i = 0; i < 6; i += 2)
+	{
+		// test for edge-plane intersection
+		auto res = intersect_edge_plane(
+			edgesA[i], edgesA[i + 1],
+			edgesB[0], edgesB[1], edgesB[3]
+		);
+		if (res == FALSE_VECTOR)
+			continue;
+
+		// test if intersection point is in triangle
+		if (!tri_contains_point(b, res))
+			continue;
+
+		// successful intersection
+		info.intersect = true;
+		return;
+	}
+
+	// intersect edges of b with a
+	for (int i = 0; i < 6; i += 2)
+	{
+		// test for edge-plane intersection
+		auto res = intersect_edge_plane(
+			edgesB[i], edgesB[i + 1],
+			edgesA[0], edgesA[1], edgesA[3]
+		);
+		if (res == FALSE_VECTOR)
+			continue;
+
+		// test if intersection point is in triangle
+		if (!tri_contains_point(a, res))
+			continue;
+
+		// successful intersection
+		info.intersect = true;
+		return;
+	}
 }

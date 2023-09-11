@@ -18,6 +18,10 @@ namespace logger
     {
         std::cout << i << '\n';
     }
+    void log(float f)
+    {
+        std::cout << f << '\n';
+    }
     void log_now(std::string str)
     {
         std::cout << str << std::endl;
