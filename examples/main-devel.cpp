@@ -44,8 +44,8 @@ int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1000;
-    renderConfig.height = 800;
+    renderConfig.width = 1920;
+    renderConfig.height = 1080;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
@@ -188,6 +188,9 @@ int main(int argc, char** argv)
         TriangleIntersection info;
         intersect_tri_tri(a, b, info);
         std::cout << info.intersect << '\n';
+        float color[3];
+        ImGui::ColorPicker3("tri color", color);
+        renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].material.m_diffuse = { color[0], color[1], color[2] };
 
         if (frame >= fps / 2)
         {

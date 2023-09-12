@@ -342,6 +342,46 @@ bool tri_contains_point(Triangle tri, Vector3 point)
 	return totalArea <= triArea + Epsilon;
 }
 
+bool intersect_ray_tri(Vector3 start, Vector3 dir, Triangle tri, Vector3& out)
+{
+	Vector3 vertex0 = tri.a;
+	Vector3 vertex1 = tri.b;
+	Vector3 vertex2 = tri.c;
+	Vector3 edge1, edge2, h, s, q;
+	float a, f, u, v;
+	edge1 = vertex1 - vertex0;
+	edge2 = vertex2 - vertex0;
+	h = glm::cross(dir, edge2);
+	a = glm::dot(edge1, h);
+
+	if (a > -Epsilon && a < Epsilon)
+		return false;    // This ray is parallel to this triangle.
+
+	f = 1.0 / a;
+	s = start - vertex0;
+	u = f * glm::dot(s, h);
+
+	if (u < 0.0 || u > 1.0)
+		return false;
+
+	q = glm::cross(s, edge1);
+	v = f * glm::dot(dir, q);
+
+	if (v < 0.0 || u + v > 1.0)
+		return false;
+
+	// At this stage we can compute t to find out where the intersection point is on the line.
+	float t = f * glm::dot(edge2, q);
+
+	if (t > Epsilon) // ray intersection
+	{
+		out = start + dir * t;
+		return true;
+	}
+	else // This means that there is a line intersection but not a ray intersection.
+		return false;
+}
+
 void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 {
 	info.intersect = false;
@@ -376,16 +416,8 @@ void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 	// intersect edges of a with b
 	for (int i = 0; i < 6; i += 2)
 	{
-		// test for edge-plane intersection
-		auto res = intersect_edge_plane(
-			edgesA[i], edgesA[i + 1],
-			edgesB[0], edgesB[1], edgesB[3]
-		);
-		if (res == FALSE_VECTOR)
-			continue;
-
-		// test if intersection point is in triangle
-		if (!tri_contains_point(b, res))
+		Vector3 intersect;
+		if (!intersect_ray_tri(edgesA[i], edgesA[i + 1], b, intersect))
 			continue;
 
 		// successful intersection
@@ -396,16 +428,8 @@ void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 	// intersect edges of b with a
 	for (int i = 0; i < 6; i += 2)
 	{
-		// test for edge-plane intersection
-		auto res = intersect_edge_plane(
-			edgesB[i], edgesB[i + 1],
-			edgesA[0], edgesA[1], edgesA[3]
-		);
-		if (res == FALSE_VECTOR)
-			continue;
-
-		// test if intersection point is in triangle
-		if (!tri_contains_point(a, res))
+		Vector3 intersect;
+		if (!intersect_ray_tri(edgesB[i], edgesB[i + 1], a, intersect))
 			continue;
 
 		// successful intersection
