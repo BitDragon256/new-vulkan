@@ -403,7 +403,7 @@ Material Material::default_lit()
 }
 
 Material::Material() :
-	m_dissolve{ 1 }, m_shader{ nullptr }, m_diffuseTex{ "" }
+	m_dissolve{ 1 }, m_shader{ nullptr }, m_diffuseTex{ "" }, m_ambient{ 0 }, m_diffuse{ 0 }, m_specular{ 0 }, m_transmittance{ 0 }, m_emission{ 0 }
 {
 	
 }
