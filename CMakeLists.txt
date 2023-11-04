@@ -31,6 +31,7 @@ set(
 	${SOURCE_DIR}/physics.cpp
 	${SOURCE_DIR}/gui.cpp
 	${SOURCE_DIR}/flags.cpp
+	${SOURCE_DIR}/tritri.cpp
 )
 
 set(
@@ -50,6 +51,7 @@ set(
 	${INCLUDE_DIR}/physics.h
 	${INCLUDE_DIR}/gui.h
 	${INCLUDE_DIR}/flags.h
+	${INCLUDE_DIR}/tritri.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
