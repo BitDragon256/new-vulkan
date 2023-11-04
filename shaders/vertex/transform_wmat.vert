@@ -47,6 +47,7 @@ struct Transform
     vec3 position;
     vec3 scale;
     vec4 rotation;
+    uint material;
 };
 
 layout(std140,set = 0, binding = 3) readonly buffer ObjectBuffer
@@ -94,7 +95,7 @@ void main()
     vec3 vertexPos = even_faster_rot(inPosition * transform.scale, transform.rotation) + transform.position;
     gl_Position = CPC.projView * vec4(vertexPos, 1.0);
 
-    outMat = convert_mat(MaterialBufferObjects.mats[inMaterial]);
+    outMat = convert_mat(MaterialBufferObjects.mats[transform.material + inMaterial]);
     outPos = vertexPos;
     outNormal = inNormal.xzy;
     outUV = uv;

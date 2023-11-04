@@ -328,8 +328,8 @@ VkDevice Shader::s_device;
 
 void GraphicsShader::set_default_shader()
 {
-	fragment.load_shader("static_geometry/default_unlit.frag.spv");
-	vertex.load_shader("dynamic_geometry/default_unlit.vert.spv");
+	fragment.load_shader("fragments/unlit_wmat.frag.spv");
+	vertex.load_shader("vertex/transform_wmat.vert.spv");
 }
 bool GraphicsShader::operator==(const GraphicsShader& other) const
 {

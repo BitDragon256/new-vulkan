@@ -16,6 +16,7 @@ struct Transform
 	alignas(16) Vector3 position;
 	alignas(16) Vector3 scale;
 	alignas(16) Quaternion rotation;
+	alignas(16) uint32_t materialStart;
 
 	Transform();
 	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
@@ -53,6 +54,8 @@ GUI_PRINT_COMPONENT_END
 #define GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING 2
 
 #define DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING 3
+
+#define GEOMETRY_HANDLER_INDEPENDENT_MATERIALS true
 
 struct StaticMesh : Mesh
 {
@@ -150,6 +153,7 @@ public:
 protected:
 
 	void add_model(Model& model, bool forceNewMeshGroup = false);
+	void add_material(Model& model, Transform& transform, bool newMat);
 	virtual void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) = 0;
 	
 	void update();
@@ -179,7 +183,7 @@ private:
 
 	std::vector<MeshGroup> m_meshGroups;
 	std::vector<MeshDataInfo> m_meshes;
-	std::vector<Material> m_materials;
+	std::vector<Material*> m_materials;
 	Buffer<MaterialSSBO> m_materialBuffer;
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
@@ -190,6 +194,8 @@ private:
 
 	void reload_meshes();
 	void reload_mesh_group(MeshGroup& meshGroup);
+
+	void reload_materials();
 
 	VkDescriptorSetLayout m_descriptorSetLayout;
 
@@ -254,7 +260,7 @@ protected:
 
 private:
 
-	void add_model(DynamicModel& model, Transform transform);
+	void add_model(DynamicModel& model, Transform& transform);
 
 	Buffer<Transform> m_transformBuffer;
 

@@ -394,6 +394,33 @@ void GeometryHandler::create_pipeline(size_t meshGroupIndex)
 	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
 }
 
+void GeometryHandler::add_material(Model& model, Transform& transform, bool newMat)
+{
+	if (!newMat)
+	{
+		// material of first child already has to be in m_materials
+		uint32_t i = 0;
+		for (auto mat : m_materials)
+		{
+			if (*mat == (const Material&) model.m_children[0].material)
+			{
+				transform.materialStart = i;
+				return;
+			}
+			i++;
+		}
+	}
+	
+	transform.materialStart = m_materials.size();
+	uint32_t i = 0;
+	for (auto& mesh : model.m_children)
+	{
+		m_materials.push_back(&mesh.material);
+		for (auto& v : mesh.vertices)
+			v.material = i;
+		i++;
+	}
+}
 void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 {
 	for (auto& mesh : model.m_children)
@@ -402,13 +429,6 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		MeshGroup* meshGroup = find_group(mesh.material.m_shader, index);
 		if (!meshGroup || forceNewMeshGroup) // no group found or a new group must be created
 			meshGroup = push_mesh_group(mesh.material.m_shader);
-
-		// material
-		uint32_t materialIndex = static_cast<uint32_t>(std::find(m_materials.begin(), m_materials.end(), mesh.material) - m_materials.begin());
-		if (materialIndex == m_materials.size())
-			m_materials.push_back(mesh.material);
-		for (auto& vert : mesh.vertices)
-			vert.material = materialIndex;
 
 		// save mesh
 		m_meshes.push_back(MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index });
@@ -419,20 +439,23 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		reloadMeshBuffers = true;
 	}
 }
-void GeometryHandler::reload_meshes()
+void GeometryHandler::reload_materials()
 {
-	// reload materials
 	std::vector<MaterialSSBO> mats(m_materials.size());
 	for (size_t i = 0; i < mats.size(); i++)
 	{
-		mats[i] = m_materials[i];
-		if (!m_materials[i].m_diffuseTex.empty())
-			mats[i].m_textureIndex = m_texturePool.find(m_materials[i].m_diffuseTex);
+		mats[i] = *m_materials[i];
+		if (!(*m_materials[i]).m_diffuseTex.empty())
+			mats[i].m_textureIndex = m_texturePool.find((*m_materials[i]).m_diffuseTex);
 		else
 			mats[i].m_textureIndex = UINT32_MAX;
 	}
 	m_materialBuffer.set(mats);
 	update_descriptor_set();
+}
+void GeometryHandler::reload_meshes()
+{
+	reload_materials();
 
 	// reload meshes
 	for (MeshGroup& meshGroup : m_meshGroups)
@@ -586,6 +609,7 @@ void GeometryHandler::update()
 		reload_meshes();
 		reloadMeshBuffers = false;
 	}
+	else reload_materials();
 }
 
 // ------------------------------------------
@@ -599,6 +623,7 @@ void StaticGeometryHandler::add_model(StaticModel& model, Transform transform)
 		bake_transform(mesh, transform);
 	}
 
+	GeometryHandler::add_material(model, transform, GEOMETRY_HANDLER_INDEPENDENT_MATERIALS);
 	GeometryHandler::add_model(model);
 }
 void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex)
@@ -691,7 +716,7 @@ void DynamicGeometryHandler::start()
 }
 void DynamicGeometryHandler::awake(EntityId entity)
 {
-	auto transform = m_ecs->get_component<Transform>(entity);
+	auto& transform = m_ecs->get_component<Transform>(entity);
 	auto& model = m_ecs->get_component<DynamicModel>(entity);
 	add_model(model, transform);
 }
@@ -793,7 +818,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	// ---------------------------------------
 }
-void DynamicGeometryHandler::add_model(DynamicModel& model, Transform transform)
+void DynamicGeometryHandler::add_model(DynamicModel& model, Transform& transform)
 {
 	auto hashSum = hash_model(model);
 
@@ -807,6 +832,7 @@ void DynamicGeometryHandler::add_model(DynamicModel& model, Transform transform)
 			break;
 		}
 	}
+	GeometryHandler::add_material(model, transform, GEOMETRY_HANDLER_INDEPENDENT_MATERIALS);
 	if (newMeshGroup)
 	{
 		GeometryHandler::add_model(model);
