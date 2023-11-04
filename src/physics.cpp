@@ -1,5 +1,7 @@
 #include "physics.h"
 
+#include "tritri.h"
+
 const float Epsilon = 0.0001f;
 
 bool operator> (Vector3 a, Vector3 b)
@@ -382,58 +384,65 @@ bool intersect_ray_tri(Vector3 start, Vector3 dir, Triangle tri, Vector3& out)
 		return false;
 }
 
+#define VEC2FLOAT(V) {V.x, V.y, V.z}
+
 void intersect_tri_tri(Triangle a, Triangle b, TriangleIntersection& info)
 {
-	info.intersect = false;
-	info.start = { 0,0,0 };
-	info.end = { 0,0,0 };
+	float v0[3] = VEC2FLOAT(a.a), v1[3] = VEC2FLOAT(a.b), v2[3] = VEC2FLOAT(a.c),
+		  u0[3] = VEC2FLOAT(b.a), u1[3] = VEC2FLOAT(b.b), u2[3] = VEC2FLOAT(b.c);
+	int intersect = tri_tri_intersect(v0, v1, v2, u0, u1, u2);
 
-	/*auto U = a.b - a.a;
-	auto V = a.c - a.a;
-	auto S = b.b - b.a;
-	auto T = b.c - b.a;
-
-	auto UxV = glm::cross(U, V);
-	float sigma = glm::dot(UxV, UxV);
-	Vector3 alpha = glm::cross(S, UxV) / sigma;
-	Vector3 beta = glm::cross(T, UxV) / sigma;
-	Vector3 gamma = glm::cross(b.a - a.a, UxV) / sigma;
-*/
-	float areaA = area_tri(a);
-	float areaB = area_tri(b);
-
-	std::array<Vector3, 6> edgesA = {
-		a.a, a.b - a.a,
-		a.a, a.c - a.a,
-		a.b, a.c - a.b
-	};
-	std::array<Vector3, 6> edgesB = {
-		b.a, b.b - b.a,
-		b.a, b.c - b.a,
-		b.b, b.c - b.b
-	};
-
-	// intersect edges of a with b
-	for (int i = 0; i < 6; i += 2)
-	{
-		Vector3 intersect;
-		if (!intersect_ray_tri(edgesA[i], edgesA[i + 1], b, intersect))
-			continue;
-
-		// successful intersection
-		info.intersect = true;
-		return;
-	}
-
-	// intersect edges of b with a
-	for (int i = 0; i < 6; i += 2)
-	{
-		Vector3 intersect;
-		if (!intersect_ray_tri(edgesB[i], edgesB[i + 1], a, intersect))
-			continue;
-
-		// successful intersection
-		info.intersect = true;
-		return;
-	}
+	info.intersect = intersect;
+//	info.intersect = false;
+//	info.start = { 0,0,0 };
+//	info.end = { 0,0,0 };
+//
+//	/*auto U = a.b - a.a;
+//	auto V = a.c - a.a;
+//	auto S = b.b - b.a;
+//	auto T = b.c - b.a;
+//
+//	auto UxV = glm::cross(U, V);
+//	float sigma = glm::dot(UxV, UxV);
+//	Vector3 alpha = glm::cross(S, UxV) / sigma;
+//	Vector3 beta = glm::cross(T, UxV) / sigma;
+//	Vector3 gamma = glm::cross(b.a - a.a, UxV) / sigma;
+//*/
+//	float areaA = area_tri(a);
+//	float areaB = area_tri(b);
+//
+//	std::array<Vector3, 6> edgesA = {
+//		a.a, a.b - a.a,
+//		a.a, a.c - a.a,
+//		a.b, a.c - a.b
+//	};
+//	std::array<Vector3, 6> edgesB = {
+//		b.a, b.b - b.a,
+//		b.a, b.c - b.a,
+//		b.b, b.c - b.b
+//	};
+//
+//	// intersect edges of a with b
+//	for (int i = 0; i < 6; i += 2)
+//	{
+//		Vector3 intersect;
+//		if (!intersect_ray_tri(edgesA[i], edgesA[i + 1], b, intersect))
+//			continue;
+//
+//		// successful intersection
+//		info.intersect = true;
+//		return;
+//	}
+//
+//	// intersect edges of b with a
+//	for (int i = 0; i < 6; i += 2)
+//	{
+//		Vector3 intersect;
+//		if (!intersect_ray_tri(edgesB[i], edgesB[i + 1], a, intersect))
+//			continue;
+//
+//		// successful intersection
+//		info.intersect = true;
+//		return;
+//	}
 }

@@ -44,8 +44,8 @@ int main(int argc, char** argv)
 {
     Renderer renderer;
     RenderConfig renderConfig;
-    renderConfig.width = 1200;
-    renderConfig.height = 800;
+    renderConfig.width = 2000;
+    renderConfig.height = 1200;
     renderConfig.title = "Vulkan";
     renderConfig.dataMode = RenderConfig::Indexed;
     renderConfig.enableValidationLayers = true;
@@ -153,6 +153,8 @@ int main(int argc, char** argv)
     renderer.m_ecs.add_component<DynamicModel>(triB);
     renderer.m_ecs.get_component<DynamicModel>(triB) = triangle;
 
+    float colorA[3] = { 0,0,0 }, colorB[3] = { 0,0,0 };
+
     bool updateECS = true;
     bool running = true;
     while (running)
@@ -189,10 +191,12 @@ int main(int argc, char** argv)
         TriangleIntersection info;
         intersect_tri_tri(a, b, info);
         //std::cout << info.intersect << '\n';
-        //float color[3];
-        //ImGui::ColorPicker3("tri color", color);
-        //renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].material.m_diffuse = { color[0], color[1], color[2] };
-        
+        ImGui::ColorPicker3("tri color", colorA);
+        renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].material.m_diffuse = { colorA[0], colorA[1], colorA[2] };
+
+        ImGui::ColorPicker3("tri color", colorB);
+        renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].material.m_diffuse = { colorB[0] * 2, colorB[1] * 2, colorB[2] * 2 };
+
         if (frame >= fps / 2)
         {
             fpsText = std::to_string(fps) + " fps";
