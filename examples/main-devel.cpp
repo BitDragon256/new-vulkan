@@ -5,9 +5,48 @@
 
 #include <nve.h>
 
-float turningSpeed = 0.7f;
-float moveSpeed = 0.03f;
-void camera_movement(Renderer& renderer, Camera& camera)
+float turningSpeed = 0.5f;
+float moveSpeed = 0.008f;
+float camDistance = 5;
+Vector3 camPos = { 0,0,0 };
+Vector3 camRot = { 0,0,0 };
+
+void str_camera_movement(Renderer& renderer, Camera& camera)
+{
+    Vector3 forward = { cos(glm::radians(camRot.z)), sin(glm::radians(camRot.z)), 0 };
+    Vector3 right = { -sin(glm::radians(camRot.z)), cos(glm::radians(camRot.z)), 0 };
+
+    if (renderer.get_key(GLFW_KEY_W) == GLFW_PRESS)
+        camPos += forward * moveSpeed;
+    if (renderer.get_key(GLFW_KEY_S) == GLFW_PRESS)
+        camPos -= forward * moveSpeed;
+
+    if (renderer.get_key(GLFW_KEY_A) == GLFW_PRESS)
+        camPos -= right * moveSpeed;
+    if (renderer.get_key(GLFW_KEY_D) == GLFW_PRESS)
+        camPos += right * moveSpeed;
+
+    if (renderer.get_key(GLFW_KEY_E) == GLFW_PRESS)
+        camPos.z += moveSpeed;
+    if (renderer.get_key(GLFW_KEY_Q) == GLFW_PRESS)
+        camPos.z -= moveSpeed;
+
+    if (renderer.get_key(GLFW_KEY_UP) == GLFW_PRESS)
+        camRot.y -= turningSpeed;
+    if (renderer.get_key(GLFW_KEY_DOWN) == GLFW_PRESS)
+        camRot.y += turningSpeed;
+
+    if (renderer.get_key(GLFW_KEY_LEFT) == GLFW_PRESS)
+        camRot.z -= turningSpeed;
+    if (renderer.get_key(GLFW_KEY_RIGHT) == GLFW_PRESS)
+        camRot.z += turningSpeed;
+
+    camRot.y = math::clamp(camRot.y, 0, 90);
+
+    camera.m_position = camPos + Vector3 { -cos(glm::radians(camRot.z)), -sin(glm::radians(camRot.z)), sin(glm::radians(camRot.y))} * camDistance;
+    camera.m_rotation = { camRot.x, camRot.y, camRot.z };
+}
+void fps_camera_movement(Renderer& renderer, Camera& camera)
 {
     Vector3 forward = { cos(glm::radians(camera.m_rotation.z)), sin(glm::radians(camera.m_rotation.z)), 0 };
     Vector3 right = { -sin(glm::radians(camera.m_rotation.z)), cos(glm::radians(camera.m_rotation.z)), 0 };
@@ -23,9 +62,9 @@ void camera_movement(Renderer& renderer, Camera& camera)
         camera.m_position += right * moveSpeed;
 
     if (renderer.get_key(GLFW_KEY_E) == GLFW_PRESS)
-        camera.m_position.z += moveSpeed;
+        camera.m_position.z += moveSpeed * 10;
     if (renderer.get_key(GLFW_KEY_Q) == GLFW_PRESS)
-        camera.m_position.z -= moveSpeed;
+        camera.m_position.z -= moveSpeed * 10;
 
     if (renderer.get_key(GLFW_KEY_UP) == GLFW_PRESS)
         camera.m_rotation.y -= turningSpeed;
@@ -38,6 +77,23 @@ void camera_movement(Renderer& renderer, Camera& camera)
         camera.m_rotation.z += turningSpeed;
 
     camera.m_rotation.y = math::clamp(camera.m_rotation.y, -50, 50);
+}
+void cart_camera_movement(Renderer& renderer, Camera& camera)
+{
+    if (renderer.get_key(GLFW_KEY_W) == GLFW_PRESS)
+        camera.m_position += VECTOR_FORWARD * moveSpeed;
+    if (renderer.get_key(GLFW_KEY_S) == GLFW_PRESS)
+        camera.m_position -= VECTOR_FORWARD * moveSpeed;
+
+    if (renderer.get_key(GLFW_KEY_A) == GLFW_PRESS)
+        camera.m_position -= VECTOR_RIGHT * moveSpeed;
+    if (renderer.get_key(GLFW_KEY_D) == GLFW_PRESS)
+        camera.m_position += VECTOR_RIGHT * moveSpeed;
+
+    if (renderer.get_key(GLFW_KEY_E) == GLFW_PRESS)
+        camera.m_position += VECTOR_UP * moveSpeed;
+    if (renderer.get_key(GLFW_KEY_Q) == GLFW_PRESS)
+        camera.m_position -= VECTOR_UP * moveSpeed;
 }
 
 int main(int argc, char** argv)
@@ -58,13 +114,9 @@ int main(int argc, char** argv)
     // Camera
 
     Camera camera;
-    camera.m_position = Vector3(-2.5, 0, 0);
-    camera.m_rotation = Vector3(0, 0, 0);
+    camera.m_position = Vector3(0, 0, 10.f);
+    camera.m_orthographic = true;
     renderer.set_active_camera(&camera);
-
-    float cubePosition[3]{ 0, 0, 0 };
-    float cubeScale[3]{ 1, 1, 1 };
-    float cubeEulerRotation[3]{ 0, 0, 0 };
 
     int fps = 0;
     int avgFps = 0;
@@ -74,17 +126,7 @@ int main(int argc, char** argv)
     auto lastTime = std::chrono::high_resolution_clock::now();
     uint32_t frame = 0;
 
-    float lightPos[3] = { 0, 0, 0 };
-
-    //auto testEntity = renderer.m_ecs.create_entity();
-    //renderer.m_ecs.add_component<Transform>(testEntity);
-    //renderer.m_ecs.add_component<DynamicModel>(testEntity);
-    //auto& testEntityModel = renderer.m_ecs.get_component<DynamicModel>(testEntity);
-    //testEntityModel.load_mesh("/test-models/sportscar/sportsCar.obj");
-    //auto& testEntityTransform = renderer.m_ecs.get_component<Transform>(testEntity);
-    //testEntityTransform.rotation = Quaternion({ -PI/2,0,0 });
-
-    //float modelPos[3] = { 0,0,0 }, modelRot[3] = { 0,0,0 }, modelScale[3] = { 0.005,0.005,0.005 };
+    Vector3 lightPos = { 0,0,0 };
 
     PhysicsSystem physicsSystem;
     renderer.m_ecs.register_system(&physicsSystem);
@@ -95,63 +137,35 @@ int main(int argc, char** argv)
 
     profiler.start_measure("complete model loading");
 
-    //DynamicModel prefab;
-    //prefab.load_mesh("/test-models/sphere/sphere-cylcoords-16k.obj");
+    DynamicModel quadModel;
+    quadModel.load_mesh("/test-models/circle/quad.obj");
 
-    //std::vector<EntityId> testEntities(testEntityCount);
-    //for (int i = 0; i < testEntityCount; i++)
-    //{
-    //    testEntities[i] = renderer.m_ecs.create_entity();
-    //    renderer.m_ecs.add_component<Transform>(testEntities[i]);
-    //    renderer.m_ecs.add_component<DynamicModel>(testEntities[i]);
-    //    //renderer.m_ecs.add_component<CheckMovement>(testEntities[i]);
-    //    renderer.m_ecs.add_component<Rigidbody>(testEntities[i]);
+    EntityId quad = renderer.m_ecs.create_entity();
+    auto& triTransform = renderer.m_ecs.add_component<Transform>(quad);
+    triTransform.position = { 0,0,0 };
+    auto& model = renderer.m_ecs.add_component<DynamicModel>(quad);
+    model = quadModel;
 
-    //    renderer.m_ecs.get_component<Rigidbody>(testEntities[i]).radius = .1f;
+    {
+        EntityId e = renderer.m_ecs.create_entity();
+        renderer.m_ecs.add_component<Transform>(e).position = { 0.5, 0, 0 };
+        renderer.m_ecs.add_component<DynamicModel>(e) = quadModel;
+    }
 
-    //    renderer.m_ecs.get_component<Transform>(testEntities[i]).position = Vector3(0, 1, 0);
-    //    renderer.m_ecs.get_component<Transform>(testEntities[i]).scale = Vector3(0.001f);
+    /*std::vector<EntityId> planeTriangles;
+    for (int x = 0; x < 50; x++)
+    {
+        for (int y = 0; y < 50; y++)
+        {
+            planeTriangles.push_back(renderer.m_ecs.create_entity());
 
-    //    renderer.m_ecs.get_component<DynamicModel>(testEntities[i]) = prefab;
-    //}
+            auto& t = renderer.m_ecs.add_component<Transform>(planeTriangles.back());
+            t.position = { (float)x, (float)y, 0 };
 
-    /*
-    float ballRadius = .115f;
-
-    std::vector<EntityId> entities;
-    auto add_object = [&renderer, prefab, ballRadius, &entities] {
-        EntityId entity = renderer.m_ecs.create_entity();
-        renderer.m_ecs.add_component<Transform>(entity);
-        renderer.m_ecs.add_component<DynamicModel>(entity);
-        renderer.m_ecs.add_component<Rigidbody>(entity);
-
-        renderer.m_ecs.get_component<Rigidbody>(entity).radius = ballRadius;
-
-        renderer.m_ecs.get_component<Transform>(entity).position = Vector3((float) rand() / INT32_MAX * 2 - 1, 1, 0);
-        renderer.m_ecs.get_component<Transform>(entity).scale = Vector3(0.001f);
-
-        renderer.m_ecs.get_component<DynamicModel>(entity) = prefab;
-
-        entities.push_back(entity);
-    };
-    */
-
-    //profiler.end_measure("complete model loading");
-    //profiler.print_last_measure("complete model loading");
-
-    DynamicModel triangle;
-    triangle.load_mesh("/test-models/triangle/triangle.obj");
-    triangle.m_children[0].material.m_diffuse = { 1, 1, 1 };
-
-    EntityId triA = renderer.m_ecs.create_entity();
-    renderer.m_ecs.add_component<Transform>(triA);
-    renderer.m_ecs.add_component<DynamicModel>(triA);
-    renderer.m_ecs.get_component<DynamicModel>(triA) = triangle;
-    
-    EntityId triB = renderer.m_ecs.create_entity();
-    renderer.m_ecs.add_component<Transform>(triB);
-    renderer.m_ecs.add_component<DynamicModel>(triB);
-    renderer.m_ecs.get_component<DynamicModel>(triB) = triangle;
+            renderer.m_ecs.add_component<DynamicModel>(planeTriangles.back());
+            renderer.m_ecs.get_component<DynamicModel>(planeTriangles.back()) = triangle;
+        }
+    }*/
 
     float colorA[3] = { 0,0,0 }, colorB[3] = { 0,0,0 };
 
@@ -159,43 +173,13 @@ int main(int argc, char** argv)
     bool running = true;
     while (running)
     {
-        camera_movement(renderer, camera);
+        cart_camera_movement(renderer, camera);
 
         renderer.gui_begin();
 
         renderer.draw_engine_gui();
 
         ImGui::Begin("General");
-
-        Triangle a;
-        a.a = renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].vertices[0].pos;
-        a.b = renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].vertices[1].pos;
-        a.c = renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].vertices[2].pos;
-        
-        Triangle b;
-        b.a = renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].vertices[0].pos;
-        b.b = renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].vertices[1].pos;
-        b.c = renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].vertices[2].pos;
-
-        Transform aTransform = renderer.m_ecs.get_component<Transform>(triA);
-        Transform bTransform = renderer.m_ecs.get_component<Transform>(triB);
-
-        a.a = Quaternion::rotate(a.a, aTransform.rotation) + aTransform.position;
-        a.b = Quaternion::rotate(a.b, aTransform.rotation) + aTransform.position;
-        a.c = Quaternion::rotate(a.c, aTransform.rotation) + aTransform.position;
-
-        b.a = Quaternion::rotate(b.a, bTransform.rotation) + bTransform.position;
-        b.b = Quaternion::rotate(b.b, bTransform.rotation) + bTransform.position;
-        b.c = Quaternion::rotate(b.c, bTransform.rotation) + bTransform.position;
-
-        TriangleIntersection info;
-        intersect_tri_tri(a, b, info);
-        //std::cout << info.intersect << '\n';
-        ImGui::ColorPicker3("tri color", colorA);
-        renderer.m_ecs.get_component<DynamicModel>(triA).m_children[0].material.m_diffuse = { colorA[0], colorA[1], colorA[2] };
-
-        ImGui::ColorPicker3("tri color", colorB);
-        renderer.m_ecs.get_component<DynamicModel>(triB).m_children[0].material.m_diffuse = { colorB[0] * 2, colorB[1] * 2, colorB[2] * 2 };
 
         if (frame >= fps / 2)
         {
@@ -211,18 +195,10 @@ int main(int argc, char** argv)
         ImGui::SliderFloat("speed", &moveSpeed, 0.f, 0.03f);
         ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
 
-        ImGui::SliderFloat3("light pos", lightPos, -10, 10);
-        renderer.set_light_pos(Vector3{ lightPos[0], lightPos[1], lightPos[2] });
+        ImGui::SliderFloat3("light pos", (float*) & lightPos, -10, 10);
+        renderer.set_light_pos(lightPos);
 
-        //ImGui::SliderFloat3("model pos", modelPos, -10, 10);
-        //ImGui::SliderFloat3("model rot", modelRot, -180, 180);
-        //ImGui::SliderFloat3("model scale", modelScale, 0.01, 10);
-        //testEntityTransform.position = { modelPos[0], modelPos[1] , modelPos[2] };
-        //testEntityTransform.scale = { modelScale[0], modelScale[1] , modelScale[2] };
-        //testEntityTransform.rotation.euler(Vector3{ modelRot[0], modelRot[1] , modelRot[2] });
-
-        //if (ImGui::Button("add object"))
-        //    add_object();
+        ImGui::SliderFloat3("cam pos", (float*) & camera.m_position, -10, 10);
 
         bool singleUpdateECS = ImGui::Button("step ecs");
         if (ImGui::Button("update ecs"))
@@ -234,6 +210,9 @@ int main(int argc, char** argv)
             ImGui::Text("ECS activated");
         else
             ImGui::Text("ECS deactivated");
+
+        if (ImGui::Button("Ortho / Persp"))
+            camera.m_orthographic = !camera.m_orthographic;
 
         ImGui::End();
 

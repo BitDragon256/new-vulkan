@@ -293,7 +293,7 @@ public:
 		std::erase(m_newEntities, entity);
 	}
 
-	template<typename T> void add_component(EntityId entity)
+	template<typename T> T& add_component(EntityId entity)
 	{
 		m_componentManager.add_component<T>(entity);
 
@@ -305,6 +305,8 @@ public:
 		for (SystemId systemId = 0; systemId < m_systems.size(); systemId++)
 			if (((entityComponents & m_systemComponents[systemId]) == m_systemComponents[systemId]) && std::find(m_systems[systemId]->m_entities.begin(), m_systems[systemId]->m_entities.end(), entity) == m_systems[systemId]->m_entities.end())
 				m_systems[systemId]->m_entities.push_back(entity);
+
+		return m_componentManager.get_component<T>(entity);
 	}
 	template<typename T> void remove_component(EntityId entity)
 	{

@@ -213,6 +213,7 @@ public:
 	Vector2 m_extent;
 	float m_nearPlane;
 	float m_farPlane;
+	bool m_orthographic;
 
 private:
 	Renderer* renderer;
