@@ -89,6 +89,23 @@ vec3 even_faster_rot(vec3 v, vec4 q)
     return (p * dot(p, v) + cross(p, v) * w) * 2 + v * (w * w - dot(p, p));
 }
 
+vec2 positions[3] = vec2[](
+    vec2(0.0, 0.0),
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0)
+);
+
+const uint MaxIndex = 5*4;
+vec2 index_to_pos(uint index)
+{
+    vec2 pos = positions[index % 3];
+    if (index % 3 == 1)
+        pos.x = 3.0 / MaxIndex;
+    pos.x += float(index) / MaxIndex * 3.0;
+    pos.x -= 1;
+    return pos;
+}
+
 void main()
 {
     Transform transform = ObjectInfoBuffer.objects[gl_InstanceIndex];
@@ -100,4 +117,7 @@ void main()
     outNormal = inNormal.xzy;
     outUV = uv;
     outTex = MaterialBufferObjects.mats[inMaterial].texIndex;
+
+    outMat.diffuse = vec3(float(gl_VertexIndex) / MaxIndex, 0, 0);
+    gl_Position = vec4(index_to_pos(gl_VertexIndex), 0, 1);
 }

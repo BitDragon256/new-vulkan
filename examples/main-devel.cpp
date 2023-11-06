@@ -187,7 +187,7 @@ int main(int argc, char** argv)
         tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
     }
 
-    bool updateECS = false;
+    bool updateECS = true;
     bool running = true;
     while (running)
     {
