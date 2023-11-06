@@ -5,6 +5,8 @@
 
 #include <nve.h>
 
+#include "simple_fluid.h"
+
 float turningSpeed = 0.5f;
 float moveSpeed = 0.008f;
 float camDistance = 5;
@@ -114,7 +116,7 @@ int main(int argc, char** argv)
     // Camera
 
     Camera camera;
-    camera.m_position = Vector3(0, 0, 10.f);
+    camera.m_position = Vector3(0, 0, 20.f);
     camera.m_orthographic = true;
     renderer.set_active_camera(&camera);
 
@@ -128,48 +130,40 @@ int main(int argc, char** argv)
 
     Vector3 lightPos = { 0,0,0 };
 
-    PhysicsSystem physicsSystem;
-    renderer.m_ecs.register_system(&physicsSystem);
-
     const int testEntityCount = 1;
 
     Profiler profiler;
 
     profiler.start_measure("complete model loading");
 
-    DynamicModel quadModel;
-    quadModel.load_mesh("/test-models/circle/quad.obj");
+    DynamicModel ball;
+    ball.load_mesh("/default_models/circle/quad.obj");
 
-    EntityId quad = renderer.m_ecs.create_entity();
-    auto& triTransform = renderer.m_ecs.add_component<Transform>(quad);
-    triTransform.position = { 0,0,0 };
-    auto& model = renderer.m_ecs.add_component<DynamicModel>(quad);
-    model = quadModel;
+    // simple fluid
+    SimpleFluid simpleFluid;
+    renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
 
+    const uint32_t particleCount = 200;
+    std::vector<EntityId> particles(particleCount);
+    int width = (int) sqrt(particleCount);
+    for (int i = 0; i < particleCount; i++)
     {
-        EntityId e = renderer.m_ecs.create_entity();
-        renderer.m_ecs.add_component<Transform>(e).position = { 0.5, 0, 0 };
-        renderer.m_ecs.add_component<DynamicModel>(e) = quadModel;
+        EntityId id = renderer.m_ecs.create_entity();
+        auto& part = renderer.m_ecs.add_component<Particle>(id);
+        renderer.m_ecs.add_component<DynamicModel>(id) = ball;
+        auto& transform = renderer.m_ecs.add_component<Transform>(id);
+        transform.scale = Vector3(0.2f);
+
+        int x = i % (width);
+        int y = (int) i / width;
+        part.position = { x, y };
+
+        particles[i] = id;
     }
-
-    /*std::vector<EntityId> planeTriangles;
-    for (int x = 0; x < 50; x++)
-    {
-        for (int y = 0; y < 50; y++)
-        {
-            planeTriangles.push_back(renderer.m_ecs.create_entity());
-
-            auto& t = renderer.m_ecs.add_component<Transform>(planeTriangles.back());
-            t.position = { (float)x, (float)y, 0 };
-
-            renderer.m_ecs.add_component<DynamicModel>(planeTriangles.back());
-            renderer.m_ecs.get_component<DynamicModel>(planeTriangles.back()) = triangle;
-        }
-    }*/
 
     float colorA[3] = { 0,0,0 }, colorB[3] = { 0,0,0 };
 
-    bool updateECS = true;
+    bool updateECS = false;
     bool running = true;
     while (running)
     {
@@ -192,11 +186,12 @@ int main(int argc, char** argv)
         ImGui::Text(avgFpsText.c_str());
         frame++;
 
+        ImGui::DragFloat("Target Density", &simpleFluid.m_targetDensity);
+        ImGui::DragFloat("Pressure Multiplier", &simpleFluid.m_pressureMultiplier, 0.1f);
+        ImGui::DragFloat("Smoothing Radius", &simpleFluid.m_smoothingRadius);
+
         ImGui::SliderFloat("speed", &moveSpeed, 0.f, 0.03f);
         ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
-
-        ImGui::SliderFloat3("light pos", (float*) & lightPos, -10, 10);
-        renderer.set_light_pos(lightPos);
 
         ImGui::SliderFloat3("cam pos", (float*) & camera.m_position, -10, 10);
 
