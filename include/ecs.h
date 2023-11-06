@@ -44,7 +44,7 @@ class ComponentList : public IComponentList
 public:
 	void add(EntityId entity)
 	{
-		assert(!m_entityToIndex.contains(entity));
+		//assert(!m_entityToIndex.contains(entity));
 
 		m_entityToIndex[entity] = m_components.size();
 		m_components.push_back(T());
@@ -52,7 +52,7 @@ public:
 	}
 	void remove(EntityId entity)
 	{
-		assert(m_entityToIndex.contains(entity));
+		//assert(m_entityToIndex.contains(entity));
 
 		size_t index = m_entityToIndex[entity];
 		m_components[index] = m_components.back();
@@ -64,7 +64,7 @@ public:
 	}
 	T& get(EntityId entity)
 	{
-		assert(m_entityToIndex.contains(entity));
+		//assert(m_entityToIndex.contains(entity));
 
 		return m_components[m_entityToIndex[entity]];
 	}
@@ -151,7 +151,7 @@ public:
 		const char* typeName = typeid(T).name();
 
 		auto id = type_to_id(typeName);
-		assert(m_entityComponents[entity].test(id));
+		////assert(m_entityComponents[entity].test(id));
 
 		return list<T>(id)->get(entity);
 	}
@@ -169,19 +169,24 @@ public:
 
 	ComponentTypeId type_to_id(const char* typeName)
 	{
-		assert(m_typeToId.contains(typeName));
-		return m_typeToId[typeName];
+		////assert(m_typeToId.contains(typeName));
+		if (typeName == m_lastTypeToIdStr)
+			return m_lastTypeToIdId;
+		ComponentTypeId id = m_typeToId[typeName];
+		m_lastTypeToIdId = id;
+		m_lastTypeToIdStr = typeName;
+		return id;
 	}
 private:
 	std::unordered_map<const char*, ComponentTypeId> m_typeToId;
+	std::string m_lastTypeToIdStr;
+	ComponentTypeId m_lastTypeToIdId;
 	ComponentTypeId m_newComponentId;
 	std::vector<IComponentList*> m_components; // indexed by ComponentTypeId
 	std::unordered_map<EntityId, std::bitset<ECS_MAX_COMPONENTS>> m_entityComponents;
 
 	template<typename T> ComponentList<T>* list(ComponentTypeId id)
 	{
-		//if (!m_components[id])
-		//	m_components[id] = construct_component_list<T>();
 		return dynamic_cast<ComponentList<T>*>(m_components[id]);
 	}
 
@@ -217,6 +222,10 @@ public:
 	virtual void update(float dt) {}
 	virtual void update(float dt, EntityId entity) {}
 	virtual std::vector<const char*> component_types() = 0;
+	virtual void gui_show_system()
+	{
+		ImGui::Text("no data");
+	};
 	virtual const char* type_name()
 	{
 		return typeid(*this).name();

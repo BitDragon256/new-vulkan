@@ -11,7 +11,7 @@ class Profiler
 public:
 
 	void start_measure(std::string name);
-	float end_measure(std::string name);
+	float end_measure(std::string name, bool print = false);
 
 	float passing_measure(std::string name);
 	void print_last_measure(std::string name);

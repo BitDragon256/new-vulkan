@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     SimpleFluid simpleFluid;
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
 
-    const uint32_t particleCount = 100;
+    const uint32_t particleCount = 1000;
     std::vector<EntityId> particles(particleCount);
     int width = (int)sqrt(particleCount);
     for (int i = 0; i < particleCount; i++)
@@ -150,8 +150,8 @@ int main(int argc, char** argv)
         auto& transform = renderer.m_ecs.add_component<Transform>(id);
         transform.scale = Vector3(0.2f);
 
-        int x = i % (width);
-        int y = (int)i / width;
+        int x = i % (width) - width / 2;
+        int y = (int)i / width - width / 2;
         part.position = { x, y };
 
         particles[i] = id;

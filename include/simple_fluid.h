@@ -5,6 +5,7 @@
 #include "nve_types.h"
 #include "ecs.h"
 #include "model-handler.h"
+#include "profiler.h"
 
 struct Particle
 {
@@ -16,6 +17,8 @@ struct Particle
 class SimpleFluid : System<Particle, Transform>
 {
 public:
+	SimpleFluid();
+
 	float m_smoothingRadius = 3.f;
 	float m_targetDensity = 2.f;
 	float m_pressureMultiplier = 100.f;
@@ -24,8 +27,11 @@ public:
 	void awake(EntityId) override;
 	void update(float dt) override;
 	void update(float dt, EntityId id) override;
+	void gui_show_system() override;
 
 private:
+	std::vector<Particle*> m_particles;
+
 	float influence(float rad, float d);
 	float influence_slope(float rad, float d);
 	float influence_volume(float rad);
@@ -37,7 +43,18 @@ private:
 	size_t m_pIndex = 0;
 	std::vector<float> m_densities;
 
+	// spatial hashing
+	std::vector<std::vector<Particle*>> m_buckets;
+	const float m_bucketSize = 1.f;
+	uint32_t m_yBuckets;
+	void create_buckets();
+	uint32_t pos_to_bucket_index(Vector2 pos);
+	std::vector<Particle*>& bucket_at(Vector2 pos);
+	std::vector<Particle*> surrounding_buckets(Vector2 pos);
+
 	// Helper Functions
 	Particle& get_particle(EntityId id);
-	void bounds_check(Particle& particle);
+	bool bounds_check(Particle& particle);
+
+	Profiler m_profiler;
 };

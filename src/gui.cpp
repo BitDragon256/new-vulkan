@@ -63,6 +63,9 @@ void GUIManager::draw_system_info()
 	{
 		if (ImGui::TreeNode(system->type_name()))
 		{
+			ImGui::SeparatorText("Info");
+			system->gui_show_system();
+
 			ImGui::SeparatorText("Entities");
 
 			const auto& entities = system->m_entities;

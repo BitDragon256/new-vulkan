@@ -8,10 +8,12 @@ void Profiler::start_measure(std::string name)
 {
 	save_time(name);
 }
-float Profiler::end_measure(std::string name)
+float Profiler::end_measure(std::string name, bool print)
 {
 	float time = measure(name);
 	m_measures.erase(name);
+	if (print)
+		print_last_measure(name);
 	return time;
 }
 float Profiler::passing_measure(std::string name)
