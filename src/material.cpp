@@ -392,6 +392,20 @@ MaterialSSBO& MaterialSSBO::operator= (const Material& mat)
 
 	return *this;
 }
+MaterialSSBO& MaterialSSBO::operator= (const MaterialSSBO& other)
+{
+	m_ambient = other.m_ambient;
+	m_diffuse = other.m_diffuse;
+	m_specular = other.m_specular;
+	m_transmittance = other.m_transmittance;
+	m_emission = other.m_emission;
+	m_specularHighlight = other.m_specularHighlight;
+	m_refraction = other.m_refraction;
+	m_dissolve = other.m_dissolve;
+	m_textureIndex = other.m_textureIndex;
+
+	return *this;
+}
 
 Material Material::default_lit()
 {

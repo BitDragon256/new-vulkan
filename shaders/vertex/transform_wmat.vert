@@ -112,11 +112,12 @@ void main()
     vec3 vertexPos = even_faster_rot(inPosition * transform.scale, transform.rotation) + transform.position;
     gl_Position = CPC.projView * vec4(vertexPos, 1.0);
 
-    outMat = convert_mat(MaterialBufferObjects.mats[transform.material + inMaterial]);
+    Material mat = MaterialBufferObjects.mats[transform.material + inMaterial];
+    outMat = convert_mat(mat);
     outPos = vertexPos;
     outNormal = inNormal.xzy;
     outUV = uv;
-    outTex = MaterialBufferObjects.mats[inMaterial].texIndex;
+    outTex = mat.texIndex;
 
     //int vertI = gl_InstanceIndex * 4 + gl_VertexIndex;
     //outMat.diffuse = vec3(float(vertI) / MaxIndex, 0, 0);

@@ -45,7 +45,6 @@ void main()
     
     outColor = texColor;
 
-    outColor = vec4(inMat.diffuse, 1);
-    //if (outColor.w < 1)
-    //    discard;
+    if (outColor.w < 1)
+        discard;
 }

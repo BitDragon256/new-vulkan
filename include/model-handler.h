@@ -16,7 +16,7 @@ struct Transform
 	alignas(16) Vector3 position;
 	alignas(16) Vector3 scale;
 	alignas(16) Quaternion rotation;
-	alignas(16) uint32_t materialStart;
+	uint32_t materialStart;
 
 	Transform();
 	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
@@ -224,7 +224,7 @@ protected:
 
 private:
 
-	void add_model(StaticModel& model, Transform transform);
+	void add_model(StaticModel& model, Transform& transform);
 };
 
 typedef uint64_t DynamicModelHashSum;

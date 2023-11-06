@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     SimpleFluid simpleFluid;
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
 
-    const uint32_t particleCount = 1;
+    const uint32_t particleCount = 100;
     std::vector<EntityId> particles(particleCount);
     int width = (int)sqrt(particleCount);
     for (int i = 0; i < particleCount; i++)
@@ -160,37 +160,48 @@ int main(int argc, char** argv)
     DynamicModel quad;
     quad.load_mesh("/default_models/quad/quad.obj");
     quad.m_children[0].material.m_diffuse = { 1, 1, 1 };
-    {
-        EntityId top, bottom, left, right;
-        top = renderer.m_ecs.create_entity();
-        bottom = renderer.m_ecs.create_entity();
-        left = renderer.m_ecs.create_entity();
-        right = renderer.m_ecs.create_entity();
 
-        renderer.m_ecs.add_component<DynamicModel>(top) = quad;
-        renderer.m_ecs.add_component<DynamicModel>(bottom) = quad;
-        renderer.m_ecs.add_component<DynamicModel>(left) = quad;
-        renderer.m_ecs.add_component<DynamicModel>(right) = quad;
+    EntityId top, bottom, left, right;
+    top = renderer.m_ecs.create_entity();
+    bottom = renderer.m_ecs.create_entity();
+    left = renderer.m_ecs.create_entity();
+    right = renderer.m_ecs.create_entity();
 
-        Transform& tTop = renderer.m_ecs.add_component<Transform>(top);
-        Transform& tBottom = renderer.m_ecs.add_component<Transform>(bottom);
-        tTop.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
-        tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
-        tTop.position.y = simpleFluid.m_maxBounds.y + 0.5f;
-        tBottom.position.y = simpleFluid.m_minBounds.y - 0.5f;
+    renderer.m_ecs.add_component<DynamicModel>(top) = quad;
+    renderer.m_ecs.add_component<DynamicModel>(bottom) = quad;
+    renderer.m_ecs.add_component<DynamicModel>(left) = quad;
+    renderer.m_ecs.add_component<DynamicModel>(right) = quad;
 
-        Transform& tLeft = renderer.m_ecs.add_component<Transform>(left);
-        Transform& tRight = renderer.m_ecs.add_component<Transform>(right);
-        tLeft.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
-        tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
-        tLeft.position.x = simpleFluid.m_minBounds.x - 0.5f;
-        tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
-    }
+    Transform& tTop = renderer.m_ecs.add_component<Transform>(top);
+    Transform& tBottom = renderer.m_ecs.add_component<Transform>(bottom);
+    Transform& tLeft = renderer.m_ecs.add_component<Transform>(left);
+    Transform& tRight = renderer.m_ecs.add_component<Transform>(right);
+
+    tTop.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
+    tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
+    tTop.position.y = simpleFluid.m_maxBounds.y + 0.5f;
+    tBottom.position.y = simpleFluid.m_minBounds.y - 0.5f;
+
+    tLeft.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
+    tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
+    tLeft.position.x = simpleFluid.m_minBounds.x - 0.5f;
+    tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
 
     bool updateECS = true;
     bool running = true;
     while (running)
     {
+
+        tTop.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
+        tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
+        tTop.position.y = simpleFluid.m_maxBounds.y + 0.5f;
+        tBottom.position.y = simpleFluid.m_minBounds.y - 0.5f;
+
+        tLeft.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
+        tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
+        tLeft.position.x = simpleFluid.m_minBounds.x - 0.5f;
+        tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
+
         cart_camera_movement(renderer, camera);
 
         renderer.gui_begin();

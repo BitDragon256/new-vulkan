@@ -119,4 +119,5 @@ struct MaterialSSBO
 	uint32_t m_textureIndex;
 
 	MaterialSSBO& operator= (const Material& mat);
+	MaterialSSBO& operator= (const MaterialSSBO& mat);
 };

@@ -622,7 +622,7 @@ void GeometryHandler::update()
 // STATIC GEOMETRY HANDLER
 // ------------------------------------------
 
-void StaticGeometryHandler::add_model(StaticModel& model, Transform transform)
+void StaticGeometryHandler::add_model(StaticModel& model, Transform& transform)
 {
 	for (auto& mesh : model.m_children)
 	{
