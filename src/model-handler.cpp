@@ -867,15 +867,15 @@ std::vector<VkDescriptorSetLayoutBinding> DynamicGeometryHandler::other_descript
 
 DynamicModelHashSum hash_model(const DynamicModel& model)
 {
-	DynamicModelHashSum hashSum = 0;
+	DynamicModelHashSum hashSum = 263357457;
 	for (auto child : model.m_children)
 	{
 		for (auto index : child.indices)
 		{
 			if (index >= child.vertices.size())
 				continue;
-			hashSum += (child.vertices[index].pos.x + child.vertices[index].pos.y + child.vertices[index].pos.z) * index;
-			hashSum >>= 4;
+			hashSum ^= (DynamicModelHashSum) (child.vertices[index].pos.x * 23626325 + child.vertices[index].pos.y * 9738346 + child.vertices[index].pos.z * 283756898967) * index + 2355901;
+			hashSum >>= 11;
 		}
 		hashSum ^= (DynamicModelHashSum) child.material.m_shader;
 	}

@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     // Camera
 
     Camera camera;
-    camera.m_position = Vector3(0, 0, 20.f);
+    camera.m_position = Vector3(0, 0, 30.f);
     camera.m_orthographic = true;
     renderer.set_active_camera(&camera);
 
@@ -127,10 +127,6 @@ int main(int argc, char** argv)
     float deltaTime;
     auto lastTime = std::chrono::high_resolution_clock::now();
     uint32_t frame = 0;
-
-    Vector3 lightPos = { 0,0,0 };
-
-    const int testEntityCount = 1;
 
     Profiler profiler;
 
@@ -143,9 +139,9 @@ int main(int argc, char** argv)
     SimpleFluid simpleFluid;
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
 
-    const uint32_t particleCount = 200;
+    const uint32_t particleCount = 1;
     std::vector<EntityId> particles(particleCount);
-    int width = (int) sqrt(particleCount);
+    int width = (int)sqrt(particleCount);
     for (int i = 0; i < particleCount; i++)
     {
         EntityId id = renderer.m_ecs.create_entity();
@@ -155,13 +151,41 @@ int main(int argc, char** argv)
         transform.scale = Vector3(0.2f);
 
         int x = i % (width);
-        int y = (int) i / width;
+        int y = (int)i / width;
         part.position = { x, y };
 
         particles[i] = id;
     }
 
-    float colorA[3] = { 0,0,0 }, colorB[3] = { 0,0,0 };
+    DynamicModel quad;
+    quad.load_mesh("/default_models/quad/quad.obj");
+    quad.m_children[0].material.m_diffuse = { 1, 1, 1 };
+    {
+        EntityId top, bottom, left, right;
+        top = renderer.m_ecs.create_entity();
+        bottom = renderer.m_ecs.create_entity();
+        left = renderer.m_ecs.create_entity();
+        right = renderer.m_ecs.create_entity();
+
+        renderer.m_ecs.add_component<DynamicModel>(top) = quad;
+        renderer.m_ecs.add_component<DynamicModel>(bottom) = quad;
+        renderer.m_ecs.add_component<DynamicModel>(left) = quad;
+        renderer.m_ecs.add_component<DynamicModel>(right) = quad;
+
+        Transform& tTop = renderer.m_ecs.add_component<Transform>(top);
+        Transform& tBottom = renderer.m_ecs.add_component<Transform>(bottom);
+        tTop.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
+        tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
+        tTop.position.y = simpleFluid.m_maxBounds.y + 0.5f;
+        tBottom.position.y = simpleFluid.m_minBounds.y - 0.5f;
+
+        Transform& tLeft = renderer.m_ecs.add_component<Transform>(left);
+        Transform& tRight = renderer.m_ecs.add_component<Transform>(right);
+        tLeft.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
+        tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
+        tLeft.position.x = simpleFluid.m_minBounds.x - 0.5f;
+        tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
+    }
 
     bool updateECS = false;
     bool running = true;

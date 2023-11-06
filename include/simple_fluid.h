@@ -19,8 +19,8 @@ public:
 	float m_smoothingRadius = 3.f;
 	float m_targetDensity = 2.f;
 	float m_pressureMultiplier = 100.f;
-	Vector2 m_maxBounds = { 10, 20 };
-	Vector2 m_minBounds = { -10, -20 };
+	const Vector2 m_maxBounds = { 15, 15 };
+	const Vector2 m_minBounds = { -15, -15 };
 	void awake(EntityId) override;
 	void update(float dt) override;
 	void update(float dt, EntityId id) override;

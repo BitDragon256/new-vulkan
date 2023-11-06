@@ -45,8 +45,6 @@ void main()
     
     outColor = texColor;
 
-    outColor = vec4(texColor);
-
     if (outColor.w < 1)
         discard;
 }
