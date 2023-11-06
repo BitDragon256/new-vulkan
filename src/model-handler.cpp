@@ -841,7 +841,7 @@ void DynamicGeometryHandler::add_model(DynamicModel& model, Transform& transform
 	GeometryHandler::add_material(model, transform, GEOMETRY_HANDLER_INDEPENDENT_MATERIALS);
 	if (newMeshGroup)
 	{
-		GeometryHandler::add_model(model);
+		GeometryHandler::add_model(model, true);
 		DynamicModelInfo newModelInfo = {};
 		newModelInfo.hashSum = hashSum;
 		newModelInfo.instanceCount = 1;

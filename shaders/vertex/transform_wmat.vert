@@ -118,6 +118,7 @@ void main()
     outUV = uv;
     outTex = MaterialBufferObjects.mats[inMaterial].texIndex;
 
-    outMat.diffuse = vec3(float(gl_VertexIndex) / MaxIndex, 0, 0);
-    gl_Position = vec4(index_to_pos(gl_VertexIndex), 0, 1);
+    //int vertI = gl_InstanceIndex * 4 + gl_VertexIndex;
+    //outMat.diffuse = vec3(float(vertI) / MaxIndex, 0, 0);
+    //gl_Position = vec4(index_to_pos(vertI), 0, 1);
 }

@@ -410,7 +410,7 @@ NVE_RESULT Renderer::create_render_pass()
         dependency.dstSubpass = subpassIndex + 1;
         dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         subpassIndex++;
@@ -688,8 +688,8 @@ void Renderer::record_main_command_buffer(uint32_t frame)
     for (uint32_t subpass = 0; subpass < subpassCount; subpass++)
     {
         vkCmdExecuteCommands(commandBuffer, 1, &secondaryCommandBuffers[subpass]);
-        //if (subpass != subpassCount - 1)
-        //    vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+        if (subpass != subpassCount - 1)
+            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     }
 
     // -------------------------------------------
@@ -844,8 +844,6 @@ void Renderer::geometry_handler_cleanup()
 
 uint32_t Renderer::geometry_handler_subpass_count()
 {
-    return 1;
-
     auto handlers = all_geometry_handlers();
     uint32_t subpassCount = 0;
     for (auto handler : handlers)
