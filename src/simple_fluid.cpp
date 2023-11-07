@@ -49,9 +49,13 @@ void SimpleFluid::update(float dt)
 		m_profiler.start_measure("pressure force");
 #endif
 
-		//particle.velocity += pressure_force(particle) * dt;
-		particle.acc += pressure_force(particle);
+		Vector2 predictedPos = particle.position, lastPos = particle.lastPosition;
 		particle.acc += Vector2 { m_gravity, 0 };
+
+		integrate(predictedPos, lastPos, particle.acc, dt);
+
+		//particle.velocity += pressure_force(particle) * dt;
+		particle.acc += glm::clamp(pressure_force(particle, predictedPos), Vector2(-15.f), Vector2(15.f));
 
 #ifdef SIMPLE_FLUID_PROFILER
 		avgPressureForce += m_profiler.end_measure("pressure force");
@@ -64,7 +68,7 @@ void SimpleFluid::update(float dt)
 		auto& bucket = bucket_at(particle.position);
 		bucket.erase(std::find(bucket.begin(), bucket.end(), particlePtr));
 
-		integrate(particle, dt);
+		integrate(particle.position, particle.lastPosition, particle.acc, dt);
 
 		if (bounds_check(particle));
 		//	particle.position += particle.velocity * dt;
@@ -103,10 +107,10 @@ void SimpleFluid::gui_show_system()
 	ImGui::DragFloat("Total Kinetic Energy", &energy, 0);
 }
 
-Vector2 SimpleFluid::pressure_force(Particle& particle)
+Vector2 SimpleFluid::pressure_force(Particle& particle, Vector2 predictedPosition)
 {
 	Vector2 force{ 0,0 };
-	auto surroundingParticles = surrounding_buckets(particle.position);
+	auto surroundingParticles = surrounding_buckets(predictedPosition);
 	for (auto pPtr : surroundingParticles)
 	{
 		Particle& p = *pPtr;
@@ -114,7 +118,7 @@ Vector2 SimpleFluid::pressure_force(Particle& particle)
 			continue;
 
 		// this -> other
-		Vector2 dir = p.position - particle.position;
+		Vector2 dir = p.position - predictedPosition;
 		float dist = fmaxf(0.01f, glm::length(dir));
 		if (dist > m_smoothingRadius)
 			continue;
@@ -123,16 +127,16 @@ Vector2 SimpleFluid::pressure_force(Particle& particle)
 		float density = fmaxf(0.01f, m_densities[p.index]);
 		float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
 		force += sharedPressure * dir * influence_slope(m_smoothingRadius, dist) / density;
-		force -= m_collisionDamping * (particle.position - particle.lastPosition);
+		force -= m_collisionDamping * (predictedPosition - particle.position);
 	}
 
 	float density = fmaxf(0.01f, m_targetDensity * m_wallForceMultiplier);
 	float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
 
-	force += sharedPressure * Vector2{ -1, 0 } * influence_slope(m_smoothingRadius, particle.position.x - m_minBounds.x) / density;
-	force += sharedPressure * Vector2{ 1, 0 }  * influence_slope(m_smoothingRadius, m_maxBounds.x - particle.position.x) / density;
-	force += sharedPressure * Vector2{ 0, -1 } * influence_slope(m_smoothingRadius, particle.position.y - m_minBounds.y) / density;
-	force += sharedPressure * Vector2{ 0, 1 }  * influence_slope(m_smoothingRadius, m_maxBounds.y - particle.position.y) / density;
+	force += sharedPressure * Vector2{ -1, 0 } * influence_slope(m_smoothingRadius, predictedPosition.x - m_minBounds.x) / density;
+	force += sharedPressure * Vector2{ 1, 0 }  * influence_slope(m_smoothingRadius, m_maxBounds.x - predictedPosition.x) / density;
+	force += sharedPressure * Vector2{ 0, -1 } * influence_slope(m_smoothingRadius, predictedPosition.y - m_minBounds.y) / density;
+	force += sharedPressure * Vector2{ 0, 1 }  * influence_slope(m_smoothingRadius, m_maxBounds.y - predictedPosition.y) / density;
 
 	return force;
 }
@@ -189,16 +193,16 @@ float SimpleFluid::density_at(Vector2 position)
 	return density;
 }
 
-void SimpleFluid::integrate(Particle& particle, float dt)
+void SimpleFluid::integrate(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt)
 {
-	classic_verlet(particle, dt);
+	classic_verlet(position, lastPosition, acceleration, dt);
 }
-void SimpleFluid::classic_verlet(Particle& particle, float dt)
+void SimpleFluid::classic_verlet(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt)
 {
-	Vector2 nextPos = 2.f * particle.position - particle.lastPosition + 0.5f * particle.acc * dt * dt;
+	Vector2 nextPos = 2.f * position - lastPosition + 0.5f * acceleration * dt * dt;
 
-	particle.lastPosition = particle.position;
-	particle.position = nextPos;
+	lastPosition = position;
+	position = nextPos;
 }
 
 void SimpleFluid::create_buckets()

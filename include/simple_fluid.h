@@ -16,8 +16,8 @@ struct Particle
 	size_t index;
 };
 
-#define SF_BOUNDING_WIDTH 40
-#define SF_BOUNDING_HEIGHT 40
+#define SF_BOUNDING_WIDTH 16
+#define SF_BOUNDING_HEIGHT 9
 
 class SimpleFluid : System<Particle, Transform>
 {
@@ -26,11 +26,11 @@ public:
 
 	bool m_active;
 	float m_gravity = 0.0f;
-	float m_smoothingRadius = 5.f;
+	float m_smoothingRadius = .3f;
 	float m_targetDensity = 1.f;
-	float m_pressureMultiplier = 500.f;
-	float m_wallForceMultiplier = 3.f;
-	float m_collisionDamping = 1.f;
+	float m_pressureMultiplier = 5.f;
+	float m_wallForceMultiplier = 1.f;
+	float m_collisionDamping = 4.f;
 	const Vector2 m_maxBounds = { SF_BOUNDING_HEIGHT / 2.f, SF_BOUNDING_WIDTH / 2.f };
 	const Vector2 m_minBounds = { -SF_BOUNDING_HEIGHT / 2.f, -SF_BOUNDING_WIDTH / 2.f };
 	void awake(EntityId) override;
@@ -45,7 +45,7 @@ private:
 	float influence_slope(float rad, float d);
 	float influence_volume(float rad);
 	float density_to_pressure(float density);
-	Vector2 pressure_force(Particle& particle);
+	Vector2 pressure_force(Particle& particle, Vector2 predictedPosition);
 	float wall_force(float d);
 	void cache_densities();
 	float density_at(Vector2 position);
@@ -54,12 +54,12 @@ private:
 	std::vector<float> m_densities;
 
 	// integration
-	void integrate(Particle& particle, float dt);
-	void classic_verlet(Particle& particle, float dt);
+	void integrate(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt);
+	void classic_verlet(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt);
 
 	// spatial hashing
 	std::vector<std::vector<Particle*>> m_buckets;
-	const float m_bucketSize = 1.f;
+	const float m_bucketSize = .3f;
 	uint32_t m_yBuckets;
 	void create_buckets();
 	uint32_t pos_to_bucket_index(Vector2 pos);

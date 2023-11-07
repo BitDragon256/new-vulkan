@@ -15,6 +15,7 @@ uint32_t TexturePool::add_texture(std::string tex)
 {
 	push_texture(tex);
 	push_image_info(m_textures.back().image.m_imageView);
+
 	should_reiterate_active();
 
 	return m_textures.size() - 1;

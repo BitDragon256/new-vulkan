@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     // Camera
 
     Camera camera;
-    camera.m_position = Vector3(0, 0, 40.f);
+    camera.m_position = Vector3(0, 0, 10.f);
     camera.m_orthographic = true;
     renderer.set_active_camera(&camera);
 
@@ -140,23 +140,24 @@ int main(int argc, char** argv)
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
     simpleFluid.m_active = false;
 
-    int particleCount = 1000;
+    int particleCount = 5000;
     std::vector<EntityId> particles;
 
     auto generate_particles = [particleCount, &particles, &renderer, ball]()
     {
         int width = (int)sqrt(particleCount);
+        float downScale = fminf(SF_BOUNDING_WIDTH, SF_BOUNDING_HEIGHT) / width / 1.5f;
         for (int i = particles.size(); i < particleCount; i++)
         {
             EntityId id = renderer.m_ecs.create_entity();
             auto& part = renderer.m_ecs.add_component<Particle>(id);
             renderer.m_ecs.add_component<DynamicModel>(id) = ball;
             auto& transform = renderer.m_ecs.add_component<Transform>(id);
-            transform.scale = Vector3(0.4f);
+            transform.scale = Vector3(0.05f);
 
             int x = i % (width)-width / 2;
             int y = (int)i / width - width / 2;
-            part.position = { x, y };
+            part.position = { x * downScale, y * downScale};
 
             particles.push_back(id);
         }

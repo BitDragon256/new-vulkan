@@ -579,6 +579,9 @@ void GeometryHandler::update_descriptor_set()
 
 	writes.push_back(material_buffer_descriptor_set_write());
 	writes.push_back(m_texturePool.get_descriptor_set_write(m_descriptorSet, GEOMETRY_HANDLER_TEXTURE_BINDING));
+	if (!writes.back().pImageInfo)
+		writes.pop_back();
+
 	writes.push_back(m_texturePool.get_sampler_descriptor_set_write(m_descriptorSet, GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING));
 
 	vkUpdateDescriptorSets(m_vulkanObjects.device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
