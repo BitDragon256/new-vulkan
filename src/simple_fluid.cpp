@@ -18,14 +18,23 @@ void SimpleFluid::awake(EntityId id)
 	m_particles.push_back(&particle);
 	bucket_at(particle.position).push_back(&particle);
 
+	particle.lastPosition = particle.position;
+
 	particle.index = m_pIndex;
 	m_pIndex++;
 }
 void SimpleFluid::update(float dt)
 {
+	if (!m_active)
+		return;
+
+#ifdef SIMPLE_FLUID_PROFILER
 	m_profiler.start_measure("cache densities");
+#endif
 	cache_densities();
+#ifdef SIMPLE_FLUID_PROFILER
 	m_profiler.end_measure("cache densities", true);
+#endif
 
 	float avgPressureForce{ 0 }, avgBucketMv{ 0 };
 
@@ -33,11 +42,16 @@ void SimpleFluid::update(float dt)
 	for (auto particlePtr : m_particles)
 	{
 		Particle& particle = *particlePtr;
+		particle.acc = Vector2(0);
 
 #ifdef SIMPLE_FLUID_PROFILER
 		m_profiler.start_measure("pressure force");
 #endif
-			particle.velocity += pressure_force(particle) * dt;
+
+		//particle.velocity += pressure_force(particle) * dt;
+		particle.acc += pressure_force(particle);
+		particle.acc += Vector2 { m_gravity, 0 };
+
 #ifdef SIMPLE_FLUID_PROFILER
 		avgPressureForce += m_profiler.end_measure("pressure force");
 #endif
@@ -45,12 +59,16 @@ void SimpleFluid::update(float dt)
 #ifdef SIMPLE_FLUID_PROFILER
 		m_profiler.start_measure("bucket move");
 #endif
-			auto& bucket = bucket_at(particle.position);
-			bucket.erase(std::find(bucket.begin(), bucket.end(), particlePtr));
-			particle.position += particle.velocity * dt;
-			if (bounds_check(particle))
-				particle.position += particle.velocity * dt;
-			bucket_at(particle.position).push_back(particlePtr);
+
+		auto& bucket = bucket_at(particle.position);
+		bucket.erase(std::find(bucket.begin(), bucket.end(), particlePtr));
+
+		integrate(particle, dt);
+
+		if (bounds_check(particle));
+		//	particle.position += particle.velocity * dt;
+		bucket_at(particle.position).push_back(particlePtr);
+
 #ifdef SIMPLE_FLUID_PROFILER
 		avgBucketMv += m_profiler.end_measure("bucket move");
 #endif
@@ -65,13 +83,7 @@ void SimpleFluid::update(float dt)
 }
 void SimpleFluid::update(float dt, EntityId id)
 {
-	/*Particle& particle = get_particle(id);
-
-	particle.velocity += pressure_force(particle) * dt;
-	particle.position += particle.velocity * dt;
-	bounds_check(particle);
-
-	m_ecs->get_component<Transform>(id).position = { particle.position.x, particle.position.y, 0 };*/
+	
 }
 void SimpleFluid::gui_show_system()
 {
@@ -79,7 +91,7 @@ void SimpleFluid::gui_show_system()
 	for (auto pId : m_entities)
 	{
 		auto& p = get_particle(pId);
-		energy += 0.5f * glm::dot(p.velocity, p.velocity);
+		energy += 0.5f * glm::dot(p.position - p.lastPosition, p.position - p.lastPosition);
 	}
 	ImGui::DragFloat("Total Kinetic Energy", &energy, 0);
 }
@@ -100,10 +112,17 @@ Vector2 SimpleFluid::pressure_force(Particle& particle)
 			continue;
 
 		dir = dir / dist;
-		float density = m_densities[p.index];
+		float density = fmaxf(0.01f, m_densities[p.index]);
 		float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
 		force += -sharedPressure * dir * influence_slope(m_smoothingRadius, dist) / density;
 	}
+	
+	force += Vector2 { -1, 0 } * influence_slope(m_smoothingRadius, m_minBounds.x + m_smoothingRadius - particle.position.x);
+	force += Vector2 { 1, 0 } * influence_slope(m_smoothingRadius, particle.position.x - m_maxBounds.x - m_smoothingRadius);
+
+	force += Vector2 { 0, -1 } * influence_slope(m_smoothingRadius, m_minBounds.y + m_smoothingRadius - particle.position.y);
+	force += Vector2 { 0, 1 } * influence_slope(m_smoothingRadius, particle.position.y - m_maxBounds.y - m_smoothingRadius);
+
 	return force;
 }
 float SimpleFluid::influence(float rad, float d)
@@ -149,6 +168,18 @@ float SimpleFluid::density_at(Vector2 position)
 	return density;
 }
 
+void SimpleFluid::integrate(Particle& particle, float dt)
+{
+	classic_verlet(particle, dt);
+}
+void SimpleFluid::classic_verlet(Particle& particle, float dt)
+{
+	Vector2 nextPos = 2.f * particle.position - particle.lastPosition + 0.5f * particle.acc * dt * dt;
+
+	particle.lastPosition = particle.position;
+	particle.position = nextPos;
+}
+
 void SimpleFluid::create_buckets()
 {
 	Vector2 size = m_maxBounds - m_minBounds;
@@ -192,13 +223,18 @@ bool SimpleFluid::bounds_check(Particle& particle)
 	bool changed{ false };
 	if (particle.position.x < m_minBounds.x || particle.position.x > m_maxBounds.x)
 	{
-		particle.velocity.x *= -1;
+		//particle.velocity.x *= -1;
 		changed = true;
 	}
 	if (particle.position.y < m_minBounds.y || particle.position.y > m_maxBounds.y)
 	{
-		particle.velocity.y *= -1;
+		//particle.velocity.y *= -1;
 		changed = true;
 	}
+
+	if (changed)
+		particle.lastPosition = particle.position;
+	particle.position = glm::clamp(particle.position, m_minBounds, m_maxBounds);
+
 	return changed;
 }

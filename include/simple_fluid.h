@@ -10,7 +10,9 @@
 struct Particle
 {
 	Vector2 position;
-	Vector2 velocity;
+	//Vector2 velocity;
+	Vector2 lastPosition;
+	Vector2 acc;
 	size_t index;
 };
 
@@ -19,9 +21,11 @@ class SimpleFluid : System<Particle, Transform>
 public:
 	SimpleFluid();
 
+	bool m_active;
+	float m_gravity = 0.0f;
 	float m_smoothingRadius = 3.f;
-	float m_targetDensity = 2.f;
-	float m_pressureMultiplier = 100.f;
+	float m_targetDensity = 1.f;
+	float m_pressureMultiplier = 1.f;
 	const Vector2 m_maxBounds = { 15, 15 };
 	const Vector2 m_minBounds = { -15, -15 };
 	void awake(EntityId) override;
@@ -42,6 +46,10 @@ private:
 
 	size_t m_pIndex = 0;
 	std::vector<float> m_densities;
+
+	// integration
+	void integrate(Particle& particle, float dt);
+	void classic_verlet(Particle& particle, float dt);
 
 	// spatial hashing
 	std::vector<std::vector<Particle*>> m_buckets;

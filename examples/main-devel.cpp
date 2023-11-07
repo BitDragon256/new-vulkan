@@ -138,24 +138,30 @@ int main(int argc, char** argv)
     // simple fluid
     SimpleFluid simpleFluid;
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
+    simpleFluid.m_active = false;
 
-    const uint32_t particleCount = 1000;
-    std::vector<EntityId> particles(particleCount);
-    int width = (int)sqrt(particleCount);
-    for (int i = 0; i < particleCount; i++)
+    int particleCount = 500;
+    std::vector<EntityId> particles;
+
+    auto generate_particles = [particleCount, &particles, &renderer, ball]()
     {
-        EntityId id = renderer.m_ecs.create_entity();
-        auto& part = renderer.m_ecs.add_component<Particle>(id);
-        renderer.m_ecs.add_component<DynamicModel>(id) = ball;
-        auto& transform = renderer.m_ecs.add_component<Transform>(id);
-        transform.scale = Vector3(0.2f);
+        int width = (int)sqrt(particleCount);
+        for (int i = particles.size(); i < particleCount; i++)
+        {
+            EntityId id = renderer.m_ecs.create_entity();
+            auto& part = renderer.m_ecs.add_component<Particle>(id);
+            renderer.m_ecs.add_component<DynamicModel>(id) = ball;
+            auto& transform = renderer.m_ecs.add_component<Transform>(id);
+            transform.scale = Vector3(0.2f);
 
-        int x = i % (width) - width / 2;
-        int y = (int)i / width - width / 2;
-        part.position = { x, y };
+            int x = i % (width)-width / 2;
+            int y = (int)i / width - width / 2;
+            part.position = { x, y };
 
-        particles[i] = id;
-    }
+            particles.push_back(id);
+        }
+    };
+    generate_particles();
 
     DynamicModel quad;
     quad.load_mesh("/default_models/quad/quad.obj");
@@ -191,7 +197,6 @@ int main(int argc, char** argv)
     bool running = true;
     while (running)
     {
-
         tTop.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
         tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
         tTop.position.y = simpleFluid.m_maxBounds.y + 0.5f;
@@ -224,6 +229,12 @@ int main(int argc, char** argv)
         ImGui::DragFloat("Target Density", &simpleFluid.m_targetDensity);
         ImGui::DragFloat("Pressure Multiplier", &simpleFluid.m_pressureMultiplier, 0.1f);
         ImGui::DragFloat("Smoothing Radius", &simpleFluid.m_smoothingRadius);
+        //ImGui::DragInt("Particle Count", &particleCount);
+        ImGui::DragFloat("Gravity", &simpleFluid.m_gravity, 0.5f);
+        if (ImGui::Button("Play / Pause"))
+            simpleFluid.m_active ^= 1;
+
+        generate_particles();
 
         ImGui::SliderFloat("speed", &moveSpeed, 0.f, 0.03f);
         ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
