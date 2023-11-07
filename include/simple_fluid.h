@@ -24,8 +24,9 @@ public:
 	bool m_active;
 	float m_gravity = 0.0f;
 	float m_smoothingRadius = 3.f;
-	float m_targetDensity = 1.f;
-	float m_pressureMultiplier = 1.f;
+	float m_targetDensity = 2.f;
+	float m_pressureMultiplier = 10.f;
+	float m_wallForceMultiplier = 2.f;
 	const Vector2 m_maxBounds = { 15, 15 };
 	const Vector2 m_minBounds = { -15, -15 };
 	void awake(EntityId) override;
@@ -41,6 +42,7 @@ private:
 	float influence_volume(float rad);
 	float density_to_pressure(float density);
 	Vector2 pressure_force(Particle& particle);
+	float wall_force(float d);
 	void cache_densities();
 	float density_at(Vector2 position);
 

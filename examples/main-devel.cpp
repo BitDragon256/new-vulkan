@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
     simpleFluid.m_active = false;
 
-    int particleCount = 500;
+    int particleCount = 100;
     std::vector<EntityId> particles;
 
     auto generate_particles = [particleCount, &particles, &renderer, ball]()
@@ -231,6 +231,7 @@ int main(int argc, char** argv)
         ImGui::DragFloat("Smoothing Radius", &simpleFluid.m_smoothingRadius);
         //ImGui::DragInt("Particle Count", &particleCount);
         ImGui::DragFloat("Gravity", &simpleFluid.m_gravity, 0.5f);
+        ImGui::DragFloat("Wall Force", &simpleFluid.m_wallForceMultiplier, 0.2f);
         if (ImGui::Button("Play / Pause"))
             simpleFluid.m_active ^= 1;
 

@@ -117,13 +117,21 @@ Vector2 SimpleFluid::pressure_force(Particle& particle)
 		force += -sharedPressure * dir * influence_slope(m_smoothingRadius, dist) / density;
 	}
 	
-	force += Vector2 { -1, 0 } * influence_slope(m_smoothingRadius, m_minBounds.x + m_smoothingRadius - particle.position.x);
-	force += Vector2 { 1, 0 } * influence_slope(m_smoothingRadius, particle.position.x - m_maxBounds.x - m_smoothingRadius);
+	force += Vector2 { -1, 0 } * wall_force(particle.position.x - m_minBounds.x) * m_wallForceMultiplier;
+	force += Vector2 { 1, 0 } * wall_force(m_maxBounds.x - particle.position.x) * m_wallForceMultiplier;
 
-	force += Vector2 { 0, -1 } * influence_slope(m_smoothingRadius, m_minBounds.y + m_smoothingRadius - particle.position.y);
-	force += Vector2 { 0, 1 } * influence_slope(m_smoothingRadius, particle.position.y - m_maxBounds.y - m_smoothingRadius);
+	force += Vector2 { 0, -1 } * wall_force(particle.position.y - m_minBounds.y) * m_wallForceMultiplier;
+	force += Vector2 { 0, 1 } * wall_force(m_maxBounds.y - particle.position.y) * m_wallForceMultiplier;
 
 	return force;
+}
+float SimpleFluid::wall_force(float d)
+{
+	if (d > m_smoothingRadius)
+		return 0;
+
+	// orig func: powf(m_smoothingRadius - d, 4.f) / (2.f * PI * powf(m_smoothingRadius, 5.f) / 5.f)
+	return -20.f * powf(m_smoothingRadius - d, 3.f) / (2.f * PI * powf(m_smoothingRadius, 5.f));
 }
 float SimpleFluid::influence(float rad, float d)
 {
@@ -135,7 +143,7 @@ float SimpleFluid::influence_slope(float rad, float d)
 {
 	if (d > rad)
 		return 0;
-	return -6.f * d * powf(rad - d, 2.f) / (PI * powf(rad, 4.f));
+	return -3.f * d * powf(rad - d, 2.f) / influence_volume(rad);
 }
 float SimpleFluid::influence_volume(float rad)
 {
@@ -143,7 +151,7 @@ float SimpleFluid::influence_volume(float rad)
 }
 float SimpleFluid::density_to_pressure(float density)
 {
-	return (density - m_targetDensity) * m_pressureMultiplier;
+	return -(density - m_targetDensity) * m_pressureMultiplier;
 }
 
 void SimpleFluid::cache_densities()
