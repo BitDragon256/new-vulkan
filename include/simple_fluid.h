@@ -16,6 +16,9 @@ struct Particle
 	size_t index;
 };
 
+#define SF_BOUNDING_WIDTH 40
+#define SF_BOUNDING_HEIGHT 40
+
 class SimpleFluid : System<Particle, Transform>
 {
 public:
@@ -23,12 +26,13 @@ public:
 
 	bool m_active;
 	float m_gravity = 0.0f;
-	float m_smoothingRadius = 3.f;
-	float m_targetDensity = 2.f;
-	float m_pressureMultiplier = 10.f;
-	float m_wallForceMultiplier = 2.f;
-	const Vector2 m_maxBounds = { 15, 15 };
-	const Vector2 m_minBounds = { -15, -15 };
+	float m_smoothingRadius = 5.f;
+	float m_targetDensity = 1.f;
+	float m_pressureMultiplier = 500.f;
+	float m_wallForceMultiplier = 3.f;
+	float m_collisionDamping = 1.f;
+	const Vector2 m_maxBounds = { SF_BOUNDING_HEIGHT / 2.f, SF_BOUNDING_WIDTH / 2.f };
+	const Vector2 m_minBounds = { -SF_BOUNDING_HEIGHT / 2.f, -SF_BOUNDING_WIDTH / 2.f };
 	void awake(EntityId) override;
 	void update(float dt) override;
 	void update(float dt, EntityId id) override;

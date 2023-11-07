@@ -34,16 +34,14 @@ layout(set = 0, binding = 2) uniform sampler samp;
 
 void main()
 {
-    vec4 texColor;
+    vec4 texColor = vec4(1);
     if (inTex != NO_TEX)
         texColor = texture(
             sampler2D(textures[inTex], samp),
             vec2(inUV.x, 1 - inUV.y)
         );
-    else
-        texColor = vec4(inMat.diffuse, 1);
     
-    outColor = texColor;
+    outColor = texColor * vec4(inMat.diffuse, 1);
 
     if (outColor.w < 1)
         discard;

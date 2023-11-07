@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     // Camera
 
     Camera camera;
-    camera.m_position = Vector3(0, 0, 30.f);
+    camera.m_position = Vector3(0, 0, 40.f);
     camera.m_orthographic = true;
     renderer.set_active_camera(&camera);
 
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
     simpleFluid.m_active = false;
 
-    int particleCount = 100;
+    int particleCount = 1000;
     std::vector<EntityId> particles;
 
     auto generate_particles = [particleCount, &particles, &renderer, ball]()
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
             auto& part = renderer.m_ecs.add_component<Particle>(id);
             renderer.m_ecs.add_component<DynamicModel>(id) = ball;
             auto& transform = renderer.m_ecs.add_component<Transform>(id);
-            transform.scale = Vector3(0.2f);
+            transform.scale = Vector3(0.4f);
 
             int x = i % (width)-width / 2;
             int y = (int)i / width - width / 2;
@@ -232,6 +232,7 @@ int main(int argc, char** argv)
         //ImGui::DragInt("Particle Count", &particleCount);
         ImGui::DragFloat("Gravity", &simpleFluid.m_gravity, 0.5f);
         ImGui::DragFloat("Wall Force", &simpleFluid.m_wallForceMultiplier, 0.2f);
+        ImGui::DragFloat("Collision Damping", &simpleFluid.m_collisionDamping);
         if (ImGui::Button("Play / Pause"))
             simpleFluid.m_active ^= 1;
 
