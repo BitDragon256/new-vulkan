@@ -8,15 +8,15 @@
 #define SIMPLE_FLUID_PROFILER
 #undef SIMPLE_FLUID_PROFILER
 
-SimpleFluid::SimpleFluid()
+SimpleFluid::SimpleFluid() : m_pIndex{ 0 }
 {
 	create_buckets();
 }
 void SimpleFluid::awake(EntityId id)
 {
 	Particle& particle = get_particle(id);
-	m_particles.push_back(&particle);
-	bucket_at(particle.position).push_back(&particle);
+	m_particles.emplace_back(&particle);
+	bucket_at(particle.position).emplace_back(&particle);
 
 	particle.lastPosition = particle.position;
 
@@ -32,22 +32,45 @@ void SimpleFluid::update(float dt)
 	m_profiler.start_measure("cache densities");
 #endif
 	cache_densities();
-#ifdef SIMPLE_FLUID_PROFILER
-	m_profiler.end_measure("cache densities", true);
-#endif
 
-	float avgPressureForce{ 0 }, avgBucketMv{ 0 };
+	// Threading force calculations
+
+	size_t threadCount = std::fmin(std::ceil((float) m_particles.size() / m_particlesPerThread), std::thread::hardware_concurrency());
+	m_threads.resize(threadCount);
+	size_t deltaIndex = std::ceil((float) m_particles.size() / threadCount);
+	for (size_t i = 0; i < threadCount; i++)
+	{
+		m_threads[i] = std::thread(&SimpleFluid::calc_forces, this, i * deltaIndex, (i + 1) * deltaIndex, dt);
+	}
+	for (size_t i = 0; i < threadCount; i++)
+	{
+		m_threads[i].join();
+	}
 
 	size_t i = 0;
-	#pragma omp parallel for
 	for (auto particlePtr : m_particles)
 	{
+		auto& bucket = bucket_at(particlePtr->position);
+		bucket.erase(std::find(bucket.begin(), bucket.end(), particlePtr));
+
+		integrate(particlePtr->position, particlePtr->lastPosition, particlePtr->acc, dt);
+
+		if (bounds_check(*particlePtr));
+		//	particle.position += particle.velocity * dt;
+
+		bucket_at(particlePtr->position).push_back(particlePtr);
+
+		// sync pos with transform
+		m_ecs->get_component<Transform>(m_entities[i++]).position = { particlePtr->position.x, particlePtr->position.y, 0 };
+	}
+}
+void SimpleFluid::calc_forces(size_t start, size_t end, float dt)
+{
+	for (size_t i = start; i < end && i < m_particles.size(); i++)
+	{
+		auto particlePtr = m_particles[i];
 		Particle& particle = *particlePtr;
 		particle.acc = Vector2(0);
-
-#ifdef SIMPLE_FLUID_PROFILER
-		m_profiler.start_measure("pressure force");
-#endif
 
 		Vector2 predictedPos = particle.position, lastPos = particle.lastPosition;
 		particle.acc += Vector2 { m_gravity, 0 };
@@ -56,35 +79,7 @@ void SimpleFluid::update(float dt)
 
 		//particle.velocity += pressure_force(particle) * dt;
 		particle.acc += glm::clamp(pressure_force(particle, predictedPos), Vector2(-15.f), Vector2(15.f));
-
-#ifdef SIMPLE_FLUID_PROFILER
-		avgPressureForce += m_profiler.end_measure("pressure force");
-#endif
-
-#ifdef SIMPLE_FLUID_PROFILER
-		m_profiler.start_measure("bucket move");
-#endif
-
-		auto& bucket = bucket_at(particle.position);
-		bucket.erase(std::find(bucket.begin(), bucket.end(), particlePtr));
-
-		integrate(particle.position, particle.lastPosition, particle.acc, dt);
-
-		if (bounds_check(particle));
-		//	particle.position += particle.velocity * dt;
-		bucket_at(particle.position).push_back(particlePtr);
-
-#ifdef SIMPLE_FLUID_PROFILER
-		avgBucketMv += m_profiler.end_measure("bucket move");
-#endif
-
-		// sync pos with transform
-		m_ecs->get_component<Transform>(m_entities[i++]).position = {particle.position.x, particle.position.y, 0};
 	}
-
-#ifdef SIMPLE_FLUID_PROFILER
-	std::cout << "Avg: pressure force: " << avgPressureForce / m_particles.size() << " bucket move: " << avgBucketMv << "\n";
-#endif
 }
 void SimpleFluid::update(float dt, EntityId id)
 {
@@ -233,7 +228,9 @@ std::vector<Particle*> SimpleFluid::surrounding_buckets(Vector2 pos)
 		for (float y = -d; y < d+1; y++)
 		{
 			auto& bucket = bucket_at(pos + Vector2{ x * m_bucketSize, y * m_bucketSize });
-			buckets.insert(buckets.end(), bucket.begin(), bucket.end());
+			// buckets.insert(buckets.end(), bucket.begin(), bucket.end());
+			for (auto& el : bucket)
+				buckets.push_back(el);
 		}
 	}
 	return buckets;

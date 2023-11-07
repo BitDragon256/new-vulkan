@@ -143,6 +143,7 @@ public:
 	void create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
 	void set_pipelines(std::vector<VkPipeline>& pipelines);
 
+	GeometryHandler();
 	void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
 	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
 
@@ -188,6 +189,7 @@ private:
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
 
+	uint32_t m_subpassCount;
 	std::vector<PipelineCreationData> m_pipelineCreationData;
 
 	bool reloadMeshBuffers;

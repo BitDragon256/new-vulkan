@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <thread>
 
 #include "nve_types.h"
 #include "ecs.h"
@@ -50,6 +51,9 @@ private:
 	void cache_densities();
 	float density_at(Vector2 position);
 
+	// simulation
+	void calc_forces(size_t start, size_t end, float dt);
+
 	size_t m_pIndex = 0;
 	std::vector<float> m_densities;
 
@@ -71,4 +75,8 @@ private:
 	bool bounds_check(Particle& particle);
 
 	Profiler m_profiler;
+
+	// Multi-Threading
+	std::vector<std::thread> m_threads;
+	const uint32_t m_particlesPerThread = 500;
 };

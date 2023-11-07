@@ -211,12 +211,16 @@ void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelin
 // GEOMETRY HANDLER
 // ------------------------------------------
 
+GeometryHandler::GeometryHandler() : m_subpassCount{ 1 }
+{}
+
 void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager)
 {
 	m_vulkanObjects = vulkanObjects;
 	reloadMeshBuffers = true;
 
 	m_rendererPipelinesCreated = false;
+	m_subpassCount = 0;
 
 	BufferConfig matBufConf = default_buffer_config();
 	matBufConf.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -331,6 +335,7 @@ void GeometryHandler::create_pipeline_create_infos(std::vector<VkGraphicsPipelin
 		subpass++;
 	}
 
+	m_subpassCount = m_meshGroups.size();
 	m_rendererPipelinesCreated = true;
 }
 void GeometryHandler::set_pipelines(std::vector<VkPipeline>& pipelines)
@@ -394,7 +399,8 @@ void GeometryHandler::create_pipeline(size_t meshGroupIndex)
 {
 	m_pipelineCreationData.push_back({});
 
-	uint32_t subpass = m_vulkanObjects.firstSubpass;
+	uint32_t subpass = m_vulkanObjects.firstSubpass + m_subpassCount;
+	m_subpassCount++;
 	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
 
 	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
@@ -494,7 +500,7 @@ BufferConfig GeometryHandler::default_buffer_config()
 
 uint32_t GeometryHandler::subpass_count()
 {
-	return 1;
+	return m_subpassCount;
 }
 
 VkWriteDescriptorSet GeometryHandler::material_buffer_descriptor_set_write()

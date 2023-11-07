@@ -358,6 +358,9 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 }
 NVE_RESULT Renderer::create_render_pass()
 {
+    if (m_renderPass != VK_NULL_HANDLE && m_renderPass != (VkRenderPass) 0xcccccccccccccccc)
+        vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+
     // color attachment
 
     VkAttachmentDescription colorAttachment = {};
@@ -609,6 +612,8 @@ void Renderer::create_geometry_pipelines()
 
         geometryHandler->set_pipelines(pipelines);
     }
+
+    m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
 }
 std::vector<GeometryHandler*> Renderer::all_geometry_handlers()
 {
@@ -748,6 +753,13 @@ NVE_RESULT Renderer::draw_frame()
     // Wait for the previous frame to finish
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
     vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
+
+    // recreate render pass if needed
+    if (m_lastGeometryHandlerSubpassCount != geometry_handler_subpass_count())
+    {
+        create_render_pass();
+        m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
+    }
 
     // Acquire an image from the swap chain
     uint32_t imageIndex;

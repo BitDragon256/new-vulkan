@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
     simpleFluid.m_active = false;
 
-    int particleCount = 5000;
+    int particleCount = 0;
     std::vector<EntityId> particles;
 
     auto generate_particles = [particleCount, &particles, &renderer, ball]()
@@ -215,6 +215,30 @@ int main(int argc, char** argv)
         renderer.draw_engine_gui();
 
         ImGui::Begin("General");
+
+        // -----------------------------------------------
+        // PARTICLE SPAWNING
+        // -----------------------------------------------
+        if (ImGui::Button("Create Particles"))
+        {
+            int width = 20;
+            int newParticleCount = width * width;
+            float downScale = fminf(SF_BOUNDING_WIDTH, SF_BOUNDING_HEIGHT) / width / 1.5f;
+            for (int i = 0; i < newParticleCount; i++)
+            {
+                EntityId id = renderer.m_ecs.create_entity();
+                auto& part = renderer.m_ecs.add_component<Particle>(id);
+                renderer.m_ecs.add_component<DynamicModel>(id) = ball;
+                auto& transform = renderer.m_ecs.add_component<Transform>(id);
+                transform.scale = Vector3(0.05f);
+
+                int x = i % (width)-width / 2;
+                int y = (int)i / width - width / 2;
+                part.position = { x * downScale, y * downScale };
+
+                particles.push_back(id);
+            }
+        }
 
         if (frame >= fps / 2)
         {
