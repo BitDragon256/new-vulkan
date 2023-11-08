@@ -8,6 +8,9 @@
 #define SIMPLE_FLUID_PROFILER
 #undef SIMPLE_FLUID_PROFILER
 
+#define SIMPLE_FLUID_THREADING
+#undef SIMPLE_FLUID_THREADING
+
 SimpleFluid::SimpleFluid() : m_pIndex{ 0 }
 {
 	create_buckets();
@@ -35,6 +38,7 @@ void SimpleFluid::update(float dt)
 
 	// Threading force calculations
 
+#ifdef SIMPLE_FLUID_THREADING
 	size_t threadCount = std::fmin(std::ceil((float) m_particles.size() / m_particlesPerThread), std::thread::hardware_concurrency());
 	m_threads.resize(threadCount);
 	size_t deltaIndex = std::ceil((float) m_particles.size() / threadCount);
@@ -46,6 +50,10 @@ void SimpleFluid::update(float dt)
 	{
 		m_threads[i].join();
 	}
+#else
+	calc_forces(0, m_particles.size(), dt);
+#endif
+
 
 	size_t i = 0;
 	for (auto particlePtr : m_particles)

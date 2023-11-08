@@ -211,6 +211,7 @@ void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelin
 // GEOMETRY HANDLER
 // ------------------------------------------
 
+std::set<GraphicsShader*> GeometryHandler::s_destroyedShaders = std::set<GraphicsShader*>();
 GeometryHandler::GeometryHandler() : m_subpassCount{ 0 }
 {}
 
@@ -457,6 +458,9 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		if (!meshGroup || forceNewMeshGroup) // no group found or a new group must be created
 			meshGroup = push_mesh_group(mesh.material.m_shader);
 
+		if (s_destroyedShaders.contains(meshGroup->shader))
+			s_destroyedShaders.erase(meshGroup->shader);
+
 		// save mesh
 		m_meshes.push_back(MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index });
 		append_vector(meshGroup->vertices, mesh.vertices);
@@ -619,9 +623,13 @@ void GeometryHandler::cleanup()
 
 		vkFreeCommandBuffers(m_vulkanObjects.device, m_vulkanObjects.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 
-		meshGroup.shader->fragment.destroy();
-		meshGroup.shader->vertex.destroy();
-		free(meshGroup.shader);
+		if (meshGroup.shader && !s_destroyedShaders.contains(meshGroup.shader))
+		{
+			meshGroup.shader->fragment.destroy();
+			meshGroup.shader->vertex.destroy();
+			s_destroyedShaders.insert(meshGroup.shader);
+			free(meshGroup.shader);
+		}
 	}
 
 	m_materialBuffer.destroy();

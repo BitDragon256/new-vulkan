@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
@@ -206,6 +207,8 @@ private:
 	void update_descriptor_set();
 
 	TexturePool m_texturePool;
+
+	static std::set<GraphicsShader*> s_destroyedShaders;
 };
 
 struct StaticModel : Model

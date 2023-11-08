@@ -314,10 +314,14 @@ void Shader::load_shader(std::string file)
 {
 	m_file = file;
 	m_module = create_shader_module(file, s_device);
+	m_destroyed = false;
 }
 void Shader::destroy()
 {
+	if (m_destroyed)
+		return;
 	vkDestroyShaderModule(s_device, m_module, nullptr);
+	m_destroyed = true;
 }
 
 bool Shader::operator==(const Shader& other) const

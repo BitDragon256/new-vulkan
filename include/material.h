@@ -64,6 +64,7 @@ public:
 	static VkDevice s_device;
 private:
 	std::string m_file;
+	bool m_destroyed;
 };
 
 struct GraphicsShader
