@@ -46,6 +46,8 @@ typedef struct Vertex
 	bool operator<(const Vertex& other);
 } Vertex;
 
+#define NULL_VERTEX Vertex{ VECTOR_NULL, VECTOR_NULL, VECTOR_NULL, Vector2(0), 0 }
+
 struct CameraPushConstant
 {
 	glm::mat4 projView;
@@ -60,6 +62,8 @@ struct CameraPushConstant
 #define VECTOR_DOWN Vector3(0, 0, -1)
 #define VECTOR_BACK Vector3(-1, 0, 0)
 #define VECTOR_LEFT Vector3(0, -1, 0)
+
+#define VECTOR_NULL Vector3(0)
 
 #define PI 3.14159265f
 

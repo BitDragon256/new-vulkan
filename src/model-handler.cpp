@@ -211,7 +211,7 @@ void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelin
 // GEOMETRY HANDLER
 // ------------------------------------------
 
-GeometryHandler::GeometryHandler() : m_subpassCount{ 1 }
+GeometryHandler::GeometryHandler() : m_subpassCount{ 0 }
 {}
 
 void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager)
@@ -237,6 +237,10 @@ void GeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffer
 {
 	m_vulkanObjects.framebuffers = framebuffers;
 	m_vulkanObjects.swapchainExtent = swapchainExtent;
+}
+void GeometryHandler::set_first_subpass(uint32_t subpass)
+{
+	m_vulkanObjects.firstSubpass = subpass;
 }
 
 MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
@@ -265,8 +269,15 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
 {
 	m_meshGroups.push_back(MeshGroup {});
 	auto& meshGroup = m_meshGroups.back();
-	meshGroup.shader.set_default_shader();
-	shader = &meshGroup.shader;
+	if (!shader)
+	{
+		meshGroup.shader.set_default_shader();
+		shader = &meshGroup.shader;
+	}
+	else
+	{
+		meshGroup.shader = *shader;
+	}
 
 	BufferConfig config = default_buffer_config();
 	config.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -340,6 +351,8 @@ void GeometryHandler::create_pipeline_create_infos(std::vector<VkGraphicsPipelin
 }
 void GeometryHandler::set_pipelines(std::vector<VkPipeline>& pipelines)
 {
+	for (size_t i = 0; i < m_meshGroups.size(); i++)
+		vkDestroyPipeline(m_vulkanObjects.device, m_meshGroups[i].pipeline, nullptr);
 	for (size_t i = 0; i < pipelines.size(); i++)
 		m_meshGroups[i].pipeline = pipelines[i];
 }
@@ -362,7 +375,7 @@ VkGraphicsPipelineCreateInfo GeometryHandler::create_pipeline_create_info(uint32
 
 	// ---------------------------------------
 
-	graphicsPipelineCI.renderPass = m_vulkanObjects.renderPass;
+	graphicsPipelineCI.renderPass = *m_vulkanObjects.renderPass;
 	graphicsPipelineCI.subpass = subpass;
 	graphicsPipelineCI.basePipelineHandle = VK_NULL_HANDLE;
 	graphicsPipelineCI.basePipelineIndex = -1;
@@ -631,6 +644,29 @@ void GeometryHandler::update()
 // STATIC GEOMETRY HANDLER
 // ------------------------------------------
 
+StaticGeometryHandler::StaticGeometryHandler()
+{
+	m_subpassCount = 1;
+}
+void StaticGeometryHandler::load_dummy_model()
+{
+	StaticMesh mesh;
+	mesh.vertices = { NULL_VERTEX, NULL_VERTEX, NULL_VERTEX };
+	mesh.indices = { 0, 1, 2 };
+	mesh.material.m_shader = new GraphicsShader();
+	mesh.material.m_shader->fragment.load_shader("fragments/unlit.frag.spv");
+	mesh.material.m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
+
+	m_dummyModel.m_children.push_back(mesh);
+	Transform transform;
+	add_model(m_dummyModel, transform);
+	free(mesh.material.m_shader);
+}
+void StaticGeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* gui)
+{
+	GeometryHandler::initialize(vulkanObjects, gui);
+	load_dummy_model();
+}
 void StaticGeometryHandler::add_model(StaticModel& model, Transform& transform)
 {
 	for (auto& mesh : model.m_children)
@@ -649,7 +685,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 	// ---------------------------------------
 
 	VkCommandBufferInheritanceInfo inheritanceInfo;
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
@@ -780,7 +816,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 	// ---------------------------------------
 
 	VkCommandBufferInheritanceInfo inheritanceInfo;
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
@@ -896,7 +932,7 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 // ------------------------------------------
 
 Transform::Transform() :
-	position{ 0, 0, 0 }, scale{ 1, 1, 1 }, rotation{}
+	position{ VECTOR_NULL }, scale{ 1, 1, 1 }, rotation{}, materialStart(0)
 {}
 Transform::Transform(Vector3 position, Vector3 scale, Quaternion rotation) :
 	position{ position }, scale{ scale }, rotation{ rotation }

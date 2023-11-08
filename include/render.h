@@ -126,6 +126,8 @@ private:
 
 	void create_geometry_pipelines();
 	void initialize_geometry_handlers();
+	void set_geometry_handler_subpasses();
+	void update_geometry_handler_framebuffers();
 
 	uint32_t m_lastGeometryHandlerSubpassCount;
 	uint32_t geometry_handler_subpass_count();

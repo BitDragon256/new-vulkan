@@ -45,12 +45,13 @@ NVE_RESULT Renderer::init(RenderConfig config)
     logger::log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
     logger::log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
-    create_descriptor_pool();           logger::log("descriptor pool created");
-
-    initialize_geometry_handlers();     logger::log("geometry handlers initialized");
-
+ 
     // TODO delete this
     Shader::s_device = m_device;
+
+   create_descriptor_pool();           logger::log("descriptor pool created");
+
+    initialize_geometry_handlers();     logger::log("geometry handlers initialized");
 
     // imgui
     imgui_init();
@@ -395,6 +396,7 @@ NVE_RESULT Renderer::create_render_pass()
     depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     uint32_t subpassCount = geometry_handler_subpass_count();
+    m_lastGeometryHandlerSubpassCount = subpassCount;
     std::vector<VkSubpassDescription> subpasses(subpassCount);
 
     for (VkSubpassDescription& subpass : subpasses)
@@ -405,18 +407,22 @@ NVE_RESULT Renderer::create_render_pass()
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
     }
 
-    std::vector<VkSubpassDependency> dependencies(subpassCount - 1);
-    uint32_t subpassIndex = 0;
-    for (VkSubpassDependency& dependency : dependencies)
+    std::vector<VkSubpassDependency> dependencies;
+    if (subpassCount > 1)
     {
-        dependency.srcSubpass = subpassIndex;
-        dependency.dstSubpass = subpassIndex + 1;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependencies.resize(subpassCount - 1);
+        uint32_t subpassIndex = 0;
+        for (VkSubpassDependency& dependency : dependencies)
+        {
+            dependency.srcSubpass = subpassIndex;
+            dependency.dstSubpass = subpassIndex + 1;
+            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-        subpassIndex++;
+            subpassIndex++;
+        }
     }
 
     // dependencies.insert(dependencies.begin(), firstDependency);
@@ -442,6 +448,8 @@ NVE_RESULT Renderer::create_render_pass()
 }
 NVE_RESULT Renderer::create_framebuffers()
 {
+    for (auto& framebuffer : m_swapchainFramebuffers)
+        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
     m_swapchainFramebuffers.resize(m_swapchainImageViews.size());
 
     for (size_t i = 0; i < m_swapchainImageViews.size(); i++) {
@@ -577,11 +585,14 @@ void Renderer::initialize_geometry_handlers()
     vulkanObjects.device = m_device;
     vulkanObjects.physicalDevice = m_physicalDevice;
     vulkanObjects.commandPool = m_commandPool;
-    vulkanObjects.renderPass = m_renderPass;
+    vulkanObjects.renderPass = &m_renderPass;
     vulkanObjects.transferQueue = m_graphicsQueue;
     vulkanObjects.descriptorPool = m_descriptorPool;
 
     vulkanObjects.swapchainExtent = m_swapchainExtent;
+    vulkanObjects.framebuffers = std::vector<VkFramebuffer*>(m_swapchainFramebuffers.size());
+    //for (size_t i = 0; i < vulkanObjects.framebuffers.size(); i++)
+    //    vulkanObjects.framebuffers[i] = &m_swapchainFramebuffers[i];
     vulkanObjects.framebuffers = m_swapchainFramebuffers;
     vulkanObjects.firstSubpass = 0;
 
@@ -589,10 +600,27 @@ void Renderer::initialize_geometry_handlers()
 
     auto handlers = all_geometry_handlers();
     for (auto handler : handlers)
+    {
         handler->initialize(vulkanObjects, &m_guiManager);
+    }
+    set_geometry_handler_subpasses();
 
     m_ecs.register_system<StaticGeometryHandler>(&m_staticGeometryHandler);
     m_ecs.register_system<DynamicGeometryHandler>(&m_dynamicGeometryHandler);
+}
+void Renderer::set_geometry_handler_subpasses()
+{
+    uint32_t subpass = 0;
+    auto handlers = all_geometry_handlers();
+    for (auto handler : handlers)
+    {
+        handler->set_first_subpass(subpass);
+        subpass += handler->subpass_count();
+    }
+}
+void Renderer::update_geometry_handler_framebuffers()
+{
+    auto handlers = all_geometry_handlers();
 }
 void Renderer::create_geometry_pipelines()
 {
@@ -612,8 +640,6 @@ void Renderer::create_geometry_pipelines()
 
         geometryHandler->set_pipelines(pipelines);
     }
-
-    m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
 }
 std::vector<GeometryHandler*> Renderer::all_geometry_handlers()
 {
@@ -692,7 +718,8 @@ void Renderer::record_main_command_buffer(uint32_t frame)
     uint32_t subpassCount = secondaryCommandBuffers.size();
     for (uint32_t subpass = 0; subpass < subpassCount; subpass++)
     {
-        vkCmdExecuteCommands(commandBuffer, 1, &secondaryCommandBuffers[subpass]);
+        if (subpass < secondaryCommandBuffers.size())
+            vkCmdExecuteCommands(commandBuffer, 1, &secondaryCommandBuffers[subpass]);
         if (subpass != subpassCount - 1)
             vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     }
@@ -755,9 +782,13 @@ NVE_RESULT Renderer::draw_frame()
     vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
 
     // recreate render pass if needed
-    if (m_lastGeometryHandlerSubpassCount != geometry_handler_subpass_count())
+    if (m_lastGeometryHandlerSubpassCount < geometry_handler_subpass_count())
     {
         create_render_pass();
+        create_framebuffers();
+        create_geometry_pipelines();
+        set_geometry_handler_subpasses();
+        update_geometry_handler_framebuffers();
         m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
     }
 

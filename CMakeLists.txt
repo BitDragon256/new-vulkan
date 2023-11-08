@@ -32,6 +32,7 @@ set(
 	${SOURCE_DIR}/gui.cpp
 	${SOURCE_DIR}/flags.cpp
 	${SOURCE_DIR}/tritri.cpp
+	${SOURCE_DIR}/post_processing.cpp
 	
 	${SOURCE_DIR}/simple_fluid.cpp
 )
@@ -54,6 +55,7 @@ set(
 	${INCLUDE_DIR}/gui.h
 	${INCLUDE_DIR}/flags.h
 	${INCLUDE_DIR}/tritri.h
+	${INCLUDE_DIR}/post_processing.h
 
 	${INCLUDE_DIR}/simple_fluid.h
 )

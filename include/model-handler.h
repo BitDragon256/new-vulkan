@@ -97,7 +97,7 @@ struct GeometryHandlerVulkanObjects
 {
 	VkDevice device;
 	VkCommandPool commandPool;
-	VkRenderPass renderPass;
+	VkRenderPass* renderPass; // renderPass can change
 	uint32_t firstSubpass;
 
 	std::vector<VkFramebuffer> framebuffers;
@@ -144,8 +144,9 @@ public:
 	void set_pipelines(std::vector<VkPipeline>& pipelines);
 
 	GeometryHandler();
-	void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
+	virtual void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
 	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
+	void set_first_subpass(uint32_t subpass);
 
 	uint32_t subpass_count();
 
@@ -168,6 +169,7 @@ protected:
 	virtual std::vector<VkDescriptorSetLayoutBinding> other_descriptors() = 0;
 
 	GUIManager* m_guiManager;
+	uint32_t m_subpassCount;
 
 private:
 
@@ -189,7 +191,6 @@ private:
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
 
-	uint32_t m_subpassCount;
 	std::vector<PipelineCreationData> m_pipelineCreationData;
 
 	bool reloadMeshBuffers;
@@ -216,6 +217,8 @@ class StaticGeometryHandler : public GeometryHandler, System<StaticModel, Transf
 {
 public:
 
+	StaticGeometryHandler();
+	void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
 	void awake(EntityId entity) override;
 	void update(float dt) override;
 
@@ -226,6 +229,8 @@ protected:
 
 private:
 
+	StaticModel m_dummyModel;
+	void load_dummy_model();
 	void add_model(StaticModel& model, Transform& transform);
 };
 
