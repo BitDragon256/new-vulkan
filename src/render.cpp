@@ -590,9 +590,9 @@ void Renderer::initialize_geometry_handlers()
     vulkanObjects.descriptorPool = m_descriptorPool;
 
     vulkanObjects.swapchainExtent = m_swapchainExtent;
-    vulkanObjects.framebuffers = std::vector<VkFramebuffer*>(m_swapchainFramebuffers.size());
-    //for (size_t i = 0; i < vulkanObjects.framebuffers.size(); i++)
-    //    vulkanObjects.framebuffers[i] = &m_swapchainFramebuffers[i];
+    // vulkanObjects.framebuffers = std::vector<VkFramebuffer*>(m_swapchainFramebuffers.size());
+    // for (size_t i = 0; i < vulkanObjects.framebuffers.size(); i++)
+    //     vulkanObjects.framebuffers[i] = &m_swapchainFramebuffers[i];
     vulkanObjects.framebuffers = m_swapchainFramebuffers;
     vulkanObjects.firstSubpass = 0;
 
@@ -621,6 +621,8 @@ void Renderer::set_geometry_handler_subpasses()
 void Renderer::update_geometry_handler_framebuffers()
 {
     auto handlers = all_geometry_handlers();
+    for (auto handler : handlers)
+        handler->update_framebuffers(m_swapchainFramebuffers, m_swapchainExtent);
 }
 void Renderer::create_geometry_pipelines()
 {
@@ -786,8 +788,8 @@ NVE_RESULT Renderer::draw_frame()
     {
         create_render_pass();
         create_framebuffers();
-        create_geometry_pipelines();
         set_geometry_handler_subpasses();
+        create_geometry_pipelines();
         update_geometry_handler_framebuffers();
         m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
     }

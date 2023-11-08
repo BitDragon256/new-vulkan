@@ -250,7 +250,7 @@ MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
 		// automatically assign the first best
 		if (m_meshGroups.size() > 0)
 		{
-			shader = &m_meshGroups[0].shader;
+			shader = m_meshGroups[0].shader;
 			return &m_meshGroups[0];
 		}
 		return nullptr;
@@ -259,7 +259,7 @@ MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
 	index = 0;
 	while (index < m_meshGroups.size())
 	{
-		if (m_meshGroups[index].shader == (*shader))
+		if ((*m_meshGroups[index].shader) == (*shader))
 			return &m_meshGroups[index];
 		index++;
 	}
@@ -271,12 +271,13 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
 	auto& meshGroup = m_meshGroups.back();
 	if (!shader)
 	{
-		meshGroup.shader.set_default_shader();
-		shader = &meshGroup.shader;
+		meshGroup.shader = new GraphicsShader();
+		meshGroup.shader->set_default_shader();
+		shader = meshGroup.shader;
 	}
 	else
 	{
-		meshGroup.shader = *shader;
+		meshGroup.shader = shader;
 	}
 
 	BufferConfig config = default_buffer_config();
@@ -288,7 +289,8 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
 
 	create_group_command_buffers(meshGroup);
 	if (m_rendererPipelinesCreated)
-		create_pipeline(m_meshGroups.size() - 1);
+		//create_pipeline(m_meshGroups.size() - 1);
+		m_subpassCount++;
 
 	return &meshGroup;
 }
@@ -367,7 +369,7 @@ VkGraphicsPipelineCreateInfo GeometryHandler::create_pipeline_create_info(uint32
 
 	// ---------------------------------------
 
-	create_pipeline_shader_stages(graphicsPipelineCI, pipelineCreationData, m_meshGroups[pipelineIndex].shader);
+	create_pipeline_shader_stages(graphicsPipelineCI, pipelineCreationData, *m_meshGroups[pipelineIndex].shader);
 
 	// ---------------------------------------
 
@@ -617,8 +619,9 @@ void GeometryHandler::cleanup()
 
 		vkFreeCommandBuffers(m_vulkanObjects.device, m_vulkanObjects.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 
-		meshGroup.shader.fragment.destroy();
-		meshGroup.shader.vertex.destroy();
+		meshGroup.shader->fragment.destroy();
+		meshGroup.shader->vertex.destroy();
+		free(meshGroup.shader);
 	}
 
 	m_materialBuffer.destroy();
@@ -660,7 +663,6 @@ void StaticGeometryHandler::load_dummy_model()
 	m_dummyModel.m_children.push_back(mesh);
 	Transform transform;
 	add_model(m_dummyModel, transform);
-	free(mesh.material.m_shader);
 }
 void StaticGeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* gui)
 {

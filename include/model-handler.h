@@ -85,7 +85,7 @@ struct MeshGroup // group with individual shaders
 	Buffer<Vertex> vertexBuffer;
 	Buffer<Index> indexBuffer;
 
-	GraphicsShader shader;
+	GraphicsShader* shader;
 	
 	bool reloadMeshBuffers;
 
