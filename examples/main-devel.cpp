@@ -179,35 +179,32 @@ int main(int argc, char** argv)
     renderer.m_ecs.add_component<DynamicModel>(left) = quad;
     renderer.m_ecs.add_component<DynamicModel>(right) = quad;
 
-    Transform& tTop = renderer.m_ecs.add_component<Transform>(top);
-    Transform& tBottom = renderer.m_ecs.add_component<Transform>(bottom);
-    Transform& tLeft = renderer.m_ecs.add_component<Transform>(left);
-    Transform& tRight = renderer.m_ecs.add_component<Transform>(right);
+    renderer.m_ecs.add_component<Transform>(top);
+    renderer.m_ecs.add_component<Transform>(bottom);
+    renderer.m_ecs.add_component<Transform>(left);
+    renderer.m_ecs.add_component<Transform>(right);
+
+    Transform & tTop = renderer.m_ecs.get_component<Transform>(top);
+    Transform & tBottom = renderer.m_ecs.get_component<Transform>(bottom);
+    Transform & tLeft = renderer.m_ecs.get_component<Transform>(left);
+    Transform & tRight = renderer.m_ecs.get_component<Transform>(right);
 
     tTop.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
-    tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
     tTop.position.y = simpleFluid.m_maxBounds.y + 0.5f;
+
+    tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
     tBottom.position.y = simpleFluid.m_minBounds.y - 0.5f;
 
     tLeft.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
-    tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
     tLeft.position.x = simpleFluid.m_minBounds.x - 0.5f;
+
+    tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
     tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
 
     bool updateECS = true;
     bool running = true;
     while (running)
     {
-        tTop.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
-        tBottom.scale.x = simpleFluid.m_maxBounds.x - simpleFluid.m_minBounds.x;
-        tTop.position.y = simpleFluid.m_maxBounds.y + 0.5f;
-        tBottom.position.y = simpleFluid.m_minBounds.y - 0.5f;
-
-        tLeft.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
-        tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
-        tLeft.position.x = simpleFluid.m_minBounds.x - 0.5f;
-        tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
-
         cart_camera_movement(renderer, camera);
 
         renderer.gui_begin();
