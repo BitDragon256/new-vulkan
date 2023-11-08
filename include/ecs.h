@@ -10,6 +10,8 @@
 #include <tuple>
 #include <vector>
 
+#include "space_consistent_vector.h"
+
 class IComponentList;
 template<typename T> class ComponentList;
 class ComponentManager;
@@ -80,7 +82,7 @@ public:
 		return typeid(T).name();
 	}
 private:
-	std::vector<T> m_components;
+	space_consistent_vector<T> m_components;
 	std::unordered_map<EntityId, size_t> m_entityToIndex;
 	std::vector<EntityId> m_entities; // basically a index -> entity map
 };
@@ -302,6 +304,7 @@ public:
 		std::erase(m_newEntities, entity);
 	}
 
+	// TODO: require space consistency, so that the address of a component stays the same over its lifespan, or that the accesser is noticed about the change
 	template<typename T> T& add_component(EntityId entity)
 	{
 		m_componentManager.add_component<T>(entity);

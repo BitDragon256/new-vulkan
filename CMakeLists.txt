@@ -56,6 +56,7 @@ set(
 	${INCLUDE_DIR}/flags.h
 	${INCLUDE_DIR}/tritri.h
 	${INCLUDE_DIR}/post_processing.h
+	${INCLUDE_DIR}/space_consistent_vector.h
 
 	${INCLUDE_DIR}/simple_fluid.h
 )
