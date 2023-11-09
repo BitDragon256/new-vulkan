@@ -306,11 +306,18 @@ void GeometryHandler::create_group_command_buffers(MeshGroup& meshGroup)
 {
 	meshGroup.commandBuffers.resize(m_vulkanObjects.framebuffers.size());
 
+	VkCommandPoolCreateInfo commandPoolCI = {};
+	commandPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	commandPoolCI.pNext = nullptr;
+	commandPoolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	commandPoolCI.queueFamilyIndex = m_vulkanObjects.queueFamilyIndex;
+	vkCreateCommandPool(m_vulkanObjects.device, &commandPoolCI, nullptr, &meshGroup.commandPool);
+
 	VkCommandBufferAllocateInfo commandBufferAI = {};
 	commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	commandBufferAI.pNext = nullptr;
 	commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-	commandBufferAI.commandPool = m_vulkanObjects.commandPool;
+	commandBufferAI.commandPool = meshGroup.commandPool;
 	commandBufferAI.commandBufferCount = static_cast<uint32_t>(m_vulkanObjects.framebuffers.size());
 	auto res = vkAllocateCommandBuffers(m_vulkanObjects.device, &commandBufferAI, meshGroup.commandBuffers.data());
 	logger::log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer for the static geometry handler");
@@ -621,7 +628,8 @@ void GeometryHandler::cleanup()
 
 		vkDestroyPipeline(m_vulkanObjects.device, meshGroup.pipeline, nullptr);
 
-		vkFreeCommandBuffers(m_vulkanObjects.device, m_vulkanObjects.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
+		vkFreeCommandBuffers(m_vulkanObjects.device, meshGroup.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
+		vkDestroyCommandPool(m_vulkanObjects.device, meshGroup.commandPool, nullptr);
 
 		if (meshGroup.shader && !s_destroyedShaders.contains(meshGroup.shader))
 		{

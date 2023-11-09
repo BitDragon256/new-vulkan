@@ -92,6 +92,7 @@ struct MeshGroup // group with individual shaders
 
 	VkPipeline pipeline;
 	std::vector<VkCommandBuffer> commandBuffers;
+	VkCommandPool commandPool;
 };
 
 struct GeometryHandlerVulkanObjects
@@ -106,6 +107,7 @@ struct GeometryHandlerVulkanObjects
 
 	VkPhysicalDevice physicalDevice;
 	VkQueue transferQueue;
+	uint32_t queueFamilyIndex;
 	
 	VkDescriptorPool descriptorPool;
 
