@@ -45,6 +45,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     logger::log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
     logger::log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
+    m_threadPool.initialize(m_threadCount);
  
     // TODO delete this
     Shader::s_device = m_device;
@@ -61,6 +62,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
     m_firstFrame = true;
     m_deltaTime = 0;
     m_lastFrameTime = std::chrono::high_resolution_clock::now();
+
+    m_avgRenderTime = 0;
 
     m_guiManager.initialize(&m_ecs);
     
@@ -81,7 +84,9 @@ NVE_RESULT Renderer::render()
     if (m_firstFrame || m_config.autoECSUpdate)
         m_ecs.update_systems(m_deltaTime);
 
+    m_profiler.start_measure("glfw poll events");
     glfwPollEvents();
+    m_profiler.end_measure("glfw poll events", true);
 
     draw_frame();
 
@@ -604,6 +609,7 @@ void Renderer::initialize_geometry_handlers()
     vulkanObjects.commandPool = m_commandPool;
     vulkanObjects.renderPass = &m_renderPass;
     vulkanObjects.transferQueue = m_graphicsQueue;
+    vulkanObjects.queueFamilyIndex = m_queueFamilyIndices.graphicsFamily.value();
     vulkanObjects.descriptorPool = m_descriptorPool;
 
     vulkanObjects.swapchainExtent = m_swapchainExtent;
@@ -796,9 +802,12 @@ NVE_RESULT Renderer::draw_frame()
     if (m_firstFrame)
         first_frame();
 
+    float renderTime = 0;
+    m_profiler.start_measure("await fences");
     // Wait for the previous frame to finish
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
     vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
+    renderTime += m_profiler.end_measure("await fences", true);
 
     // recreate render pass if needed
     if (m_lastGeometryHandlerSubpassCount < geometry_handler_subpass_count())
@@ -811,20 +820,32 @@ NVE_RESULT Renderer::draw_frame()
         m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
     }
 
+    m_profiler.start_measure("aqcuire image");
     // Acquire an image from the swap chain
     uint32_t imageIndex;
     vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
+    renderTime += m_profiler.end_measure("aqcuire image", true);
 
     // update push constant
     m_cameraPushConstant.projView = m_activeCamera->projection_matrix() * m_activeCamera->view_matrix();
     m_cameraPushConstant.camPos = m_activeCamera->m_position;
 
     // record command buffers
+    m_profiler.start_measure("record cmd buffers");
     auto geometryHandlers = all_geometry_handlers();
+    /*for (auto geometryHandler : geometryHandlers)
+        genCmdBuf(geometryHandler);*/
+    cmdBufDone = 0;
     for (auto geometryHandler : geometryHandlers)
-        geometryHandler->record_command_buffers(m_frame);
+    {
+        m_threadPool.doJob(std::bind(&Renderer::genCmdBuf, this, geometryHandler));
+    }
+    while (cmdBufDone != geometryHandlers.size());
+    renderTime += m_profiler.end_measure("record cmd buffers", true);
 
+    m_profiler.start_measure("record main cmd buf");
     record_main_command_buffer(m_frame);
+    renderTime += m_profiler.end_measure("record main cmd buf", true);
 
     if (!m_imguiDraw)
         gui_begin();
@@ -835,12 +856,17 @@ NVE_RESULT Renderer::draw_frame()
     std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
     std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphores[m_frame] };
 
+    m_profiler.start_measure("submit cmd buf");
     // Submit the recorded command buffers
     std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffers[m_frame], m_imgui_commandBuffers[m_frame]};
     submit_command_buffers(commandBuffers, waitSemaphores, signalSemaphores);
+    renderTime += m_profiler.end_measure("submit cmd buf", true);
 
+    m_profiler.start_measure("present image");
     // Present the swap chain image
     present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
+    renderTime += m_profiler.end_measure("present image", true);
+    std::cout << "total render time: " << renderTime << " seconds\n";
 
     m_frame = (m_frame + 1) % m_swapchainFramebuffers.size();
 
@@ -945,6 +971,13 @@ uint32_t Renderer::geometry_handler_subpass_count()
 //
 //    vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
 //}
+
+void Renderer::genCmdBuf(GeometryHandler* geometryHandler)
+{
+    geometryHandler->record_command_buffers(m_frame);
+    cmdBufDone++;
+};
+
 
 // ---------------------------------------
 // GUI
