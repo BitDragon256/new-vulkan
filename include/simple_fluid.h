@@ -11,7 +11,7 @@
 struct Particle
 {
 	Vector2 position;
-	//Vector2 velocity;
+	Vector2 velocity;
 	Vector2 lastPosition;
 	Vector2 acc;
 	size_t index;
@@ -62,8 +62,9 @@ private:
 	std::vector<float> m_densities;
 
 	// integration
-	void integrate(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt);
-	void classic_verlet(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt);
+	void integrate(Vector2& position, Vector2& lastPosition, Vector2& velocity, const Vector2& acceleration, float dt);
+	void classic_verlet(Vector2& position, Vector2& lastPosition, Vector2& velocity, const Vector2& acceleration, float dt);
+	void implicit_euler(Vector2& position, Vector2& velocity, const Vector2& acceleration, float dt);
 
 	// spatial hashing
 	std::vector<std::vector<Particle*>> m_buckets;

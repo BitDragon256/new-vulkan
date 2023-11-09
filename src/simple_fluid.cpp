@@ -61,7 +61,7 @@ void SimpleFluid::update(float dt)
 		auto& bucket = bucket_at(particlePtr->position);
 		bucket.erase(std::find(bucket.begin(), bucket.end(), particlePtr));
 
-		integrate(particlePtr->position, particlePtr->lastPosition, particlePtr->acc, dt);
+		integrate(particlePtr->position, particlePtr->lastPosition, particlePtr->velocity, particlePtr->acc, dt);
 
 		if (bounds_check(*particlePtr));
 		//	particle.position += particle.velocity * dt;
@@ -80,14 +80,12 @@ void SimpleFluid::calc_forces(size_t start, size_t end, float dt)
 		Particle& particle = *particlePtr;
 		particle.acc = Vector2(0);
 
-		Vector2 predictedPos = particle.position, lastPos = particle.lastPosition;
+		Vector2 predictedPos = particle.position + particle.velocity * dt;
 		particle.acc += Vector2 { m_gravity, 0 };
-		particle.acc += mouse_force(particle.position, (particle.position - particle.lastPosition) / dt);
-
-		integrate(predictedPos, lastPos, particle.acc, dt);
+		particle.acc += mouse_force(particle.position, particle.velocity);
 
 		//particle.velocity += pressure_force(particle) * dt;
-		particle.acc += glm::clamp(pressure_force(particle, predictedPos), Vector2(-15.f), Vector2(15.f));
+		particle.acc += pressure_force(particle, predictedPos);
 	}
 }
 void SimpleFluid::update(float dt, EntityId id)
@@ -132,16 +130,16 @@ Vector2 SimpleFluid::pressure_force(Particle& particle, Vector2 predictedPositio
 		float density = fmaxf(0.01f, m_densities[p.index]);
 		float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
 		force += sharedPressure * dir * influence_slope(m_smoothingRadius, dist) / density;
-		force -= m_collisionDamping * (predictedPosition - particle.position);
+		force -= m_collisionDamping * particle.velocity;
 	}
 
-	float density = fmaxf(0.01f, m_targetDensity * m_wallForceMultiplier);
-	float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
+	// float density = fmaxf(0.01f, m_targetDensity * m_wallForceMultiplier);
+	// float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
 
-	force += sharedPressure * Vector2{ -1, 0 } * influence_slope(m_smoothingRadius, predictedPosition.x - m_minBounds.x) / density;
-	force += sharedPressure * Vector2{ 1, 0 }  * influence_slope(m_smoothingRadius, m_maxBounds.x - predictedPosition.x) / density;
-	force += sharedPressure * Vector2{ 0, -1 } * influence_slope(m_smoothingRadius, predictedPosition.y - m_minBounds.y) / density;
-	force += sharedPressure * Vector2{ 0, 1 }  * influence_slope(m_smoothingRadius, m_maxBounds.y - predictedPosition.y) / density;
+	// force += sharedPressure * Vector2{ -1, 0 } * influence_slope(m_smoothingRadius, predictedPosition.x - m_minBounds.x) / density;
+	// force += sharedPressure * Vector2{ 1, 0 }  * influence_slope(m_smoothingRadius, m_maxBounds.x - predictedPosition.x) / density;
+	// force += sharedPressure * Vector2{ 0, -1 } * influence_slope(m_smoothingRadius, predictedPosition.y - m_minBounds.y) / density;
+	// force += sharedPressure * Vector2{ 0, 1 }  * influence_slope(m_smoothingRadius, m_maxBounds.y - predictedPosition.y) / density;
 
 	return force;
 }
@@ -211,16 +209,24 @@ float SimpleFluid::density_at(Vector2 position)
 	return density;
 }
 
-void SimpleFluid::integrate(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt)
+void SimpleFluid::integrate(Vector2& position, Vector2& lastPosition, Vector2& velocity, const Vector2& acceleration, float dt)
 {
-	classic_verlet(position, lastPosition, acceleration, dt);
+	// classic_verlet(position, lastPosition, velocity, acceleration, dt);
+	implicit_euler(position, velocity, acceleration, dt);
 }
-void SimpleFluid::classic_verlet(Vector2& position, Vector2& lastPosition, const Vector2& acceleration, float dt)
+void SimpleFluid::classic_verlet(Vector2& position, Vector2& lastPosition, Vector2& velocity, const Vector2& acceleration, float dt)
 {
 	Vector2 nextPos = 2.f * position - lastPosition + 0.5f * acceleration * dt * dt;
 
 	lastPosition = position;
 	position = nextPos;
+
+	velocity = (lastPosition - position) / dt;
+}
+void SimpleFluid::implicit_euler(Vector2& position, Vector2& velocity, const Vector2& acceleration, float dt)
+{
+	velocity += acceleration * dt;
+	position += velocity * dt;
 }
 
 void SimpleFluid::create_buckets()
@@ -268,12 +274,12 @@ bool SimpleFluid::bounds_check(Particle& particle)
 	bool changed{ false };
 	if (particle.position.x < m_minBounds.x || particle.position.x > m_maxBounds.x)
 	{
-		//particle.velocity.x *= -1;
+		particle.velocity.x *= -1;
 		changed = true;
 	}
 	if (particle.position.y < m_minBounds.y || particle.position.y > m_maxBounds.y)
 	{
-		//particle.velocity.y *= -1;
+		particle.velocity.y *= -1;
 		changed = true;
 	}
 
