@@ -32,6 +32,9 @@ public:
 	float m_pressureMultiplier = 5.f;
 	float m_wallForceMultiplier = 1.f;
 	float m_collisionDamping = 4.f;
+	Vector2 m_mousePos;
+	float m_mouseRadius = 2.f;
+	float m_mouseStrength = 10.f;
 	const Vector2 m_maxBounds = { SF_BOUNDING_HEIGHT / 2.f, SF_BOUNDING_WIDTH / 2.f };
 	const Vector2 m_minBounds = { -SF_BOUNDING_HEIGHT / 2.f, -SF_BOUNDING_WIDTH / 2.f };
 	void awake(EntityId) override;
@@ -47,6 +50,7 @@ private:
 	float influence_volume(float rad);
 	float density_to_pressure(float density);
 	Vector2 pressure_force(Particle& particle, Vector2 predictedPosition);
+	Vector2 mouse_force(Vector2 pos, Vector2 vel);
 	float wall_force(float d);
 	void cache_densities();
 	float density_at(Vector2 position);

@@ -101,7 +101,7 @@ std::array<float, 4> GUIManager::viewport(std::array<float, 4> defaultViewport)
 {
 	if (!m_activated)
 		return defaultViewport;
-	return { 0, 0, defaultViewport[2] * 0.7f, defaultViewport[3] * 0.7f};
+	return { 0, 0, defaultViewport[2] * m_cut.x, defaultViewport[3] * m_cut.y};
 }
 
 std::ostream& operator<< (std::ostream& ostream, const Vector3& vec)

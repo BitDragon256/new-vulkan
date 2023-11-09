@@ -207,6 +207,16 @@ int main(int argc, char** argv)
     {
         cart_camera_movement(renderer, camera);
 
+        // mouse interaction
+        auto mousePos = renderer.mouse_to_screen(renderer.get_mouse_pos()) / 2.f;
+        if (renderer.get_mouse_button(GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+            simpleFluid.m_mousePos = {
+            mousePos.y * SF_BOUNDING_HEIGHT,
+            -mousePos.x * SF_BOUNDING_WIDTH
+        };
+        else
+            simpleFluid.m_mousePos = Vector2(std::numeric_limits<float>::max());
+
         renderer.gui_begin();
 
         renderer.draw_engine_gui();
@@ -255,6 +265,8 @@ int main(int argc, char** argv)
         ImGui::DragFloat("Gravity", &simpleFluid.m_gravity, 0.5f);
         ImGui::DragFloat("Wall Force", &simpleFluid.m_wallForceMultiplier, 0.2f);
         ImGui::DragFloat("Collision Damping", &simpleFluid.m_collisionDamping);
+        ImGui::DragFloat("Mouse Radius", &simpleFluid.m_mouseRadius);
+        ImGui::DragFloat("Mouse Strength", &simpleFluid.m_mouseStrength);
         if (ImGui::Button("Play / Pause"))
             simpleFluid.m_active ^= 1;
 

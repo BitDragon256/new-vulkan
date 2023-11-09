@@ -9,7 +9,7 @@
 #undef SIMPLE_FLUID_PROFILER
 
 #define SIMPLE_FLUID_THREADING
-#undef SIMPLE_FLUID_THREADING
+// #undef SIMPLE_FLUID_THREADING
 
 SimpleFluid::SimpleFluid() : m_pIndex{ 0 }
 {
@@ -82,6 +82,7 @@ void SimpleFluid::calc_forces(size_t start, size_t end, float dt)
 
 		Vector2 predictedPos = particle.position, lastPos = particle.lastPosition;
 		particle.acc += Vector2 { m_gravity, 0 };
+		particle.acc += mouse_force(particle.position, (particle.position - particle.lastPosition) / dt);
 
 		integrate(predictedPos, lastPos, particle.acc, dt);
 
@@ -93,10 +94,11 @@ void SimpleFluid::update(float dt, EntityId id)
 {
 	if (m_densities.empty())
 		return;
+	auto& p = get_particle(id);
 	m_ecs->get_component<DynamicModel>(id).m_children[0].material.m_diffuse = Vector3(
-		(m_densities[get_particle(id).index] - m_targetDensity) / 5.f,  // R dens > tDens
-		0,																// G
-		(m_targetDensity - m_densities[get_particle(id).index])			// B tDens > dens
+		glm::length(p.position - p.lastPosition) / dt / 5.f,
+		0.f,
+		0.f
 	);
 }
 void SimpleFluid::gui_show_system()
@@ -142,6 +144,19 @@ Vector2 SimpleFluid::pressure_force(Particle& particle, Vector2 predictedPositio
 	force += sharedPressure * Vector2{ 0, 1 }  * influence_slope(m_smoothingRadius, m_maxBounds.y - predictedPosition.y) / density;
 
 	return force;
+}
+Vector2 SimpleFluid::mouse_force(Vector2 pos, Vector2 vel)
+{
+	Vector2 offset = m_mousePos - pos;
+	float dst = glm::dot(offset, offset);
+	if (dst < m_mouseRadius * m_mouseRadius)
+	{
+		dst = sqrtf(dst);
+		Vector2 n = dst <= 0.01f ? Vector2(0) : offset / dst;
+		float interpolation = 1.f - dst / m_mouseRadius;
+		return (n * m_mouseStrength - vel) * interpolation;
+	}
+	return Vector2(0);
 }
 float SimpleFluid::density_to_pressure(float density)
 {

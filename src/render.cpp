@@ -101,6 +101,23 @@ int Renderer::get_key(int key)
 {
     return glfwGetKey(m_window, key);
 }
+int Renderer::get_mouse_button(int btn)
+{
+    return glfwGetMouseButton(m_window, btn);
+}
+Vector2 Renderer::get_mouse_pos()
+{
+    double xPos, yPos;
+    glfwGetCursorPos(m_window, &xPos, &yPos);
+    return { xPos, yPos };
+}
+Vector2 Renderer::mouse_to_screen(Vector2 mouse)
+{
+    return 2.f * Vector2 {
+        mouse.x / m_swapchainExtent.width / m_guiManager.m_cut.x,
+        mouse.y / m_swapchainExtent.height / m_guiManager.m_cut.y
+    } - Vector2(1.f);
+}
 
 void Renderer::set_light_pos(Vector3 pos)
 {

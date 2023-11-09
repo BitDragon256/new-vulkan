@@ -66,6 +66,9 @@ public:
 
 	// input
 	int get_key(int key);
+	int get_mouse_button(int btn);
+	Vector2 get_mouse_pos();
+	Vector2 mouse_to_screen(Vector2 mouse);
 
 	// gui
 	void gui_begin();

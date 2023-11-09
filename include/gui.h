@@ -36,6 +36,8 @@ public:
 	void draw_entity_info(); // all entities with their respective components
 	void draw_system_info(); // all systems and all affected entities
 
+	Vector2 m_cut = { 0.7f, 0.7f };
+
 	std::array<float, 4> viewport(std::array<float, 4> defaultViewport);
 private:
 	ECSManager* m_ecs;
