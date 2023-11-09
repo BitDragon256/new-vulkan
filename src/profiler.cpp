@@ -26,7 +26,7 @@ float Profiler::passing_measure(std::string name)
 }
 void Profiler::print_last_measure(std::string name)
 {
-	std::cout << name << " measured " << std::fixed << std::setprecision(10) << m_lastMeasures[name] << " seconds\n";
+	std::cout << name << " measured " << m_lastMeasures[name] << " seconds\n";
 }
 
 void Profiler::save_time(std::string name)
