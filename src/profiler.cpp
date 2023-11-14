@@ -47,7 +47,7 @@ float Profiler::end_label()
 	if (!m_labels.empty())
 	{
 		std::string name = m_labels.back();
-		m_outS << "---";
+		s_outS << "---";
 		float time = end_measure(name, true);
 		m_labels.pop_back();
 		return time;
@@ -69,14 +69,16 @@ std::chrono::time_point<std::chrono::high_resolution_clock> Profiler::now()
 {
 	return std::chrono::high_resolution_clock::now();
 }
+std::stringstream Profiler::s_outS;
+size_t Profiler::s_outBufWrites = 0;
 std::stringstream& Profiler::out_buf()
 {
-	if (m_outBufWrites++ >= PROFILER_OUT_BUFFER_WRITES)
+	if (s_outBufWrites++ >= PROFILER_OUT_BUFFER_WRITES)
 	{
-		std::ios::sync_with_stdio(false);
-		std::cout << m_outS.str();
-		m_outS.clear();
-		m_outBufWrites = 0;
+		//std::ios::sync_with_stdio(false);
+		//std::cout << s_outS.str();
+		s_outS.clear();
+		s_outBufWrites = 0;
 	}
-	return m_outS;
+	return s_outS;
 }

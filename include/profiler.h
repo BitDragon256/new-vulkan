@@ -32,7 +32,7 @@ private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> now();
 	float measure(std::string name);
 
-	std::stringstream m_outS;
-	size_t m_outBufWrites = 0;
+	static std::stringstream s_outS;
+	static size_t s_outBufWrites;
 
 };
