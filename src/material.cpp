@@ -149,8 +149,6 @@ VkWriteDescriptorSet TexturePool::get_descriptor_set_write(VkDescriptorSet descr
 	write.dstBinding = binding;
 	write.dstArrayElement = 0;
 
-	std::cout << m_activeImageInfos.size() << " " << descriptorSet << " " << m_reiterateActive << std::endl;
-
 	if (m_reiterateActive)
 		reiterate_active();
 
