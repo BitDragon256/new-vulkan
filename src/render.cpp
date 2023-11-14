@@ -60,7 +60,6 @@ NVE_RESULT Renderer::init(RenderConfig config)
 
     m_frame = 0;
 
-    m_firstFrame = true;
     m_deltaTime = 0;
     m_lastFrameTime = std::chrono::high_resolution_clock::now();
 
@@ -73,24 +72,32 @@ NVE_RESULT Renderer::init(RenderConfig config)
 }
 NVE_RESULT Renderer::render()
 {
+    m_profiler.start_measure("total render time");
+    m_profiler.start_measure("glfw window should close poll");
     if (glfwWindowShouldClose(m_window))
     {
         clean_up();
         return NVE_RENDER_EXIT_SUCCESS;
     }
+    m_profiler.end_measure("glfw window should close poll", true);
 
     std::chrono::time_point<std::chrono::high_resolution_clock> now = std::chrono::high_resolution_clock::now();
     m_deltaTime = std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_lastFrameTime).count() / 1000000000.f;
     m_lastFrameTime = now;
 
+    m_profiler.start_measure("ecs update");
     if (m_firstFrame || m_config.autoECSUpdate)
         m_ecs.update_systems(m_deltaTime);
+    m_profiler.end_measure("ecs update", true);
 
     m_profiler.start_measure("glfw poll events");
     glfwPollEvents();
     m_profiler.end_measure("glfw poll events", true);
 
+    m_profiler.start_measure("draw frame");
     draw_frame();
+    m_profiler.end_measure("draw frame", true);
+    m_profiler.end_measure("total render time", true);
 
     return NVE_SUCCESS;
 }
@@ -805,12 +812,14 @@ NVE_RESULT Renderer::draw_frame()
         first_frame();
 
     float renderTime = 0;
+    m_profiler.begin_label("draw_frame");
     m_profiler.start_measure("await fences");
     // Wait for the previous frame to finish
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
     vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
     renderTime += m_profiler.end_measure("await fences", true);
 
+    m_profiler.start_measure("render pass recreation");
     // recreate render pass if needed
     if (m_lastGeometryHandlerSubpassCount < geometry_handler_subpass_count())
     {
@@ -821,6 +830,7 @@ NVE_RESULT Renderer::draw_frame()
         update_geometry_handler_framebuffers();
         m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
     }
+    renderTime += m_profiler.end_measure("render pass recreation", true);
 
     m_profiler.start_measure("aqcuire image");
     // Acquire an image from the swap chain
@@ -849,11 +859,13 @@ NVE_RESULT Renderer::draw_frame()
     record_main_command_buffer(m_frame);
     renderTime += m_profiler.end_measure("record main cmd buf", true);
 
+    m_profiler.start_measure("gui draw");
     if (!m_imguiDraw)
         gui_begin();
 
     imgui_draw(imageIndex);
     m_imguiDraw = false;
+    renderTime += m_profiler.end_measure("gui draw");
 
     std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
     std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphores[m_frame] };
@@ -868,7 +880,8 @@ NVE_RESULT Renderer::draw_frame()
     // Present the swap chain image
     present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
     renderTime += m_profiler.end_measure("present image", true);
-    std::cout << "total render time: " << renderTime << " seconds\n";
+    m_profiler.out_buf() << "total render time: " << renderTime << " seconds\n";
+    m_profiler.end_label();
 
     m_frame = (m_frame + 1) % m_swapchainFramebuffers.size();
 
