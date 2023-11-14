@@ -203,7 +203,10 @@ int main(int argc, char** argv)
     tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
     tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
 
+    float renderAvg = 0;
+    
     bool updateECS = true;
+    bool singleUpdateECS = false;
     bool running = true;
     while (running)
     {
@@ -221,6 +224,12 @@ int main(int argc, char** argv)
 
         renderer.gui_begin();
 
+        profiler.start_measure("total time");
+
+        profiler.start_measure("gui");
+
+        // GUI
+        {
         renderer.draw_engine_gui();
 
         ImGui::Begin("General");
@@ -279,13 +288,11 @@ int main(int argc, char** argv)
         ImGui::SliderFloat("speed", &moveSpeed, 0.f, 0.03f);
         ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
 
-        ImGui::SliderFloat3("cam pos", (float*) & camera.m_position, -10, 10);
+            ImGui::SliderFloat3("cam pos", (float*)&camera.m_position, -10, 10);
 
-        bool singleUpdateECS = ImGui::Button("step ecs");
+            singleUpdateECS = ImGui::Button("step ecs");
         if (ImGui::Button("update ecs"))
             updateECS = !updateECS;
-        if (updateECS || singleUpdateECS)
-            renderer.m_ecs.update_systems(1.f / 50.f);
 
         if (updateECS)
             ImGui::Text("ECS activated");
@@ -297,9 +304,23 @@ int main(int argc, char** argv)
 
         ImGui::End();
 
+            profiler.end_measure("gui", true);
+        }
+
+        profiler.start_measure("ecs");
+        if (updateECS || singleUpdateECS)
+            renderer.m_ecs.update_systems(1.f / 120.f);
+        profiler.end_measure("ecs", true);
+
+        profiler.start_measure("render");
         NVE_RESULT res = renderer.render();
         if (res == NVE_RENDER_EXIT_SUCCESS)
             running = false;
+        renderAvg += profiler.end_measure("render", true);
+        renderAvg /= 2;
+        profiler.end_measure("total time", true);
+
+        //std::cout << "---------------------------------------\n";
 
         // time
         auto now = std::chrono::high_resolution_clock::now();
@@ -309,6 +330,7 @@ int main(int argc, char** argv)
         avgFps /= 2.f;
         lastTime = std::chrono::high_resolution_clock::now();
     }
+    std::cout << "avg render time: " << renderAvg << " seconds\n";
 
     return 0;
 }
