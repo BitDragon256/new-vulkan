@@ -5,11 +5,11 @@
 
 #include "logger.h"
 
-#define SIMPLE_FLUID_PROFILER
-#undef SIMPLE_FLUID_PROFILER
+#define SF_PROFILER
+// #undef SIMPLE_FLUID_PROFILER
 
 #define SIMPLE_FLUID_THREADING
-// #undef SIMPLE_FLUID_THREADING
+#undef SIMPLE_FLUID_THREADING
 
 SimpleFluid::SimpleFluid() : m_pIndex{ 0 }
 {
@@ -31,12 +31,19 @@ void SimpleFluid::update(float dt)
 	if (!m_active)
 		return;
 
-#ifdef SIMPLE_FLUID_PROFILER
+#ifdef SF_PROFILER
+	float totalTime = 0;
 	m_profiler.start_measure("cache densities");
 #endif
 	cache_densities();
+#ifdef SF_PROFILER
+	totalTime += m_profiler.end_measure("cache densities", true);
+#endif
 
 	// Threading force calculations
+#ifdef SF_PROFILER
+	m_profiler.start_measure("calc forces");
+#endif
 
 #ifdef SIMPLE_FLUID_THREADING
 	size_t threadCount = std::fmin(std::ceil((float) m_particles.size() / m_particlesPerThread), std::thread::hardware_concurrency());
@@ -53,7 +60,10 @@ void SimpleFluid::update(float dt)
 #else
 	calc_forces(0, m_particles.size(), dt);
 #endif
-
+#ifdef SF_PROFILER
+	totalTime += m_profiler.end_measure("calc forces", true);
+	m_profiler.start_measure("assign buckets");
+#endif
 
 	size_t i = 0;
 	for (auto particlePtr : m_particles)
@@ -71,17 +81,24 @@ void SimpleFluid::update(float dt)
 		// sync pos with transform
 		m_ecs->get_component<Transform>(m_entities[i++]).position = { particlePtr->position.x, particlePtr->position.y, 0 };
 	}
+
+#ifdef SF_PROFILER
+	totalTime += m_profiler.end_measure("assign buckets", true);
+	std::cout << "total time measured " << totalTime << " seconds\n\n";
+#endif
 }
 void SimpleFluid::calc_forces(size_t start, size_t end, float dt)
 {
 	for (size_t i = start; i < end && i < m_particles.size(); i++)
 	{
 		auto particlePtr = m_particles[i];
+		
 		Particle& particle = *particlePtr;
 		particle.acc = Vector2(0);
 
 		Vector2 predictedPos = particle.position + particle.velocity * dt;
 		particle.acc += Vector2 { m_gravity, 0 };
+		
 		particle.acc += mouse_force(particle.position, particle.velocity);
 
 		//particle.velocity += pressure_force(particle) * dt;
@@ -174,13 +191,13 @@ float SimpleFluid::influence(float rad, float d)
 {
 	if (d > rad)
 		return 0;
-	return powf(rad - d, 3) / influence_volume(rad);
+	return powf((rad - d) * 2.f, 3) / influence_volume(rad);
 }
 float SimpleFluid::influence_slope(float rad, float d)
 {
 	if (d > rad)
 		return 0;
-	return -3.f * powf(rad - d, 2.f) / influence_volume(rad);
+	return -2.f * 3.f * powf(rad - d, 2.f) / influence_volume(rad);
 }
 float SimpleFluid::influence_volume(float rad)
 {
