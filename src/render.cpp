@@ -26,6 +26,7 @@
 NVE_RESULT Renderer::init(RenderConfig config)
 {
     m_config = config;
+    m_firstFrame = true;
 
     // add_descriptors();
 
@@ -64,6 +65,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     m_lastFrameTime = std::chrono::high_resolution_clock::now();
 
     m_avgRenderTime = 0;
+    m_acquireImageTimeout = false;
 
     m_guiManager.initialize(&m_ecs);
     
