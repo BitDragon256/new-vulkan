@@ -21,6 +21,7 @@
 #include "nve_types.h"
 #include "model-handler.h"
 #include "image.h"
+#include "thread_pool.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1
@@ -202,6 +203,11 @@ private:
 	NVE_RESULT draw_frame();
 
 	GUIManager m_guiManager;
+
+	// multithreading
+	ThreadPool m_threadPool;
+	const int m_threadCount = 2;
+	void genCmdBuf(GeometryHandler* geometryHandler);
 };
 
 void imgui_error_handle(VkResult err);

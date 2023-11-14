@@ -8,6 +8,7 @@ void ThreadPool::initialize(int threads)
         return;
     m_initialized = true;
     shutdown_ = false;
+    m_activeJobCount = 0;
     // Create the specified number of threads
     threads_.reserve(threads);
     for (int i = 0; i < threads; ++i)
@@ -34,7 +35,7 @@ void ThreadPool::doJob(std::function <void(void)> func)
 {
     if (!m_initialized)
         return;
-    // Place a job on the queu and unblock a thread
+    // Place a job on the queue and unblock a thread
     std::unique_lock <std::mutex> l(lock_);
 
     jobs_.emplace(std::move(func));
@@ -65,10 +66,26 @@ void ThreadPool::threadEntry(int i)
             // std::cout << "thread " << i << " does a job" << std::endl;
             job = std::move(jobs_.front());
             jobs_.pop();
+            m_activeJobCount++;
         }
 
         // Do the job without holding any locks
         job();
+        m_activeJobCount--;
+
+        if (!m_activeJobCount || shutdown_)
+        {
+            std::unique_lock<std::mutex> l(m_allFinishedLock);
+            m_allFinished.notify_all();
+        }
     }
 
+}
+void ThreadPool::wait_for_finish()
+{
+    std::unique_lock<std::mutex> l(m_allFinishedLock);
+    while (!jobs_.empty())
+    {
+        m_allFinished.wait(l);
+    }
 }

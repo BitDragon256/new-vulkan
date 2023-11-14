@@ -383,7 +383,7 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 }
 NVE_RESULT Renderer::create_render_pass()
 {
-    if (m_renderPass != VK_NULL_HANDLE && m_renderPass != (VkRenderPass) 0xcccccccccccccccc)
+    if (!m_firstFrame)
         vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 
     // color attachment
@@ -842,7 +842,7 @@ NVE_RESULT Renderer::draw_frame()
     {
         m_threadPool.doJob(std::bind(&Renderer::genCmdBuf, this, geometryHandler));
     }
-    while (cmdBufDone != geometryHandlers.size());
+    m_threadPool.wait_for_finish();
     renderTime += m_profiler.end_measure("record cmd buffers", true);
 
     m_profiler.start_measure("record main cmd buf");
