@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include <chrono>
 #include <sstream>
@@ -228,7 +230,9 @@ int main(int argc, char** argv)
         // -----------------------------------------------
         if (ImGui::Button("Create Particles"))
         {
-            int width = 20;
+                srand(time(NULL));
+
+                int width = 7;
             int newParticleCount = width * width;
             float downScale = fminf(SF_BOUNDING_WIDTH, SF_BOUNDING_HEIGHT) / width / 1.5f;
             for (int i = 0; i < newParticleCount; i++)
@@ -237,11 +241,11 @@ int main(int argc, char** argv)
                 auto& part = renderer.m_ecs.add_component<Particle>(id);
                 renderer.m_ecs.add_component<DynamicModel>(id) = ball;
                 auto& transform = renderer.m_ecs.add_component<Transform>(id);
-                transform.scale = Vector3(0.05f);
+                    transform.scale = Vector3(0.1f);
 
                 int x = i % (width)-width / 2;
                 int y = (int)i / width - width / 2;
-                part.position = { x * downScale, y * downScale };
+                    part.position = { x * downScale, y * downScale + (rand() % 100) / 1000.f - 0.05f };
 
                 particles.push_back(id);
             }
