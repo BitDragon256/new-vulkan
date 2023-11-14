@@ -815,8 +815,11 @@ NVE_RESULT Renderer::draw_frame()
     m_profiler.begin_label("draw_frame");
     m_profiler.start_measure("await fences");
     // Wait for the previous frame to finish
+    if (!m_acquireImageTimeout)
+    {
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
     vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
+    }
     renderTime += m_profiler.end_measure("await fences", true);
 
     m_profiler.start_measure("render pass recreation");
@@ -832,11 +835,22 @@ NVE_RESULT Renderer::draw_frame()
     }
     renderTime += m_profiler.end_measure("render pass recreation", true);
 
-    m_profiler.start_measure("aqcuire image");
+    m_profiler.start_measure("acquire image");
     // Acquire an image from the swap chain
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
-    renderTime += m_profiler.end_measure("aqcuire image", true);
+    {
+        auto res = vkAcquireNextImageKHR(m_device, m_swapchain, 1, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
+        if (res == VK_TIMEOUT)
+        {
+            m_acquireImageTimeout = true;
+            return NVE_SUCCESS;
+        }
+        else
+        {
+            m_acquireImageTimeout = false;
+        }
+    }
+    renderTime += m_profiler.end_measure("acquire image", true);
 
     // update push constant
     m_cameraPushConstant.projView = m_activeCamera->projection_matrix() * m_activeCamera->view_matrix();
@@ -847,7 +861,6 @@ NVE_RESULT Renderer::draw_frame()
     auto geometryHandlers = all_geometry_handlers();
     /*for (auto geometryHandler : geometryHandlers)
         genCmdBuf(geometryHandler);*/
-    cmdBufDone = 0;
     for (auto geometryHandler : geometryHandlers)
     {
         m_threadPool.doJob(std::bind(&Renderer::genCmdBuf, this, geometryHandler));
@@ -990,7 +1003,6 @@ uint32_t Renderer::geometry_handler_subpass_count()
 void Renderer::genCmdBuf(GeometryHandler* geometryHandler)
 {
     geometryHandler->record_command_buffers(m_frame);
-    cmdBufDone++;
 };
 
 
@@ -1347,7 +1359,6 @@ glm::mat4 Camera::view_matrix()
 }
 glm::mat4 Camera::projection_matrix()
 {
-    
     if (!m_orthographic)
         return glm::perspective(glm::radians(m_fov), m_extent.x / m_extent.y, m_nearPlane, m_farPlane);
     return glm::transpose(glm::mat4x4(
