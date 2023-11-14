@@ -6,3 +6,6 @@ external/
 .VSCodeCounter/
 test-models/
 /.vs
+/measure01.png
+/measure02.png
+/render_measures.txt
