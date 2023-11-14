@@ -22,6 +22,7 @@
 #include "model-handler.h"
 #include "image.h"
 #include "thread_pool.h"
+#include "profiler.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1
@@ -99,6 +100,7 @@ private:
 	std::vector<VkImageView> m_swapchainImageViews;
 	VkFormat m_swapchainImageFormat;
 	VkExtent2D m_swapchainExtent;
+	bool m_acquireImageTimeout;
 
 	std::vector<VImage> m_depthImages;
 	void create_depth_images();
@@ -208,6 +210,10 @@ private:
 	ThreadPool m_threadPool;
 	const int m_threadCount = 2;
 	void genCmdBuf(GeometryHandler* geometryHandler);
+
+	// profiling
+	Profiler m_profiler;
+	float m_avgRenderTime;
 };
 
 void imgui_error_handle(VkResult err);
