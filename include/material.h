@@ -19,6 +19,8 @@ typedef struct Texture
 class TexturePool
 {
 public:
+	TexturePool();
+
 	uint32_t add_texture(std::string tex);
 	uint32_t find(std::string tex);
 	VkWriteDescriptorSet get_descriptor_set_write(VkDescriptorSet descriptorSet, uint32_t binding);

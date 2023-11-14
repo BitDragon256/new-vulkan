@@ -11,6 +11,10 @@
 // TEXTURE POOL
 // --------------------------------------
 
+TexturePool::TexturePool()
+{
+	should_reiterate_active();
+}
 uint32_t TexturePool::add_texture(std::string tex)
 {
 	push_texture(tex);
@@ -144,6 +148,8 @@ VkWriteDescriptorSet TexturePool::get_descriptor_set_write(VkDescriptorSet descr
 	write.dstSet = descriptorSet;
 	write.dstBinding = binding;
 	write.dstArrayElement = 0;
+
+	std::cout << m_activeImageInfos.size() << " " << descriptorSet << " " << m_reiterateActive << std::endl;
 
 	if (m_reiterateActive)
 		reiterate_active();
