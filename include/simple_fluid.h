@@ -1,12 +1,12 @@
 #pragma once
 
 #include <vector>
-#include <thread>
 
 #include "nve_types.h"
 #include "ecs.h"
 #include "model-handler.h"
 #include "profiler.h"
+#include "thread_pool.h"
 
 struct Particle
 {
@@ -26,15 +26,19 @@ public:
 	SimpleFluid();
 
 	bool m_active;
-	float m_gravity = 0.0f;
-	float m_smoothingRadius = .3f;
-	float m_targetDensity = 1.f;
-	float m_pressureMultiplier = 5.f;
-	float m_wallForceMultiplier = 1.f;
-	float m_collisionDamping = 4.f;
+	float m_gravity = 10.0f;
+	float m_smoothingRadius = .8f;
+	float m_targetDensity = 6.f;
+	float m_pressureMultiplier = 50.f;
+	float m_wallForceMultiplier = 0.f;
+	float m_collisionDamping = .998f;
+
+	float m_influenceInner = 1.f;
+	float m_influencePower = 2.5f;
+
 	Vector2 m_mousePos;
-	float m_mouseRadius = 2.f;
-	float m_mouseStrength = 10.f;
+	float m_mouseRadius = 3.f;
+	float m_mouseStrength = 400.f;
 	const Vector2 m_maxBounds = { SF_BOUNDING_HEIGHT / 2.f, SF_BOUNDING_WIDTH / 2.f };
 	const Vector2 m_minBounds = { -SF_BOUNDING_HEIGHT / 2.f, -SF_BOUNDING_WIDTH / 2.f };
 	void awake(EntityId) override;
@@ -68,7 +72,7 @@ private:
 
 	// spatial hashing
 	std::vector<std::vector<Particle*>> m_buckets;
-	const float m_bucketSize = .3f;
+	const float m_bucketSize = .8f;
 	uint32_t m_yBuckets;
 	void create_buckets();
 	uint32_t pos_to_bucket_index(Vector2 pos);
@@ -82,6 +86,8 @@ private:
 	Profiler m_profiler;
 
 	// Multi-Threading
-	std::vector<std::thread> m_threads;
-	const uint32_t m_particlesPerThread = 500;
+	const uint32_t m_threadCount = 8;
+	ThreadPool m_threadPool;
+	std::vector<std::mutex> m_bucketLockMutices;
+	std::vector<std::condition_variable> m_bucketLockConds;
 };
