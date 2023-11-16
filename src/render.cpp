@@ -17,6 +17,14 @@
 #include "vulkan_helpers.h"
 #include "material.h"
 
+#ifdef RENDER_PROFILER
+#define PROFILE_START(X) m_profiler.start_measure(X);
+#define PROFILE_END(X) m_profiler.end_measure(X, true);
+#else
+#define PROFILE_START(X)
+#define PROFILE_END(X) 0.f;
+#endif
+
 // ---------------------------------------
 // RENDERER
 // ---------------------------------------
@@ -51,7 +59,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     // TODO delete this
     Shader::s_device = m_device;
 
-   create_descriptor_pool();           logger::log("descriptor pool created");
+    create_descriptor_pool();           logger::log("descriptor pool created");
 
     initialize_geometry_handlers();     logger::log("geometry handlers initialized");
 
@@ -72,32 +80,32 @@ NVE_RESULT Renderer::init(RenderConfig config)
 }
 NVE_RESULT Renderer::render()
 {
-    m_profiler.start_measure("total render time");
-    m_profiler.start_measure("glfw window should close poll");
+    PROFILE_START("total render time");
+    PROFILE_START("glfw window should close poll");
     if (glfwWindowShouldClose(m_window))
     {
         clean_up();
         return NVE_RENDER_EXIT_SUCCESS;
     }
-    m_profiler.end_measure("glfw window should close poll", true);
+    PROFILE_END("glfw window should close poll");
 
     std::chrono::time_point<std::chrono::high_resolution_clock> now = std::chrono::high_resolution_clock::now();
     m_deltaTime = std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_lastFrameTime).count() / 1000000000.f;
     m_lastFrameTime = now;
 
-    m_profiler.start_measure("ecs update");
+    PROFILE_START("ecs update");
     if (m_firstFrame || m_config.autoECSUpdate)
         m_ecs.update_systems(m_deltaTime);
-    m_profiler.end_measure("ecs update", true);
+    PROFILE_END("ecs update");
 
-    m_profiler.start_measure("glfw poll events");
+    PROFILE_START("glfw poll events");
     glfwPollEvents();
-    m_profiler.end_measure("glfw poll events", true);
+    PROFILE_END("glfw poll events");
 
-    m_profiler.start_measure("draw frame");
+    PROFILE_START("draw frame");
     draw_frame();
-    m_profiler.end_measure("draw frame", true);
-    m_profiler.end_measure("total render time", true);
+    PROFILE_END("draw frame");
+    PROFILE_END("total render time");
 
     return NVE_SUCCESS;
 }
@@ -811,18 +819,19 @@ NVE_RESULT Renderer::draw_frame()
     if (m_firstFrame)
         first_frame();
 
+    //auto renderStart = std::chrono::high_resolution_clock::now();
     float renderTime = 0;
     m_profiler.begin_label("draw_frame");
-    m_profiler.start_measure("await fences");
+    PROFILE_START("await fences");
     // Wait for the previous frame to finish
     if (!m_acquireImageTimeout)
     {
-    vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
-    vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
+        vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
+        vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
     }
-    renderTime += m_profiler.end_measure("await fences", true);
+    renderTime += PROFILE_END("await fences");
 
-    m_profiler.start_measure("render pass recreation");
+    PROFILE_START("render pass recreation");
     // recreate render pass if needed
     if (m_lastGeometryHandlerSubpassCount < geometry_handler_subpass_count())
     {
@@ -833,9 +842,9 @@ NVE_RESULT Renderer::draw_frame()
         update_geometry_handler_framebuffers();
         m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
     }
-    renderTime += m_profiler.end_measure("render pass recreation", true);
+    renderTime += PROFILE_END("render pass recreation");
 
-    m_profiler.start_measure("acquire image");
+    PROFILE_START("acquire image");
     // Acquire an image from the swap chain
     uint32_t imageIndex;
     {
@@ -850,14 +859,14 @@ NVE_RESULT Renderer::draw_frame()
             m_acquireImageTimeout = false;
         }
     }
-    renderTime += m_profiler.end_measure("acquire image", true);
+    renderTime += PROFILE_END("acquire image");
 
     // update push constant
     m_cameraPushConstant.projView = m_activeCamera->projection_matrix() * m_activeCamera->view_matrix();
     m_cameraPushConstant.camPos = m_activeCamera->m_position;
 
     // record command buffers
-    m_profiler.start_measure("record cmd buffers");
+    PROFILE_START("record cmd buffers");
     auto geometryHandlers = all_geometry_handlers();
     /*for (auto geometryHandler : geometryHandlers)
         genCmdBuf(geometryHandler);*/
@@ -866,37 +875,39 @@ NVE_RESULT Renderer::draw_frame()
         m_threadPool.doJob(std::bind(&Renderer::genCmdBuf, this, geometryHandler));
     }
     m_threadPool.wait_for_finish();
-    renderTime += m_profiler.end_measure("record cmd buffers", true);
+    renderTime += PROFILE_END("record cmd buffers");
 
-    m_profiler.start_measure("record main cmd buf");
+    PROFILE_START("record main cmd buf");
     record_main_command_buffer(m_frame);
-    renderTime += m_profiler.end_measure("record main cmd buf", true);
-
-    m_profiler.start_measure("gui draw");
+    renderTime += PROFILE_END("record main cmd buf"); 
+    PROFILE_START("gui draw");
     if (!m_imguiDraw)
         gui_begin();
 
     imgui_draw(imageIndex);
     m_imguiDraw = false;
-    renderTime += m_profiler.end_measure("gui draw");
+    renderTime += PROFILE_END("gui draw");
 
     std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
     std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphores[m_frame] };
 
-    m_profiler.start_measure("submit cmd buf");
+    PROFILE_START("submit cmd buf");
     // Submit the recorded command buffers
     std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffers[m_frame], m_imgui_commandBuffers[m_frame]};
     submit_command_buffers(commandBuffers, waitSemaphores, signalSemaphores);
-    renderTime += m_profiler.end_measure("submit cmd buf", true);
+    renderTime += PROFILE_END("submit cmd buf");
 
-    m_profiler.start_measure("present image");
+    PROFILE_START("present image");
     // Present the swap chain image
     present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
-    renderTime += m_profiler.end_measure("present image", true);
+    renderTime += PROFILE_END("present image");
     m_profiler.out_buf() << "total render time: " << renderTime << " seconds\n";
     m_profiler.end_label();
 
     m_frame = (m_frame + 1) % m_swapchainFramebuffers.size();
+
+    //auto renderEnd = std::chrono::high_resolution_clock::now();
+    //std::cout << "total render time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(renderEnd - renderStart).count() / NANOSECONDS_PER_SECOND;
 
     return NVE_SUCCESS;
 }
