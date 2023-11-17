@@ -11,6 +11,17 @@
 #include <vector>
 
 #include "space_consistent_vector.h"
+#include "profiler.h"
+
+#define PROFILE_ECS
+#ifdef PROFILE_ECS
+inline Profiler ECS_Profiler;
+#define PROFILE_START(X) ECS_Profiler.start_measure(X);
+#define PROFILE_END(X) ECS_Profiler.end_measure(X, true);
+#else
+#define PROFILE_START(X)
+#define PROFILE_END(X) 0.f;
+#endif
 
 class IComponentList;
 template<typename T> class ComponentList;
@@ -346,18 +357,27 @@ public:
 
 	void update_systems(float dt)
 	{
+		ECS_Profiler.begin_label("ecs_update");
+		PROFILE_START("new entities");
 		if (m_newEntities.size() > 0)
 		{
 			awake_entities();
 			m_newEntities.clear();
 		}
+		PROFILE_END("new entities");
 
 		for (auto system : m_systems)
 		{
+			ECS_Profiler.out_buf() << system->type_name() << ":\n";
+			PROFILE_START("update whole system");
 			system->update(dt);
+			PROFILE_END("update whole system");
+			PROFILE_START("update single system entities");
 			for (EntityId entity : system->m_entities)
 				system->update(dt, entity);
+			PROFILE_END("update single system entities");
 		}
+		ECS_Profiler.end_label();
 	}
 private:
 	std::vector<ISystem*> m_systems;
@@ -401,3 +421,6 @@ private:
 	//	m_componentManager.ensure_component(typeName);
 	//}
 };
+
+#undef PROFILE_START(X)
+#undef PROFILE_END(X)
