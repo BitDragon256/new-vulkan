@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <mutex>
+#include <forward_list>
 
 #include "nve_types.h"
 #include "ecs.h"
@@ -28,13 +30,15 @@ public:
 	bool m_active;
 	float m_gravity = 10.0f;
 	float m_smoothingRadius = .8f;
-	float m_targetDensity = 6.f;
+	float m_targetDensity = 8.f;
 	float m_pressureMultiplier = 50.f;
 	float m_wallForceMultiplier = 0.f;
 	float m_collisionDamping = .998f;
 
 	float m_influenceInner = 1.f;
 	float m_influencePower = 2.5f;
+
+	int m_threadBucketDiff = 2;
 
 	Vector2 m_mousePos;
 	float m_mouseRadius = 3.f;
@@ -43,14 +47,14 @@ public:
 	const Vector2 m_minBounds = { -SF_BOUNDING_HEIGHT / 2.f, -SF_BOUNDING_WIDTH / 2.f };
 	void awake(EntityId) override;
 	void update(float dt) override;
-	void update(float dt, EntityId id) override;
+	//void update(float dt, EntityId id) override;
 	void gui_show_system() override;
 
 private:
 	std::vector<Particle*> m_particles;
 
 	float influence(float rad, float d);
-	float influence_slope(float rad, float d);
+	float influence_grad(float rad, float d);
 	float influence_volume(float rad);
 	float density_to_pressure(float density);
 	Vector2 pressure_force(Particle& particle, Vector2 predictedPosition);
@@ -86,8 +90,7 @@ private:
 	Profiler m_profiler;
 
 	// Multi-Threading
-	const uint32_t m_threadCount = 8;
+	const uint32_t m_threadCount = 32;
 	ThreadPool m_threadPool;
-	std::vector<std::mutex> m_bucketLockMutices;
-	std::vector<std::condition_variable> m_bucketLockConds;
+	std::forward_list<std::mutex> m_bucketLockMutices;
 };

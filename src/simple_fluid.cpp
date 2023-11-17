@@ -6,14 +6,23 @@
 #include "logger.h"
 
 #define SF_PROFILER
-// #undef SIMPLE_FLUID_PROFILER
+#undef SF_PROFILER
+
+#ifdef SF_PROFILER
+#define PROFILE_START(X) m_profiler.start_measure(X);
+#define PROFILE_END(X) m_profiler.end_measure(X, true);
+#else
+#define PROFILE_START(X)
+#define PROFILE_END(X) 0.f
+#endif
 
 #define SIMPLE_FLUID_THREADING
-#undef SIMPLE_FLUID_THREADING
+//#undef SIMPLE_FLUID_THREADING
 
 SimpleFluid::SimpleFluid() : m_pIndex{ 0 }
 {
 	create_buckets();
+	m_threadPool.initialize(m_threadCount);
 }
 void SimpleFluid::awake(EntityId id)
 {
@@ -31,39 +40,27 @@ void SimpleFluid::update(float dt)
 	if (!m_active)
 		return;
 
-#ifdef SF_PROFILER
+	m_profiler.begin_label("simple_fluid_update");
+
 	float totalTime = 0;
-	m_profiler.start_measure("cache densities");
-#endif
+	PROFILE_START("cache densities");
 	cache_densities();
-#ifdef SF_PROFILER
-	totalTime += m_profiler.end_measure("cache densities", true);
-#endif
+	totalTime += PROFILE_END("cache densities", true);
 
 	// Threading force calculations
-#ifdef SF_PROFILER
-	m_profiler.start_measure("calc forces");
-#endif
+	PROFILE_START("calc forces");
 
 #ifdef SIMPLE_FLUID_THREADING
-	size_t threadCount = std::fmin(std::ceil((float) m_particles.size() / m_particlesPerThread), std::thread::hardware_concurrency());
-	m_threads.resize(threadCount);
-	size_t deltaIndex = std::ceil((float) m_particles.size() / threadCount);
-	for (size_t i = 0; i < threadCount; i++)
+	for (size_t i = 0; i < m_buckets.size(); i += m_threadBucketDiff)
 	{
-		m_threads[i] = std::thread(&SimpleFluid::calc_forces, this, i * deltaIndex, (i + 1) * deltaIndex, dt);
+		m_threadPool.doJob(std::bind(&SimpleFluid::calc_forces, this, i, i + m_threadBucketDiff, dt));
 	}
-	for (size_t i = 0; i < threadCount; i++)
-	{
-		m_threads[i].join();
-	}
+	//m_threadPool.wait_for_finish();
 #else
-	calc_forces(0, m_particles.size(), dt);
+	calc_forces(0, m_buckets.size(), dt);
 #endif
-#ifdef SF_PROFILER
-	totalTime += m_profiler.end_measure("calc forces", true);
-	m_profiler.start_measure("assign buckets");
-#endif
+	totalTime += PROFILE_END("calc forces", true);
+	PROFILE_START("assign buckets");
 
 	size_t i = 0;
 	for (auto particlePtr : m_particles)
@@ -82,40 +79,48 @@ void SimpleFluid::update(float dt)
 		m_ecs->get_component<Transform>(m_entities[i++]).position = { particlePtr->position.x, particlePtr->position.y, 0 };
 	}
 
-#ifdef SF_PROFILER
-	totalTime += m_profiler.end_measure("assign buckets", true);
-	std::cout << "total time measured " << totalTime << " seconds\n\n";
-#endif
+	totalTime += PROFILE_END("assign buckets", true);
+	//m_profiler.out_buf() << "total time measured " << totalTime << " seconds\n\n";
+	m_profiler.end_label();
 }
 void SimpleFluid::calc_forces(size_t start, size_t end, float dt)
 {
-	for (size_t i = start; i < end && i < m_particles.size(); i++)
+	// for (size_t i = start; i < end && i < m_particles.size(); i++)
+	auto bucketIt = m_bucketLockMutices.begin();
+	for (int i = 0; i < start; i++) bucketIt++;
+	for (size_t i = start; i < end && i < m_buckets.size(); i++, bucketIt++)
 	{
-		auto particlePtr = m_particles[i];
-		
-		Particle& particle = *particlePtr;
-		particle.acc = Vector2(0);
+#ifdef SIMPLE_FLUID_THREADING
+		std::lock_guard<std::mutex> lock(*bucketIt);
+#endif
+		for (auto particlePtr : m_buckets[i])
+		{
+			Particle& particle = *particlePtr;
+			particle.acc = Vector2(0);
 
-		Vector2 predictedPos = particle.position + particle.velocity * dt;
-		particle.acc += Vector2 { m_gravity, 0 };
-		
-		particle.acc += mouse_force(particle.position, particle.velocity);
+			Vector2 predictedPos = particle.position + particle.velocity * dt;
+			particle.acc += Vector2 { m_gravity, 0 };
 
-		//particle.velocity += pressure_force(particle) * dt;
-		particle.acc += pressure_force(particle, predictedPos);
+			particle.acc += mouse_force(particle.position, particle.velocity);
+
+			//particle.velocity += pressure_force(particle) * dt;
+			particle.acc += pressure_force(particle, predictedPos);
+		}
 	}
 }
+/*
 void SimpleFluid::update(float dt, EntityId id)
 {
 	if (m_densities.empty())
 		return;
 	auto& p = get_particle(id);
 	m_ecs->get_component<DynamicModel>(id).m_children[0].material.m_diffuse = Vector3(
-		glm::length(p.position - p.lastPosition) / dt / 5.f,
-		0.f,
+		density_to_pressure(density_at(p.position)) / 20.f / m_pressureMultiplier,
+		-density_to_pressure(density_at(p.position)) / 20.f / m_pressureMultiplier,
 		0.f
 	);
 }
+*/
 void SimpleFluid::gui_show_system()
 {
 	float energy{ 0 };
@@ -146,17 +151,9 @@ Vector2 SimpleFluid::pressure_force(Particle& particle, Vector2 predictedPositio
 		dir = dir / dist;
 		float density = fmaxf(0.01f, m_densities[p.index]);
 		float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
-		force += sharedPressure * dir * influence_slope(m_smoothingRadius, dist) / density;
-		force -= m_collisionDamping * particle.velocity;
+		force += sharedPressure * dir * influence_grad(m_smoothingRadius, dist) / density;
+		particle.velocity = m_collisionDamping * particle.velocity + (1.f - m_collisionDamping) * pPtr->velocity;
 	}
-
-	// float density = fmaxf(0.01f, m_targetDensity * m_wallForceMultiplier);
-	// float sharedPressure = (density_to_pressure(density) + density_to_pressure(m_densities[particle.index])) / 2.f;
-
-	// force += sharedPressure * Vector2{ -1, 0 } * influence_slope(m_smoothingRadius, predictedPosition.x - m_minBounds.x) / density;
-	// force += sharedPressure * Vector2{ 1, 0 }  * influence_slope(m_smoothingRadius, m_maxBounds.x - predictedPosition.x) / density;
-	// force += sharedPressure * Vector2{ 0, -1 } * influence_slope(m_smoothingRadius, predictedPosition.y - m_minBounds.y) / density;
-	// force += sharedPressure * Vector2{ 0, 1 }  * influence_slope(m_smoothingRadius, m_maxBounds.y - predictedPosition.y) / density;
 
 	return force;
 }
@@ -191,17 +188,17 @@ float SimpleFluid::influence(float rad, float d)
 {
 	if (d > rad)
 		return 0;
-	return powf((rad - d) * 2.f, 3) / influence_volume(rad);
+	return powf((rad - d) * m_influenceInner, m_influencePower) / influence_volume(rad);
 }
-float SimpleFluid::influence_slope(float rad, float d)
+float SimpleFluid::influence_grad(float rad, float d)
 {
 	if (d > rad)
 		return 0;
-	return -2.f * 3.f * powf(rad - d, 2.f) / influence_volume(rad);
+	return -m_influenceInner * m_influencePower * powf(rad - d, m_influencePower - 1.f);// / influence_volume(rad);
 }
 float SimpleFluid::influence_volume(float rad)
 {
-	return PI * powf(rad, 4.f) / 2.f;
+	return PI * powf(rad, m_influencePower + 1.f) / (m_influencePower + 1.f) * m_influenceInner;
 }
 
 void SimpleFluid::cache_densities()
@@ -251,8 +248,10 @@ void SimpleFluid::create_buckets()
 	Vector2 size = m_maxBounds - m_minBounds;
 	uint32_t xCount = (uint32_t) ceilf(size.x / m_bucketSize) + 1;
 	m_yBuckets = (uint32_t) ceilf(size.y / m_bucketSize) + 1;
+	size_t bucketCount = xCount * m_yBuckets;
 
-	m_buckets.resize(xCount * m_yBuckets);
+	m_buckets.resize(bucketCount);
+	m_bucketLockMutices.resize(bucketCount);
 }
 uint32_t SimpleFluid::pos_to_bucket_index(Vector2 pos)
 {
