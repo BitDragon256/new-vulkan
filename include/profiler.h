@@ -6,7 +6,9 @@
 #include <unordered_map>
 
 #define NANOSECONDS_PER_SECOND 1000000000.f
-#define PROFILER_OUT_BUFFER_WRITES 500 
+#define PROFILER_OUT_BUFFER_WRITES 50000 
+
+class Profiler;
 
 class Profiler
 {
@@ -21,12 +23,13 @@ public:
 	float end_label();
 
 	std::stringstream& out_buf();
+	static void print_buf();
 
 private:
 
 	std::unordered_map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> m_measures;
 	std::unordered_map<std::string, float> m_lastMeasures;
-	std::vector<std::string> m_labels;
+	static std::vector<std::string> s_labels;
 
 	void save_time(std::string name);
 	std::chrono::time_point<std::chrono::high_resolution_clock> now();
