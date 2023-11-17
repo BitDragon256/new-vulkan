@@ -901,7 +901,9 @@ NVE_RESULT Renderer::draw_frame()
     // Present the swap chain image
     present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
     renderTime += PROFILE_END("present image");
+#ifdef RENDER_PROFILER
     m_profiler.out_buf() << "total render time: " << renderTime << " seconds\n";
+#endif
     m_profiler.end_label();
 
     m_frame = (m_frame + 1) % m_swapchainFramebuffers.size();
