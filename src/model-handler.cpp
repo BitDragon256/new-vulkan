@@ -8,6 +8,15 @@
 #include "math-core.h"
 #include "profiler.h"
 
+#define RENDER_PROFILER
+#ifdef RENDER_PROFILER
+#define PROFILE_START(X) m_profiler.start_measure(X);
+#define PROFILE_END(X) m_profiler.end_measure(X, true);
+#else
+#define PROFILE_START(X)
+#define PROFILE_END(X) 0.f;
+#endif
+
 // ------------------------------------------
 // NON-MEMBER FUNCTIONS
 // ------------------------------------------
@@ -479,6 +488,9 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 }
 void GeometryHandler::reload_materials()
 {
+	m_profiler.begin_label("reload materials");
+
+	PROFILE_START("iterate through mats");
 	std::vector<MaterialSSBO> mats(m_materials.size());
 	for (size_t i = 0; i < mats.size(); i++)
 	{
@@ -488,8 +500,16 @@ void GeometryHandler::reload_materials()
 		else
 			mats[i].m_textureIndex = UINT32_MAX;
 	}
-	m_materialBuffer.set(mats);
-	update_descriptor_set();
+	PROFILE_END("iterate through mats");
+	PROFILE_START("update buffer");
+	bool reload = m_materialBuffer.set(mats);
+	PROFILE_END("update buffer");
+	PROFILE_START("update descriptor");
+	if (reload)
+		update_descriptor_set();
+	PROFILE_END("update descriptor");
+
+	m_profiler.end_label();
 }
 void GeometryHandler::reload_meshes()
 {
@@ -653,10 +673,17 @@ void GeometryHandler::update()
 {
 	if (reloadMeshBuffers)
 	{
+		PROFILE_START("reload meshes");
 		reload_meshes();
 		reloadMeshBuffers = false;
+		PROFILE_END("reload meshes");
 	}
-	else reload_materials();
+	else
+	{
+		PROFILE_START("reload mats");
+		reload_materials();
+		PROFILE_END("reload mats");
+	}
 }
 
 // ------------------------------------------
@@ -791,14 +818,22 @@ void DynamicGeometryHandler::awake(EntityId entity)
 }
 void DynamicGeometryHandler::update(float dt)
 {
+	m_profiler.begin_label("dyn update");
+	PROFILE_START("get transforms")
 	// get all transforms
 	std::vector<Transform> transforms(m_entities.size());
 	for (size_t i = 0; i < m_entities.size(); i++)
 		transforms[i] = m_ecs->get_component<Transform>(m_entities[i]);
+	PROFILE_END("get transforms");
 
+	PROFILE_START("push transforms");
 	// push transforms
 	m_transformBuffer.set(transforms);
+	PROFILE_END("push transforms");
+
+	PROFILE_START("update base handler");
 	GeometryHandler::update();
+	PROFILE_END("update base handler");
 
 	// update descriptor set
 	VkWriteDescriptorSet transformBufferWrite = {};
@@ -816,7 +851,10 @@ void DynamicGeometryHandler::update(float dt)
 	transformBufferWrite.dstSet = m_descriptorSet;
 	transformBufferWrite.pBufferInfo = &transformBufferInfo;
 
+	PROFILE_START("update descriptors");
 	vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
+	PROFILE_END("update descriptors");
+	m_profiler.end_label();
 }
 
 void DynamicGeometryHandler::cleanup()

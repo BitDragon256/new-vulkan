@@ -11,6 +11,7 @@
 #include "math-core.h"
 #include "gui.h"
 #include "logger.h"
+#include "profiler.h"
 
 struct Transform
 {
@@ -173,6 +174,8 @@ protected:
 
 	GUIManager* m_guiManager;
 	uint32_t m_subpassCount;
+
+	Profiler m_profiler;
 
 private:
 
