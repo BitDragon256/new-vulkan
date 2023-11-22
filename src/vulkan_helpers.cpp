@@ -315,3 +315,25 @@ VkFormat find_depth_format(VkPhysicalDevice physicalDevice) {
         physicalDevice
     );
 }
+
+
+/*
+* -------------------------------------------------
+*			       OBJECT CREATION
+* -------------------------------------------------
+ */
+VkSemaphore vk_create_semaphore(VkDevice device)
+{
+    VkSemaphoreCreateInfo semCI = {};
+    semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semCI.pNext = nullptr;
+    semCI.flags = 0;
+    
+    VkSemaphore sem;
+    vkCreateSemaphore(device, &semCI, nullptr, &sem);
+    return sem;
+}
+void vk_destroy_semaphore(VkDevice device, VkSemaphore semaphore)
+{
+    vkDestroySemaphore(device, semaphore, nullptr);
+}

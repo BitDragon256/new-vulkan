@@ -54,3 +54,11 @@ VkResult vkCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsM
 
 VkFormat find_supported_format(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features, VkPhysicalDevice physicalDevice);
 VkFormat find_depth_format(VkPhysicalDevice physicalDevice);
+
+/*
+* -------------------------------------------------
+*			       OBJECT CREATION
+* -------------------------------------------------
+ */
+VkSemaphore vk_create_semaphore(VkDevice device);
+void vk_destroy_semaphore(VkDevice device, VkSemaphore semaphore);
