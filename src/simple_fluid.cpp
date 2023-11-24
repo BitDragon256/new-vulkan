@@ -45,7 +45,7 @@ void SimpleFluid::update(float dt)
 	float totalTime = 0;
 	PROFILE_START("cache densities");
 	cache_densities();
-	totalTime += PROFILE_END("cache densities", true);
+	totalTime += PROFILE_END("cache densities");
 
 	// Threading force calculations
 	PROFILE_START("calc forces");
@@ -59,7 +59,7 @@ void SimpleFluid::update(float dt)
 #else
 	calc_forces(0, m_buckets.size(), dt);
 #endif
-	totalTime += PROFILE_END("calc forces", true);
+	totalTime += PROFILE_END("calc forces");
 	PROFILE_START("assign buckets");
 
 	size_t i = 0;
@@ -79,7 +79,7 @@ void SimpleFluid::update(float dt)
 		m_ecs->get_component<Transform>(m_entities[i++]).position = { particlePtr->position.x, particlePtr->position.y, 0 };
 	}
 
-	totalTime += PROFILE_END("assign buckets", true);
+	totalTime += PROFILE_END("assign buckets");
 	//m_profiler.out_buf() << "total time measured " << totalTime << " seconds\n\n";
 	m_profiler.end_label();
 }
@@ -305,3 +305,8 @@ bool SimpleFluid::bounds_check(Particle& particle)
 
 	return changed;
 }
+
+#undef PROFILE_START
+#undef PROFILE_END
+#undef PROFILE_LABEL
+#undef PROFILE_LABEL_END

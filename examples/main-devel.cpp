@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     // simple fluid
     SimpleFluid simpleFluid;
     renderer.m_ecs.register_system<SimpleFluid>(&simpleFluid);
-    simpleFluid.m_active = false;
+    simpleFluid.m_active = true;
 
     int particleCount = 0;
     std::vector<EntityId> particles;
@@ -203,7 +203,8 @@ int main(int argc, char** argv)
     tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
     tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
 
-    float renderAvg = 0;
+    float renderAvg = 0.f;
+    float profilerTime = 0.f;
     
     bool updateECS = true;
     bool singleUpdateECS = false;
@@ -223,88 +224,103 @@ int main(int argc, char** argv)
             simpleFluid.m_mousePos = Vector2(std::numeric_limits<float>::max());
 
         renderer.gui_begin();
-
+        
         profiler.start_measure("total time");
 
-        profiler.start_measure("gui");
+        //profiler.start_measure("gui");
 
         // GUI
         {
-        renderer.draw_engine_gui();
+            renderer.draw_engine_gui();
 
-        ImGui::Begin("General");
+            ImGui::Begin("General");
 
-        // -----------------------------------------------
-        // PARTICLE SPAWNING
-        // -----------------------------------------------
-        if (ImGui::Button("Create Particles"))
-        {
+            // -----------------------------------------------
+            // PARTICLE SPAWNING
+            // -----------------------------------------------
+            if (ImGui::Button("Create Particles"))
+            {
                 srand(time(NULL));
 
-                int width = 7;
-            int newParticleCount = width * width;
-            float downScale = fminf(SF_BOUNDING_WIDTH, SF_BOUNDING_HEIGHT) / width / 1.5f;
-            for (int i = 0; i < newParticleCount; i++)
-            {
-                EntityId id = renderer.m_ecs.create_entity();
-                auto& part = renderer.m_ecs.add_component<Particle>(id);
-                renderer.m_ecs.add_component<DynamicModel>(id) = ball;
-                auto& transform = renderer.m_ecs.add_component<Transform>(id);
+                int width = 12;
+                int newParticleCount = width * width;
+                float downScale = fminf(SF_BOUNDING_WIDTH, SF_BOUNDING_HEIGHT) / width / 1.5f;
+                for (int i = 0; i < newParticleCount; i++)
+                {
+                    EntityId id = renderer.m_ecs.create_entity();
+                    auto& part = renderer.m_ecs.add_component<Particle>(id);
+                    renderer.m_ecs.add_component<DynamicModel>(id) = ball;
+                    auto& transform = renderer.m_ecs.add_component<Transform>(id);
                     transform.scale = Vector3(0.1f);
 
-                int x = i % (width)-width / 2;
-                int y = (int)i / width - width / 2;
+                    int x = i % (width)-width / 2;
+                    int y = (int)i / width - width / 2;
                     part.position = { x * downScale, y * downScale + (rand() % 100) / 1000.f - 0.05f };
 
-                particles.push_back(id);
+                    particles.push_back(id);
+                }
             }
-        }
+            if (ImGui::Button("Reset Velocity"))
+            {
+                for (auto pId : particles)
+                {
+                    auto& p = renderer.m_ecs.get_component<Particle>(pId);
+                    p.lastPosition = p.position;
+                    p.velocity = Vector2(0);
+                }
+            }
 
-        if (frame >= fps / 2)
-        {
-            fpsText = std::to_string(fps) + " fps";
-            avgFpsText = std::to_string(avgFps) + " fps (avg)";
-            frame = 0;
+            if (frame >= fps / 2)
+            {
+                fpsText = std::to_string(fps) + " fps";
+                avgFpsText = std::to_string(avgFps) + " fps (avg)";
+                frame = 0;
 
-        }
-        ImGui::Text(fpsText.c_str());
-        ImGui::Text(avgFpsText.c_str());
-        frame++;
+            }
+            ImGui::Text(fpsText.c_str());
+            ImGui::Text(avgFpsText.c_str());
+            frame++;
 
-        ImGui::DragFloat("Target Density", &simpleFluid.m_targetDensity);
-        ImGui::DragFloat("Pressure Multiplier", &simpleFluid.m_pressureMultiplier, 0.1f);
-        ImGui::DragFloat("Smoothing Radius", &simpleFluid.m_smoothingRadius);
-        //ImGui::DragInt("Particle Count", &particleCount);
-        ImGui::DragFloat("Gravity", &simpleFluid.m_gravity, 0.5f);
-        ImGui::DragFloat("Wall Force", &simpleFluid.m_wallForceMultiplier, 0.2f);
-        ImGui::DragFloat("Collision Damping", &simpleFluid.m_collisionDamping);
-        ImGui::DragFloat("Mouse Radius", &simpleFluid.m_mouseRadius);
-        ImGui::DragFloat("Mouse Strength", &simpleFluid.m_mouseStrength);
-        if (ImGui::Button("Play / Pause"))
-            simpleFluid.m_active ^= 1;
+            ImGui::DragFloat("Target Density", &simpleFluid.m_targetDensity);
+            ImGui::DragFloat("Pressure Multiplier", &simpleFluid.m_pressureMultiplier, 0.1f);
+            ImGui::DragFloat("Smoothing Radius", &simpleFluid.m_smoothingRadius);
+            //ImGui::DragInt("Particle Count", &particleCount);
+            ImGui::DragFloat("Gravity", &simpleFluid.m_gravity, 0.5f);
+            ImGui::DragFloat("Wall Force", &simpleFluid.m_wallForceMultiplier, 0.2f);
+            ImGui::DragFloat("Collision Damping", &simpleFluid.m_collisionDamping);
 
-        generate_particles();
+            ImGui::DragFloat("Influence Inner", &simpleFluid.m_influenceInner);
+            ImGui::DragFloat("Influence Power", &simpleFluid.m_influencePower);
+            ImGui::DragFloat("Mouse Radius", &simpleFluid.m_mouseRadius);
+            ImGui::DragFloat("Mouse Strength", &simpleFluid.m_mouseStrength);
 
-        ImGui::SliderFloat("speed", &moveSpeed, 0.f, 0.03f);
-        ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
+            ImGui::DragInt("Thread Bucket Difference", &simpleFluid.m_threadBucketDiff, 1, 1);
+
+            if (ImGui::Button("Play / Pause"))
+                simpleFluid.m_active ^= 1;
+
+            generate_particles();
+
+            ImGui::SliderFloat("speed", &moveSpeed, 0.f, 0.03f);
+            ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
 
             ImGui::SliderFloat3("cam pos", (float*)&camera.m_position, -10, 10);
 
             singleUpdateECS = ImGui::Button("step ecs");
-        if (ImGui::Button("update ecs"))
-            updateECS = !updateECS;
+            if (ImGui::Button("update ecs"))
+                updateECS = !updateECS;
 
-        if (updateECS)
-            ImGui::Text("ECS activated");
-        else
-            ImGui::Text("ECS deactivated");
+            if (updateECS)
+                ImGui::Text("ECS activated");
+            else
+                ImGui::Text("ECS deactivated");
 
-        if (ImGui::Button("Ortho / Persp"))
-            camera.m_orthographic = !camera.m_orthographic;
+            if (ImGui::Button("Ortho / Persp"))
+                camera.m_orthographic = !camera.m_orthographic;
 
-        ImGui::End();
+            ImGui::End();
 
-            profiler.end_measure("gui", true);
+            // profiler.end_measure("gui", true);
         }
 
         profiler.start_measure("ecs");
@@ -318,9 +334,7 @@ int main(int argc, char** argv)
             running = false;
         renderAvg += profiler.end_measure("render", true);
         renderAvg /= 2;
-        profiler.end_measure("total time", true);
-
-        //std::cout << "---------------------------------------\n";
+        profiler.end_measure("total time", false);
 
         // time
         auto now = std::chrono::high_resolution_clock::now();
@@ -329,6 +343,11 @@ int main(int argc, char** argv)
         avgFps += fps;
         avgFps /= 2.f;
         lastTime = std::chrono::high_resolution_clock::now();
+
+        profilerTime += deltaTime;
+        if (profilerTime > 1.f)
+            Profiler::print_buf();
+        profiler.out_buf() << "\nprint\n";
     }
     std::cout << "avg render time: " << renderAvg << " seconds\n";
 
