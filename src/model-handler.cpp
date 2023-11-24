@@ -252,6 +252,35 @@ void GeometryHandler::set_first_subpass(uint32_t subpass)
 {
 	m_vulkanObjects.firstSubpass = subpass;
 }
+// TODO staged buffer copy synchronization
+std::vector<VkSemaphore> GeometryHandler::buffer_cpy_semaphores()
+{
+	// ANCHOR
+	vkQueueWaitIdle(m_vulkanObjects.transferQueue);
+	vkDeviceWaitIdle(m_vulkanObjects.device);
+	return {};
+
+	std::vector<VkSemaphore> sems = {};
+	sems.push_back(m_materialBuffer.staged_buf_cpy_semaphore());
+	for (auto& meshGroup : m_meshGroups)
+	{
+		sems.push_back(meshGroup.vertexBuffer.staged_buf_cpy_semaphore());
+		sems.push_back(meshGroup.indexBuffer.staged_buf_cpy_semaphore());
+	}
+
+	return sems;
+}
+std::vector<VkFence> GeometryHandler::buffer_cpy_fences()
+{
+	std::vector<VkFence> fences = {};
+	fences.push_back(m_materialBuffer.staged_buf_cpy_fence());
+	for (auto& meshGroup : m_meshGroups)
+	{
+		fences.push_back(meshGroup.vertexBuffer.staged_buf_cpy_fence());
+		fences.push_back(meshGroup.indexBuffer.staged_buf_cpy_fence());
+	}
+	return fences;
+}
 
 MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
 {
@@ -700,7 +729,7 @@ void StaticGeometryHandler::load_dummy_model()
 	mesh.vertices = { NULL_VERTEX, NULL_VERTEX, NULL_VERTEX };
 	mesh.indices = { 0, 1, 2 };
 	mesh.material.m_shader = new GraphicsShader();
-	mesh.material.m_shader->fragment.load_shader("fragments/unlit.frag.spv");
+	mesh.material.m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
 	mesh.material.m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 
 	m_dummyModel.m_children.push_back(mesh);
@@ -855,6 +884,22 @@ void DynamicGeometryHandler::update(float dt)
 	vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
 	PROFILE_END("update descriptors");
 	m_profiler.end_label();
+}
+// TODO staged buffer copy synchronization
+std::vector<VkSemaphore> DynamicGeometryHandler::buffer_cpy_semaphores()
+{
+	auto sems = GeometryHandler::buffer_cpy_semaphores();
+	sems.push_back(m_transformBuffer.staged_buf_cpy_semaphore());
+
+	return sems;
+}
+// TODO staged buffer copy synchronization
+std::vector<VkFence> DynamicGeometryHandler::buffer_cpy_fences()
+{
+	auto fences = GeometryHandler::buffer_cpy_fences();
+	fences.push_back(m_transformBuffer.staged_buf_cpy_fence());
+
+	return fences;
 }
 
 void DynamicGeometryHandler::cleanup()

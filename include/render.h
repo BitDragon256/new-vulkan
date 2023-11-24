@@ -137,6 +137,9 @@ private:
 	void set_geometry_handler_subpasses();
 	void update_geometry_handler_framebuffers();
 
+// TODO staged buffer copy synchronization
+	void wait_for_geometry_handler_buffer_cpies();
+
 	uint32_t m_lastGeometryHandlerSubpassCount;
 	uint32_t geometry_handler_subpass_count();
 

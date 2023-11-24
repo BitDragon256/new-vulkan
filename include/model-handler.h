@@ -153,6 +153,8 @@ public:
 	void set_first_subpass(uint32_t subpass);
 
 	uint32_t subpass_count();
+	virtual std::vector<VkSemaphore> buffer_cpy_semaphores();
+	virtual std::vector<VkFence> buffer_cpy_fences();
 
 	virtual void cleanup();
 
@@ -265,6 +267,9 @@ public:
 	void start() override;
 	void awake(EntityId entity) override;
 	void update(float dt) override;
+
+	std::vector<VkSemaphore> buffer_cpy_semaphores() override;
+	std::vector<VkFence> buffer_cpy_fences() override;
 
 	void cleanup() override;
 

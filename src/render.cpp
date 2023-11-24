@@ -692,6 +692,18 @@ std::vector<GeometryHandler*> Renderer::all_geometry_handlers()
         &m_dynamicGeometryHandler,
     };
 }
+// TODO staged buffer copy synchronization
+void Renderer::wait_for_geometry_handler_buffer_cpies()
+{
+    std::vector<VkFence> fences;
+    auto handlers = all_geometry_handlers();
+    for (auto handler : handlers)
+    {
+        auto handlerFences = handler->buffer_cpy_fences();
+        append_vector(fences, handlerFences);
+    }
+    vkWaitForFences(m_device, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, UINT32_MAX);
+}
 
 void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
 {
@@ -867,6 +879,10 @@ NVE_RESULT Renderer::draw_frame()
     m_cameraPushConstant.projView = m_activeCamera->projection_matrix() * m_activeCamera->view_matrix();
     m_cameraPushConstant.camPos = m_activeCamera->m_position;
 
+    // collect semaphores
+    // this has to be done before the model handler update because the geometry handlers otherwise doesn't update its buffers
+    std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
+
     // record command buffers
     PROFILE_START("record cmd buffers");
     auto geometryHandlers = all_geometry_handlers();
@@ -874,6 +890,12 @@ NVE_RESULT Renderer::draw_frame()
         genCmdBuf(geometryHandler);*/
     for (auto geometryHandler : geometryHandlers)
     {
+        // TODO staged buffer copy synchronization
+        //auto sems = geometryHandler->buffer_cpy_semaphores();
+        //for (auto sem : sems)
+        //    if (sem != VK_NULL_HANDLE)
+        //        waitSemaphores.push_back(sem);
+
         m_threadPool.doJob(std::bind(&Renderer::genCmdBuf, this, geometryHandler));
     }
     m_threadPool.wait_for_finish();
@@ -892,6 +914,13 @@ NVE_RESULT Renderer::draw_frame()
 
     std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
     std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphores[m_frame] };
+    std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    // TODO staged buffer copy synchronization
+    //while (waitSemaphores.size() > waitStages.size())
+    //    waitStages.push_back(VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+
+    // wait_for_geometry_handler_buffer_cpies();
 
     PROFILE_START("submit cmd buf");
     // Submit the recorded command buffers
