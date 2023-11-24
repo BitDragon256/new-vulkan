@@ -36,7 +36,6 @@ typedef struct {
     bool singleUseStagedBuffer;
     VkCommandPool stagedBufferTransferCommandPool;
     VkQueue stagedBufferTransferQueue;
-    bool selfSubmitStagedBufferCopy;
 } BufferConfig;
 
 typedef struct {
@@ -105,7 +104,7 @@ public:
         PROFILE_START("recreate buffer " + typeName);
         if (recreate)
             create();
-        PROFILE_END("recreate buffer" + typeName);
+        PROFILE_END("recreate buffer " + typeName);
         PROFILE_START("check reload");
         bool reload = recreate;
         for (size_t i = 0; i < data.size() && !reload; i++)
@@ -272,11 +271,23 @@ public:
             cmdBufAI.pNext = 0;
             cmdBufAI.commandBufferCount = 1;
             cmdBufAI.commandPool = m_config.stagedBufferTransferCommandPool;
-            if (m_config.selfSubmitStagedBufferCopy)
-                cmdBufAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            else
-                cmdBufAI.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+            cmdBufAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
             vkAllocateCommandBuffers(m_config.device, &cmdBufAI, &m_commandBuffer);
+
+            m_stagedBufCpySemaphoreSignaled = true;
+            m_stagedBufCpySubmitted = true;
+
+			VkSemaphoreCreateInfo semCI = {};
+			semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			semCI.pNext = nullptr;
+			semCI.flags = 0;
+			vkCreateSemaphore(m_config.device, &semCI, nullptr, &m_stagedBufCpySemaphore);
+
+            VkFenceCreateInfo fenceCI = {};
+            fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fenceCI.pNext = nullptr;
+            fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            vkCreateFence(m_config.device, &fenceCI, nullptr, &m_lastStagedBufCpyFence);
         }
 
         m_stagingBuffer.initialize(m_config.device, m_config.physicalDevice);
@@ -292,12 +303,27 @@ public:
     }
     void destroy()
     {
+        if (m_config.useStagedBuffer)
+        {
+            vkDestroySemaphore(m_config.device, m_stagedBufCpySemaphore, nullptr);
+            vkDestroyFence(m_config.device, m_lastStagedBufCpyFence, nullptr);
+            vkFreeCommandBuffers(m_config.device, m_config.stagedBufferTransferCommandPool, 1, &m_commandBuffer);
+        }
         m_stagingBuffer.destroy();
         RawBuffer<T>::destroy();
     }
-    VkCommandBuffer staged_cpy_cmd_buf()
+
+    VkSemaphore staged_buf_cpy_semaphore()
     {
-        return m_commandBuffer;
+        if (!m_stagedBufCpySubmitted)
+            return VK_NULL_HANDLE;
+        m_stagedBufCpySubmitted = false;
+        m_stagedBufCpySemaphoreSignaled = true;
+        return m_stagedBufCpySemaphore;
+    }
+    VkFence staged_buf_cpy_fence()
+    {
+        return m_lastStagedBufCpyFence;
     }
 protected:
     void reload_data() override
@@ -320,14 +346,40 @@ protected:
 
     void copy_buffer(VkBuffer srcBuf, VkBuffer dstBuf, VkDeviceSize size)
     {
+        record_cpy_cmd_buf(srcBuf, dstBuf, size);
+
+        // TODO staged buffer copy synchronization
+        //if (!m_stagedBufCpySemaphoreSignaled)
+        //{
+        //    m_stagedBufCpySemaphores.push_back(m_stagedBufCpySemaphore);
+        //    m_stagedBufCpySemaphore = vk_create_semaphore(m_config.device);
+        //}
+
+		submit_cpy_cmd_buf();
+    }
+
+private:
+
+    Profiler m_profiler;
+    VkCommandBuffer m_commandBuffer;
+    VkSemaphore m_stagedBufCpySemaphore;
+    VkFence m_lastStagedBufCpyFence;
+    bool m_stagedBufCpySemaphoreSignaled;
+    bool m_stagedBufCpySubmitted;
+
+    std::vector<VkSemaphore> m_stagedBufCpySemaphores;
+
+    void record_cpy_cmd_buf(VkBuffer srcBuf, VkBuffer dstBuf, VkDeviceSize size)
+    {
+        VkResult res;
         PROFILE_START("begin cmd buf");
-        vkResetCommandBuffer(m_commandBuffer, 0);
-        VkCommandBufferBeginInfo cmdBufBI;
+        res = vkResetCommandBuffer(m_commandBuffer, 0);
+        VkCommandBufferBeginInfo cmdBufBI = {};
         cmdBufBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmdBufBI.flags = 0;
         cmdBufBI.pNext = 0;
         cmdBufBI.pInheritanceInfo = 0;
-        vkBeginCommandBuffer(m_commandBuffer, &cmdBufBI);
+        res = vkBeginCommandBuffer(m_commandBuffer, &cmdBufBI);
         // VkCommandBuffer cmdBuffer = begin_single_time_cmd_buffer(m_config.stagedBufferTransferCommandPool, m_config.device);
         PROFILE_END("begin cmd buf");
         VkBufferCopy copyRegion = {};
@@ -336,42 +388,89 @@ protected:
         copyRegion.dstOffset = 0;
         PROFILE_START("record cmd buf");
         vkCmdCopyBuffer(m_commandBuffer, srcBuf, dstBuf, 1, &copyRegion);
+        // vkCmdCopyBuffer(cmdBuffer, srcBuf, dstBuf, 1, &copyRegion);
         PROFILE_END("record cmd buf");
-        PROFILE_START("submit cmd buf");
         // end_single_time_cmd_buffer(cmdBuffer, m_config.stagedBufferTransferCommandPool, m_config.device, m_config.stagedBufferTransferQueue);
-        vkEndCommandBuffer(m_commandBuffer);
+        PROFILE_START("end cmd buf");
+        res = vkEndCommandBuffer(m_commandBuffer);
+        PROFILE_END("end cmd buf");
+    }
+    void submit_cpy_cmd_buf()
+    {
+        VkResult res;
 
-        if (m_config.selfSubmitStagedBufferCopy)
-        {
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &m_commandBuffer;
+		// PROFILE_START("wait on last fence");
+		// VkResult res = vkWaitForFences(m_config.device, 1, &m_lastStagedBufCpyFence, VK_TRUE, UINT32_MAX);
+		vkResetFences(m_config.device, 1, &m_lastStagedBufCpyFence);
+		// PROFILE_END("wait on last fence");
 
-            VkFence fence;
-            VkFenceCreateInfo fenceCI = {};
-            fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            fenceCI.pNext = nullptr;
-            fenceCI.flags = 0;
+		PROFILE_START("submit cmd buf");
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.pNext = nullptr;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_commandBuffer;
+		submitInfo.signalSemaphoreCount = 0;
+        // submitInfo.pSignalSemaphores = &m_stagedBufCpySemaphore;
 
-            vkCreateFence(m_config.device, &fenceCI, nullptr, &fence);
+		// submitInfo.waitSemaphoreCount = static_cast<uint32_t>(m_stagedBufCpySemaphores.size());
+        // submitInfo.pWaitSemaphores = m_stagedBufCpySemaphores.data();
+        // std::vector<VkPipelineStageFlags> waitStages(m_stagedBufCpySemaphores.size(), VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+        // submitInfo.pWaitDstStageMask = waitStages.data();
+        submitInfo.waitSemaphoreCount = 0;
 
-            res = vkQueueSubmit(m_config.stagedBufferTransferQueue, 1, &submitInfo, fence);
-            res = vkWaitForFences(m_config.device, 1, &fence, VK_TRUE, UINT64_MAX);
+		res = vkQueueSubmit(m_config.stagedBufferTransferQueue, 1, &submitInfo, m_lastStagedBufCpyFence);
+		// res = vkQueueSubmit(m_config.stagedBufferTransferQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		PROFILE_END("submit cmd buf");
 
-            vkDestroyFence(m_config.device, fence, nullptr);
-        }
+		res = vkWaitForFences(m_config.device, 1, &m_lastStagedBufCpyFence, VK_TRUE, UINT32_MAX);
 
-        PROFILE_END("submit cmd buf");
+        m_stagedBufCpySemaphores.clear();
+		m_stagedBufCpySemaphoreSignaled = false;
+        m_stagedBufCpySubmitted = true;
+    }
+    void self_submit_cpy_cmd_buf()
+    {
+		PROFILE_START("wait on last fence");
+		vkWaitForFences(m_config.device, 1, &m_lastStagedBufCpyFence, VK_TRUE, UINT32_MAX);
+		vkResetFences(m_config.device, 1, &m_lastStagedBufCpyFence);
+		PROFILE_END("wait on last fence");
+
+		PROFILE_START("submit cmd buf");
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.pNext = nullptr;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_commandBuffer;
+		submitInfo.signalSemaphoreCount = 0;
+        submitInfo.pSignalSemaphores = nullptr; // &m_stagedBufCpySemaphore;
+        std::cout << m_stagedBufCpySemaphore << "\n";
+		submitInfo.waitSemaphoreCount = 0;
+
+		VkFence fence;
+		VkFenceCreateInfo fenceCI = {};
+		fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceCI.pNext = nullptr;
+		fenceCI.flags = 0;
+
+		vkCreateFence(m_config.device, &fenceCI, nullptr, &fence);
+
+		auto res = vkQueueSubmit(m_config.stagedBufferTransferQueue, 1, &submitInfo, fence);
+
+		vkWaitForFences(m_config.device, 1, &fence, VK_TRUE, UINT32_MAX);
+		vkDestroyFence(m_config.device, fence, nullptr);
+
+		PROFILE_END("submit cmd buf");
+
+		m_stagedBufCpySemaphoreSignaled = false;
+        m_stagedBufCpySubmitted = true;
+
+        logger::log("self submit cpy buf");
     }
 
-private:
-
-    Profiler m_profiler;
-    VkCommandBuffer m_commandBuffer;
 };
 
-#undef PROFILE_START(X)
-#undef PROFILE_END(X)
-#undef PROFILE_LABEL(X)
+#undef PROFILE_START
+#undef PROFILE_END
+#undef PROFILE_LABEL
 #undef PROFILE_LABEL_END
