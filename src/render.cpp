@@ -89,6 +89,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
     m_avgRenderTime = 0;
     m_acquireImageTimeout = false;
 
+    m_ecs.lock();
     m_guiManager.initialize(&m_ecs);
     
     return NVE_SUCCESS;
@@ -110,7 +111,11 @@ NVE_RESULT Renderer::render()
 
     PROFILE_START("ecs update");
     if (m_firstFrame || m_config.autoECSUpdate)
+    {
+        m_ecs.unlock();
         m_ecs.update_systems(m_deltaTime);
+        m_ecs.lock();
+    }
     PROFILE_END("ecs update");
 
     PROFILE_START("glfw poll events");
@@ -121,6 +126,8 @@ NVE_RESULT Renderer::render()
     draw_frame();
     PROFILE_END("draw frame");
     PROFILE_END("total render time");
+
+    m_ecs.unlock();
 
     return NVE_SUCCESS;
 }
