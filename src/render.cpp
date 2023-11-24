@@ -28,6 +28,19 @@
 #endif
 
 // ---------------------------------------
+// NON-MEMBER FUNCTIONS
+// ---------------------------------------
+
+template<typename T>
+void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
+{
+    if (appendage.empty())
+        return;
+    origin.insert(origin.end(), appendage.begin(), appendage.end());
+}
+
+
+// ---------------------------------------
 // RENDERER
 // ---------------------------------------
 
