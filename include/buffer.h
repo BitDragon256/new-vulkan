@@ -109,7 +109,7 @@ public:
         PROFILE_START("check reload");
         bool reload = recreate;
         for (size_t i = 0; i < data.size() && !reload; i++)
-            if (memequal((void*) & m_data[i], (void*) & data[i], tSize))
+            if (!memequal((void*) & m_data[i], (void*) & data[i], tSize))
                 reload = true;
         PROFILE_END("check reload");
         if (reload)
