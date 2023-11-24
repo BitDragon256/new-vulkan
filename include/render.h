@@ -205,7 +205,7 @@ private:
 
 	// rendering
 	void record_main_command_buffer(uint32_t imageIndex);
-	NVE_RESULT submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems);
+	NVE_RESULT submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkPipelineStageFlags> waitStages, std::vector<VkSemaphore> signalSems);
 	void present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageIndex, std::vector<VkSemaphore> signalSems);
 	NVE_RESULT draw_frame();
 

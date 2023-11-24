@@ -735,14 +735,6 @@ void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessenge
     }
 }
 
-template<typename T>
-void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
-{
-    if (appendage.empty())
-        return;
-    origin.insert(origin.end(), appendage.begin(), appendage.end());
-}
-
 void Renderer::record_main_command_buffer(uint32_t frame)
 {
     // -------------------------------------------
@@ -808,20 +800,24 @@ void Renderer::record_main_command_buffer(uint32_t frame)
 
     {
         auto res = vkEndCommandBuffer(commandBuffer);
-        logger::log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording");
+        logger::log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording: " + std::string(string_VkResult(res)));
     }
 
     // -------------------------------------------
 }
-NVE_RESULT Renderer::submit_command_buffers(std::vector<VkCommandBuffer> commandBuffers, std::vector<VkSemaphore> waitSems, std::vector<VkSemaphore> signalSems)
+NVE_RESULT Renderer::submit_command_buffers(
+    std::vector<VkCommandBuffer> commandBuffers,
+    std::vector<VkSemaphore> waitSems,
+    std::vector<VkPipelineStageFlags> waitStages,
+    std::vector<VkSemaphore> signalSems
+)
 {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSems.size());
     submitInfo.pWaitSemaphores = waitSems.data();
-    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.pWaitDstStageMask = waitStages.data();
 
     submitInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
     submitInfo.pCommandBuffers = commandBuffers.data();
@@ -908,8 +904,6 @@ NVE_RESULT Renderer::draw_frame()
     // record command buffers
     PROFILE_START("record cmd buffers");
     auto geometryHandlers = all_geometry_handlers();
-    /*for (auto geometryHandler : geometryHandlers)
-        genCmdBuf(geometryHandler);*/
     for (auto geometryHandler : geometryHandlers)
     {
         // TODO staged buffer copy synchronization
@@ -934,7 +928,6 @@ NVE_RESULT Renderer::draw_frame()
     m_imguiDraw = false;
     renderTime += PROFILE_END("gui draw");
 
-    std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
     std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphores[m_frame] };
     std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
@@ -947,7 +940,7 @@ NVE_RESULT Renderer::draw_frame()
     PROFILE_START("submit cmd buf");
     // Submit the recorded command buffers
     std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffers[m_frame], m_imgui_commandBuffers[m_frame]};
-    submit_command_buffers(commandBuffers, waitSemaphores, signalSemaphores);
+    submit_command_buffers(commandBuffers, waitSemaphores, waitStages, signalSemaphores);
     renderTime += PROFILE_END("submit cmd buf");
 
     PROFILE_START("present image");
