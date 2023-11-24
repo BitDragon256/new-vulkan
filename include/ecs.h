@@ -269,7 +269,7 @@ class ECSManager
 {
 public:
 	ECSManager() :
-		m_maxEntities(0)
+		m_maxEntities(0), m_locked{ false }
 	{
 		fill_available_entities();
 	}
@@ -357,6 +357,9 @@ public:
 
 	void update_systems(float dt)
 	{
+		if (m_locked)
+			return;
+
 		ECS_Profiler.begin_label("ecs_update");
 		PROFILE_START("new entities");
 		if (m_newEntities.size() > 0)
@@ -378,6 +381,15 @@ public:
 			PROFILE_END("update single system entities");
 		}
 		ECS_Profiler.end_label();
+	}
+
+	void lock()
+	{
+		m_locked = true;
+	}
+	void unlock()
+	{
+		m_locked = false;
 	}
 private:
 	std::vector<ISystem*> m_systems;
@@ -416,11 +428,15 @@ private:
 
 	friend class GUIManager;
 
+	bool m_locked;
+
 	//void ensure_component(const char* typeName)
 	//{
 	//	m_componentManager.ensure_component(typeName);
 	//}
 };
 
-#undef PROFILE_START(X)
-#undef PROFILE_END(X)
+#undef PROFILE_START
+#undef PROFILE_END
+#undef PROFILE_LABEL
+#undef PROFILE_LABEL_END
