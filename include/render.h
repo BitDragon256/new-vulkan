@@ -107,6 +107,8 @@ private:
 
 	VkQueue m_graphicsQueue;
 	VkQueue m_presentationQueue;
+	VkQueue m_transferQueue;
+	VkQueue m_computeQueue;
 
 	QueueFamilyIndices m_queueFamilyIndices;
 

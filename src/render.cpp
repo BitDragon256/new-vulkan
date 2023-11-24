@@ -297,6 +297,8 @@ NVE_RESULT Renderer::create_device()
 
     vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
     vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentationFamily.value(), 0, &m_presentationQueue);
+    vkGetDeviceQueue(m_device, m_queueFamilyIndices.transferFamily.value(), 0, &m_transferQueue);
+    vkGetDeviceQueue(m_device, m_queueFamilyIndices.computeFamily.value(), 0, &m_computeQueue);
 
     return NVE_SUCCESS;
 }
@@ -625,8 +627,8 @@ void Renderer::initialize_geometry_handlers()
     vulkanObjects.physicalDevice = m_physicalDevice;
     vulkanObjects.commandPool = m_commandPool;
     vulkanObjects.renderPass = &m_renderPass;
-    vulkanObjects.transferQueue = m_graphicsQueue;
-    vulkanObjects.queueFamilyIndex = m_queueFamilyIndices.graphicsFamily.value();
+    vulkanObjects.transferQueue = m_transferQueue;
+    vulkanObjects.queueFamilyIndex = m_queueFamilyIndices.transferFamily.value();
     vulkanObjects.descriptorPool = m_descriptorPool;
 
     vulkanObjects.swapchainExtent = m_swapchainExtent;

@@ -91,6 +91,10 @@ QueueFamilyIndices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR sur
         {
             indices.presentationFamily = i;
         }
+        if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+            indices.transferFamily = i;
+        if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+            indices.computeFamily = i;
 
 
         if (indices.is_complete())
@@ -105,7 +109,11 @@ QueueFamilyIndices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR sur
 
 bool QueueFamilyIndices::is_complete()
 {
-    return graphicsFamily.has_value() && presentationFamily.has_value();
+    return
+        graphicsFamily.has_value() &&
+        presentationFamily.has_value() &&
+        transferFamily.has_value() &&
+        computeFamily.has_value();
 }
 
 SwapChainSupportDetails query_swap_chain_support(VkPhysicalDevice device, VkSurfaceKHR surface) {
