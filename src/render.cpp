@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <vulkan/vk_enum_string_helper.h>
+
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_glfw.h>
 
@@ -194,7 +196,7 @@ NVE_RESULT Renderer::create_instance()
     VkResult res = vkCreateInstance(&instanceCI, nullptr, &m_instance);
     if (res != VK_SUCCESS)
     {
-        logger::log("instance creation failed: " + res);
+        logger::log("instance creation failed: " + std::string(string_VkResult(res)));
         return NVE_FAILURE;
     }
     
@@ -808,7 +810,7 @@ NVE_RESULT Renderer::submit_command_buffers(std::vector<VkCommandBuffer> command
     submitInfo.pSignalSemaphores = signalSems.data();
 
     auto res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_frame]);
-    logger::log_cond(res != VK_SUCCESS, "failed to submit command buffers to graphics queue");
+    logger::log_cond(res != VK_SUCCESS, "failed to submit command buffers to graphics queue: " + std::string(string_VkResult(res)));
 
     return NVE_SUCCESS;
 }
@@ -1412,3 +1414,8 @@ glm::mat4 Camera::projection_matrix()
         0, 0, 0, 1
     ));
 }
+
+#undef PROFILE_START
+#undef PROFILE_END
+#undef PROFILE_LABEL
+#undef PROFILE_LABEL_END
