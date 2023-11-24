@@ -20,6 +20,8 @@ bool check_device_extension_support(VkPhysicalDevice device);
 struct QueueFamilyIndices {
 	std::optional<uint32_t> graphicsFamily;
 	std::optional<uint32_t> presentationFamily;
+	std::optional<uint32_t> transferFamily;
+	std::optional<uint32_t> computeFamily;
 	bool is_complete();
 };
 QueueFamilyIndices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface);
