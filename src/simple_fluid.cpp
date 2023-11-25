@@ -77,8 +77,9 @@ void SimpleFluid::update(float dt)
 		auto& particle = m_ecs->get_component<Particle>(particleId);
 
 		auto& bucket = bucket_at(particle.position);
-		if (!bucket.empty())
-			bucket.erase(std::find(bucket.begin(), bucket.end(), &particle));
+		auto it = std::find(bucket.begin(), bucket.end(), &particle);
+		if (it != bucket.end())
+			bucket.erase(it);
 
 		integrate(particle.position, particle.lastPosition, particle.velocity, particle.acc, dt);
 
@@ -92,7 +93,7 @@ void SimpleFluid::update(float dt)
 		transform.position = { particle.position.x, particle.position.y, 0 };
 
 		// delete entity if out of box
-		if (transform.position.y >= 0.f)
+		if (transform.position.y >= SF_BOUNDING_WIDTH / 2.f - 0.5f)
 		{
 			auto& bucket = bucket_at(particle.position);
 			bucket.erase(std::find(bucket.begin(), bucket.end(), &particle));
@@ -140,6 +141,9 @@ void SimpleFluid::gui_show_system()
 		energy += 0.5f * glm::dot(p.position - p.lastPosition, p.position - p.lastPosition);
 	}
 	ImGui::DragFloat("Total Kinetic Energy", &energy, 0);
+
+	int entityCount = static_cast<int>(m_entities.size());
+	ImGui::DragInt("Particle Count", &entityCount, 0);
 }
 
 Vector2 SimpleFluid::pressure_force(Particle& particle, Vector2 predictedPosition)
