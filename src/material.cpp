@@ -430,3 +430,17 @@ Material::Material() :
 {
 	
 }
+
+bool operator== (const MaterialSSBO& a, const MaterialSSBO& b)
+{
+	return
+		a.m_ambient == b.m_ambient &&
+		a.m_diffuse == b.m_diffuse &&
+		a.m_specular == b.m_specular &&
+		a.m_transmittance == b.m_transmittance &&
+		a.m_emission == b.m_emission &&
+		a.m_specularHighlight == b.m_specularHighlight &&
+		a.m_refraction == b.m_refraction &&
+		a.m_dissolve == b.m_dissolve &&
+		a.m_textureIndex == b.m_textureIndex;
+}

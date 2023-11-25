@@ -124,3 +124,5 @@ struct MaterialSSBO
 	MaterialSSBO& operator= (const Material& mat);
 	MaterialSSBO& operator= (const MaterialSSBO& mat);
 };
+
+bool operator== (const MaterialSSBO& a, const MaterialSSBO& b);
