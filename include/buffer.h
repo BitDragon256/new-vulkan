@@ -71,14 +71,13 @@ inline void destroy_all_corresponding_buffers(VkDevice device)
 
 inline bool memequal(void* a, void* b, size_t stride)
 {
-    if (stride % 4 != 0)
+    for (size_t i = 0; i < stride; i += 1)
     {
-        std::cerr << "stride must be multiple of four!\n";
-        abort();
-    }
-    for (size_t i = 0; i < stride; i += 4)
-        if (*((int*)a + i) != *((int*)b + i))
+        if (*((uint8_t*)a + i) != *((uint8_t*)b + i))
+        {
             return false;
+        }
+    }
     return true;
 }
 
@@ -101,21 +100,26 @@ public:
         m_realSize = tSize * m_data.size();
 
         std::string typeName = typeid(*this).name();
-        PROFILE_START("recreate buffer " + typeName);
         if (recreate)
+        {
+            PROFILE_START("recreate buffer " + typeName);
             create();
-        PROFILE_END("recreate buffer " + typeName);
-        PROFILE_START("check reload");
+            PROFILE_END("recreate buffer " + typeName);
+        }
         bool reload = recreate;
         for (size_t i = 0; i < data.size() && !reload; i++)
-            if (!memequal((void*) & m_data[i], (void*) & data[i], tSize))
+        {
+            if (!memequal((void*)&m_data[i], (void*)&data[i], tSize))
+            {
                 reload = true;
-        PROFILE_END("check reload");
+                break;
+            }
+        }
         if (reload)
         {
-            PROFILE_LABEL("reload data " + typeName);
+            // PROFILE_LABEL("reload data " + typeName);
             reload_data();
-            PROFILE_LABEL_END
+            // PROFILE_LABEL_END
         }
         else
             return false;
@@ -171,15 +175,15 @@ protected:
     void cpy_data(const T* d)
     {
         void* data;
-        PROFILE_START("map mem");
+        // PROFILE_START("map mem");
         vkMapMemory(m_config.device, m_memory, 0, m_realSize, 0, &data);
-        PROFILE_END("map mem");
-        PROFILE_START("cpy mem");
+        // PROFILE_END("map mem");
+        // PROFILE_START("cpy mem");
         std::memcpy(data, d, (size_t)m_realSize);
-        PROFILE_END("cpy mem");
-        PROFILE_START("unmap mem");
+        // PROFILE_END("cpy mem");
+        // PROFILE_START("unmap mem");
         vkUnmapMemory(m_config.device, m_memory);
-        PROFILE_END("unmap mem");
+        // PROFILE_END("unmap mem");
     }
 
     bool m_created;
@@ -372,7 +376,7 @@ private:
     void record_cpy_cmd_buf(VkBuffer srcBuf, VkBuffer dstBuf, VkDeviceSize size)
     {
         VkResult res;
-        PROFILE_START("begin cmd buf");
+        // PROFILE_START("begin cmd buf");
         res = vkResetCommandBuffer(m_commandBuffer, 0);
         VkCommandBufferBeginInfo cmdBufBI = {};
         cmdBufBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -381,19 +385,19 @@ private:
         cmdBufBI.pInheritanceInfo = 0;
         res = vkBeginCommandBuffer(m_commandBuffer, &cmdBufBI);
         // VkCommandBuffer cmdBuffer = begin_single_time_cmd_buffer(m_config.stagedBufferTransferCommandPool, m_config.device);
-        PROFILE_END("begin cmd buf");
+        // PROFILE_END("begin cmd buf");
         VkBufferCopy copyRegion = {};
         copyRegion.size = RawBuffer<T>::m_realSize;
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
-        PROFILE_START("record cmd buf");
+        // PROFILE_START("record cmd buf");
         vkCmdCopyBuffer(m_commandBuffer, srcBuf, dstBuf, 1, &copyRegion);
         // vkCmdCopyBuffer(cmdBuffer, srcBuf, dstBuf, 1, &copyRegion);
-        PROFILE_END("record cmd buf");
+        // PROFILE_END("record cmd buf");
         // end_single_time_cmd_buffer(cmdBuffer, m_config.stagedBufferTransferCommandPool, m_config.device, m_config.stagedBufferTransferQueue);
-        PROFILE_START("end cmd buf");
+        // PROFILE_START("end cmd buf");
         res = vkEndCommandBuffer(m_commandBuffer);
-        PROFILE_END("end cmd buf");
+        // PROFILE_END("end cmd buf");
     }
     void submit_cpy_cmd_buf()
     {
@@ -423,7 +427,9 @@ private:
 		// res = vkQueueSubmit(m_config.stagedBufferTransferQueue, 1, &submitInfo, VK_NULL_HANDLE);
 		PROFILE_END("submit cmd buf");
 
+        PROFILE_START("wait fences");
 		res = vkWaitForFences(m_config.device, 1, &m_lastStagedBufCpyFence, VK_TRUE, UINT32_MAX);
+        PROFILE_END("wait fences");
 
         m_stagedBufCpySemaphores.clear();
 		m_stagedBufCpySemaphoreSignaled = false;
