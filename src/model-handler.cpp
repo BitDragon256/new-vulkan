@@ -21,6 +21,15 @@
 // NON-MEMBER FUNCTIONS
 // ------------------------------------------
 
+bool operator== (const Transform& a, const Transform& b)
+{
+	return
+		a.position == b.position &&
+		a.scale == b.scale &&
+		a.rotation == b.rotation &&
+		a.materialStart == b.materialStart;
+}
+
 template<typename T>
 void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
 {

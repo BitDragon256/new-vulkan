@@ -24,6 +24,8 @@ struct Transform
 	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
 };
 
+bool operator== (const Transform& a, const Transform& b);
+
 static std::unordered_map<Transform*, Vector3> absRotations;
 
 GUI_PRINT_COMPONENT_START(Transform)
