@@ -95,9 +95,7 @@ public:
             return false;
 
         bool recreate = data.size() > m_data.size() || !m_created;
-        m_data = data;
-        size_t tSize = sizeof(T);
-        m_realSize = tSize * m_data.size();
+        m_realSize = sizeof(T) * data.size();
 
         std::string typeName = typeid(*this).name();
         if (recreate)
@@ -109,21 +107,21 @@ public:
         bool reload = recreate;
         for (size_t i = 0; i < data.size() && !reload; i++)
         {
-            if (!memequal((void*)&m_data[i], (void*)&data[i], tSize))
+            // if (!memequal((void*)&m_data[i], (void*)&data[i], tSize))
+            if (!(m_data[i] == data[i]))
             {
                 reload = true;
                 break;
             }
         }
+        m_data = data;
         if (reload)
         {
             // PROFILE_LABEL("reload data " + typeName);
             reload_data();
             // PROFILE_LABEL_END
         }
-        else
-            return false;
-        return true;
+        return reload;
     }
     void cpy_raw(uint32_t size, const T* data)
     {
