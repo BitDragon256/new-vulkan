@@ -3,6 +3,7 @@
 #include <vector>
 #include <mutex>
 #include <forward_list>
+#include <queue>
 
 #include "nve_types.h"
 #include "ecs.h"
@@ -28,7 +29,7 @@ public:
 	SimpleFluid();
 
 	bool m_active;
-	float m_gravity = 10.0f;
+	float m_gravity = 0.0f;
 	float m_smoothingRadius = .8f;
 	float m_targetDensity = 8.f;
 	float m_pressureMultiplier = 50.f;
@@ -51,7 +52,7 @@ public:
 	void gui_show_system() override;
 
 private:
-	std::vector<Particle*> m_particles;
+	// std::vector<Particle*> m_particles;
 
 	float influence(float rad, float d);
 	float influence_grad(float rad, float d);
@@ -67,6 +68,8 @@ private:
 	void calc_forces(size_t start, size_t end, float dt);
 
 	size_t m_pIndex = 0;
+	std::queue<size_t> m_availableParticleIndices;
+
 	std::vector<float> m_densities;
 
 	// integration

@@ -17,7 +17,7 @@
 #endif
 
 #define SIMPLE_FLUID_THREADING
-//#undef SIMPLE_FLUID_THREADING
+#undef SIMPLE_FLUID_THREADING
 
 SimpleFluid::SimpleFluid() : m_pIndex{ 0 }
 {
@@ -27,13 +27,21 @@ SimpleFluid::SimpleFluid() : m_pIndex{ 0 }
 void SimpleFluid::awake(EntityId id)
 {
 	Particle& particle = get_particle(id);
-	m_particles.emplace_back(&particle);
+	// m_particles.emplace_back(&particle);
 	bucket_at(particle.position).emplace_back(&particle);
 
 	particle.lastPosition = particle.position;
 
-	particle.index = m_pIndex;
-	m_pIndex++;
+	if (m_availableParticleIndices.empty())
+	{
+		particle.index = m_pIndex;
+		m_pIndex++;
+	}
+	else
+	{
+		particle.index = m_availableParticleIndices.front();
+		m_availableParticleIndices.pop();
+	}
 }
 void SimpleFluid::update(float dt)
 {
@@ -62,21 +70,36 @@ void SimpleFluid::update(float dt)
 	totalTime += PROFILE_END("calc forces");
 	PROFILE_START("assign buckets");
 
-	size_t i = 0;
-	for (auto particlePtr : m_particles)
+	// size_t i = 0;
+	// for (auto particlePtr : m_particles)
+	for (auto particleId : m_entities)
 	{
-		auto& bucket = bucket_at(particlePtr->position);
-		bucket.erase(std::find(bucket.begin(), bucket.end(), particlePtr));
+		auto& particle = m_ecs->get_component<Particle>(particleId);
 
-		integrate(particlePtr->position, particlePtr->lastPosition, particlePtr->velocity, particlePtr->acc, dt);
+		auto& bucket = bucket_at(particle.position);
+		if (!bucket.empty())
+			bucket.erase(std::find(bucket.begin(), bucket.end(), &particle));
 
-		if (bounds_check(*particlePtr));
+		integrate(particle.position, particle.lastPosition, particle.velocity, particle.acc, dt);
+
+		if (bounds_check(particle));
 		//	particle.position += particle.velocity * dt;
 
-		bucket_at(particlePtr->position).push_back(particlePtr);
+		bucket_at(particle.position).push_back(&particle);
 
 		// sync pos with transform
-		m_ecs->get_component<Transform>(m_entities[i++]).position = { particlePtr->position.x, particlePtr->position.y, 0 };
+		auto& transform = m_ecs->get_component<Transform>(particleId);
+		transform.position = { particle.position.x, particle.position.y, 0 };
+
+		// delete entity if out of box
+		if (transform.position.y >= 0.f)
+		{
+			auto& bucket = bucket_at(particle.position);
+			bucket.erase(std::find(bucket.begin(), bucket.end(), &particle));
+
+			m_availableParticleIndices.push(particle.index);
+			m_ecs->delete_entity(particleId);
+		}
 	}
 
 	totalTime += PROFILE_END("assign buckets");
@@ -108,19 +131,6 @@ void SimpleFluid::calc_forces(size_t start, size_t end, float dt)
 		}
 	}
 }
-/*
-void SimpleFluid::update(float dt, EntityId id)
-{
-	if (m_densities.empty())
-		return;
-	auto& p = get_particle(id);
-	m_ecs->get_component<DynamicModel>(id).m_children[0].material.m_diffuse = Vector3(
-		density_to_pressure(density_at(p.position)) / 20.f / m_pressureMultiplier,
-		-density_to_pressure(density_at(p.position)) / 20.f / m_pressureMultiplier,
-		0.f
-	);
-}
-*/
 void SimpleFluid::gui_show_system()
 {
 	float energy{ 0 };
@@ -206,9 +216,11 @@ void SimpleFluid::cache_densities()
 	if (m_densities.size() < m_entities.size())
 		m_densities.resize(m_entities.size());
 
-	for (auto pPtr : m_particles)
+	// for (auto pPtr : m_particles)
+	for (auto pId : m_entities)
 	{
-		m_densities[pPtr->index] = density_at(pPtr->position);
+		auto& particle = m_ecs->get_component<Particle>(pId);
+		m_densities[particle.index] = density_at(particle.position);
 	}
 }
 float SimpleFluid::density_at(Vector2 position)
