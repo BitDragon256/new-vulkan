@@ -161,9 +161,19 @@ namespace math
 		return (quat * t * quat.conjugated()).vector_part();
 	}
 
+	bool operator== (const quaternion& a, const quaternion& b)
+	{
+		return
+			a.x == b.x &&
+			a.y == b.y &&
+			a.z == b.z &&
+			a.w == b.w;
+	}
+
 	// --------------------------------
 	// FUNCTIONS
 	// --------------------------------
+
 	float abs(float x)
 	{
 		return x * ((x > 0) - (x < 0));

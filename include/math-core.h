@@ -49,4 +49,6 @@ namespace math
 	float max(float a, float b);
 	float clamp(float x, float lower, float upper);
 
+	bool operator== (const quaternion& a, const quaternion& b);
+
 } // namespace math
