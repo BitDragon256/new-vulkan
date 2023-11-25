@@ -309,7 +309,9 @@ public:
 		std::erase(m_entities, entity);
 
 		for (size_t i = 0; i < m_systems.size(); i++)
+		{
 			std::erase(m_systems[i]->m_entities, entity);
+		}
 
 		m_componentManager.remove_entity(entity);
 		std::erase(m_newEntities, entity);
@@ -403,6 +405,8 @@ private:
 		for (auto system : m_systems)
 		{
 			std::vector<EntityId> newEntities;
+			std::sort(m_newEntities.begin(), m_newEntities.end());
+			std::sort(system->m_entities.begin(), system->m_entities.end());
 			std::set_intersection(
 				system->m_entities.begin(),
 				system->m_entities.end(),
