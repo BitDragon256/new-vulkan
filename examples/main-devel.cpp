@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include <chrono>
+#include <numeric>
 #include <sstream>
 
 #include <nve.h>
@@ -124,6 +125,7 @@ int main(int argc, char** argv)
 
     int fps = 0;
     int avgFps = 0;
+    std::vector<int> fpsQueue(30);
     std::string fpsText;
     std::string avgFpsText;
     float deltaTime;
@@ -203,7 +205,6 @@ int main(int argc, char** argv)
     tRight.scale.y = simpleFluid.m_maxBounds.y - simpleFluid.m_minBounds.y;
     tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
 
-    float renderAvg = 0.f;
     float profilerTime = 0.f;
     
     bool updateECS = true;
@@ -332,16 +333,15 @@ int main(int argc, char** argv)
         NVE_RESULT res = renderer.render();
         if (res == NVE_RENDER_EXIT_SUCCESS)
             running = false;
-        renderAvg += profiler.end_measure("render", true);
-        renderAvg /= 2;
         profiler.end_measure("total time", false);
 
         // time
         auto now = std::chrono::high_resolution_clock::now();
         deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count();
         fps = 1000.f / deltaTime;
-        avgFps += fps;
-        avgFps /= 2.f;
+        fpsQueue.erase(fpsQueue.begin());
+        fpsQueue.push_back(deltaTime);
+        avgFps = 1000.f / (std::accumulate(fpsQueue.begin(), fpsQueue.end(), 0) / 30.f);
         lastTime = std::chrono::high_resolution_clock::now();
 
         profilerTime += deltaTime;
@@ -349,7 +349,6 @@ int main(int argc, char** argv)
             Profiler::print_buf();
         profiler.out_buf() << "\nprint\n";
     }
-    std::cout << "avg render time: " << renderAvg << " seconds\n";
 
     return 0;
 }
