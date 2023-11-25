@@ -533,10 +533,12 @@ void GeometryHandler::reload_materials()
 	PROFILE_START("update buffer");
 	bool reload = m_materialBuffer.set(mats);
 	PROFILE_END("update buffer");
-	PROFILE_START("update descriptor");
 	if (reload)
+	{
+		PROFILE_START("update descriptor");
 		update_descriptor_set();
-	PROFILE_END("update descriptor");
+		PROFILE_END("update descriptor");
+	}
 
 	m_profiler.end_label();
 }
@@ -862,7 +864,7 @@ void DynamicGeometryHandler::update(float dt)
 
 	PROFILE_START("push transforms");
 	// push transforms
-	m_transformBuffer.set(transforms);
+	bool updateDescriptorSet = m_transformBuffer.set(transforms);
 	PROFILE_END("push transforms");
 
 	PROFILE_START("update base handler");
@@ -870,24 +872,27 @@ void DynamicGeometryHandler::update(float dt)
 	PROFILE_END("update base handler");
 
 	// update descriptor set
-	VkWriteDescriptorSet transformBufferWrite = {};
-	transformBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	transformBufferWrite.pNext = nullptr;
+	if (updateDescriptorSet)
+	{
+		VkWriteDescriptorSet transformBufferWrite = {};
+		transformBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		transformBufferWrite.pNext = nullptr;
 
-	VkDescriptorBufferInfo transformBufferInfo = {};
-	transformBufferInfo.buffer = m_transformBuffer.m_buffer;
-	transformBufferInfo.offset = 0;
-	transformBufferInfo.range = m_transformBuffer.range();
+		VkDescriptorBufferInfo transformBufferInfo = {};
+		transformBufferInfo.buffer = m_transformBuffer.m_buffer;
+		transformBufferInfo.offset = 0;
+		transformBufferInfo.range = m_transformBuffer.range();
 
-	transformBufferWrite.descriptorCount = 1;
-	transformBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	transformBufferWrite.dstBinding = DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING;
-	transformBufferWrite.dstSet = m_descriptorSet;
-	transformBufferWrite.pBufferInfo = &transformBufferInfo;
+		transformBufferWrite.descriptorCount = 1;
+		transformBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		transformBufferWrite.dstBinding = DYNAMIC_MODEL_HANDLER_TRANSFORM_BUFFER_BINDING;
+		transformBufferWrite.dstSet = m_descriptorSet;
+		transformBufferWrite.pBufferInfo = &transformBufferInfo;
 
-	PROFILE_START("update descriptors");
-	vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
-	PROFILE_END("update descriptors");
+		PROFILE_START("update descriptors");
+		vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
+		PROFILE_END("update descriptors");
+	}
 	m_profiler.end_label();
 }
 // TODO staged buffer copy synchronization
