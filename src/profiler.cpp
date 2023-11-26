@@ -71,6 +71,7 @@ std::stringstream Profiler::s_outS;
 size_t Profiler::s_outBufWrites = 0;
 std::stringstream& Profiler::out_buf()
 {
+	return s_outS;
 	if (s_outBufWrites++ >= PROFILER_OUT_BUFFER_WRITES)
 	{
 		std::ios::sync_with_stdio(false);
