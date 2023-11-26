@@ -206,13 +206,18 @@ int main(int argc, char** argv)
     tRight.position.x = simpleFluid.m_maxBounds.x + 0.5f;
 
     float profilerTime = 0.f;
+
+    int particleCounter = 1;
     
     bool updateECS = true;
     bool singleUpdateECS = false;
     bool running = true;
     while (running)
     {
-        cart_camera_movement(renderer, camera);
+        if (camera.m_orthographic)
+            cart_camera_movement(renderer, camera);
+        else
+            fps_camera_movement(renderer, camera);
 
         // mouse interaction
         auto mousePos = renderer.mouse_to_screen(renderer.get_mouse_pos()) / 2.f;
@@ -238,6 +243,33 @@ int main(int argc, char** argv)
 
             // -----------------------------------------------
             // PARTICLE SPAWNING
+            // -----------------------------------------------
+
+            // -----------------------------------------------
+            // WINDTUNNEL
+            // -----------------------------------------------
+
+            if (particleCounter % 5 == 0)
+            {
+                for (float y = -SF_BOUNDING_HEIGHT / 2.f; y < SF_BOUNDING_HEIGHT / 2.f; y += 0.2f)
+                {
+                    EntityId id = renderer.m_ecs.create_entity();
+                    auto& part = renderer.m_ecs.add_component<Particle>(id);
+                    renderer.m_ecs.add_component<DynamicModel>(id) = ball;
+                    auto& transform = renderer.m_ecs.add_component<Transform>(id);
+                    transform.scale = Vector3(0.1f);
+
+                    int x = -SF_BOUNDING_WIDTH / 2.f;
+                    part.position = { y, x };
+                    part.velocity = { 0.f, 20.f };
+
+                    particles.push_back(id);
+                }
+            }
+            particleCounter++;
+
+            // -----------------------------------------------
+            // BUTTON PRESS
             // -----------------------------------------------
             if (ImGui::Button("Create Particles"))
             {
@@ -317,7 +349,10 @@ int main(int argc, char** argv)
                 ImGui::Text("ECS deactivated");
 
             if (ImGui::Button("Ortho / Persp"))
+            {
                 camera.m_orthographic = !camera.m_orthographic;
+                camera.m_position = Vector3(0, 0, 10.f);
+            }
 
             ImGui::End();
 
