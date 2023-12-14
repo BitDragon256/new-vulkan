@@ -1408,7 +1408,7 @@ glm::mat4 Camera::view_matrix()
         return glm::lookAt(m_position, m_position + glm::rotate(glm::qua(glm::radians(m_rotation)), VECTOR_FORWARD), VECTOR_DOWN);
 
     float zoom = 1.f / math::max(0.001f, m_position.z + 1);
-    float ratio = m_extent.x / m_extent.y;
+    float ratio = m_extent.y / m_extent.x;
     return glm::transpose(glm::mat4x4(
         zoom * ratio, 0, 0, m_position.x * ratio,
         0, zoom, 0, m_position.y,
@@ -1421,8 +1421,8 @@ glm::mat4 Camera::projection_matrix()
     if (!m_orthographic)
         return glm::perspective(glm::radians(m_fov), m_extent.x / m_extent.y, m_nearPlane, m_farPlane);
     return glm::transpose(glm::mat4x4(
-        0, -1, 0, 0,
         1, 0, 0, 0,
+        0, 1, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 1
     ));
