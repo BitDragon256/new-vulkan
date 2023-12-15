@@ -30,6 +30,8 @@ protected:
     bool shutdown_;
     bool m_initialized;
     std::queue <std::function <void(void)>> jobs_;
+    std::mutex m_activeJobCountMutex;
     size_t m_activeJobCount;
+    void change_job_count(int delta);
     std::vector <std::thread> threads_;
 };

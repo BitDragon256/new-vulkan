@@ -39,7 +39,7 @@ void ThreadPool::doJob(std::function <void(void)> func)
     std::unique_lock <std::mutex> l(lock_);
 
     jobs_.emplace(std::move(func));
-    m_activeJobCount++;
+    change_job_count(1);
     condVar_.notify_one();
 }
 void ThreadPool::threadEntry(int i)
@@ -70,8 +70,10 @@ void ThreadPool::threadEntry(int i)
         }
 
         // Do the job without holding any locks
+        // std::cout << "doing job now\n";
         job();
-        m_activeJobCount--;
+        // std::cout << "done doing job\n";
+        change_job_count(-1);
 
         if (!m_activeJobCount || shutdown_)
         {
@@ -88,4 +90,9 @@ void ThreadPool::wait_for_finish()
     {
         m_allFinished.wait(l);
     }
+}
+void ThreadPool::change_job_count(int delta)
+{
+      std::lock_guard<std::mutex> l(m_activeJobCountMutex);
+      m_activeJobCount += delta;
 }
