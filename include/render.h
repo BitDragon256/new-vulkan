@@ -74,7 +74,7 @@ public:
 
 	// gui
 	void gui_begin();
-	void draw_engine_gui();
+	void draw_engine_gui(std::function<void(void)> guiDraw);
 
 	void clean_up();
 

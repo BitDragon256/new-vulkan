@@ -1255,7 +1255,7 @@ NVE_RESULT Renderer::imgui_create_command_buffers()
 
 void Renderer::gui_begin()
 {
-    if (!m_imguiDraw)
+    if (!m_imguiDraw && !m_acquireImageTimeout)
     {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -1264,13 +1264,17 @@ void Renderer::gui_begin()
         m_imguiDraw = true;
     }
 }
-void Renderer::draw_engine_gui()
+void Renderer::draw_engine_gui(std::function<void(void)> guiDraw)
 {
+    if (m_acquireImageTimeout)
+        return;
     gui_begin();
 
     m_guiManager.activate();
     m_guiManager.draw_entity_info();
     m_guiManager.draw_system_info();
+
+    guiDraw();
 }
 void Renderer::imgui_draw(uint32_t imageIndex)
 {
