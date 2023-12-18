@@ -119,7 +119,7 @@ int main(int argc, char** argv)
     // Camera
 
     Camera camera;
-    camera.m_position = Vector3(0, 0, 10.f);
+    camera.m_position = Vector3(0, 0, 50.f);
     camera.m_orthographic = true;
     renderer.set_active_camera(&camera);
 
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
     std::vector<int> fpsQueue(30);
     std::string fpsText;
     std::string avgFpsText;
-    float deltaTime;
+    float deltaTime = 0.f;
     auto lastTime = std::chrono::high_resolution_clock::now();
     uint32_t frame = 0;
 
@@ -148,7 +148,11 @@ int main(int argc, char** argv)
 
     auto boundary = renderer.m_ecs.create_entity();
 
-    renderer.m_ecs.add_component<Transform>(boundary).scale = Vector3(52, 52, 1);
+    float mouseParticleRadius = 5.f;
+    float particleRadius = 1.f;
+    float boundingParticleRadius = 50.f;
+
+    renderer.m_ecs.add_component<Transform>(boundary).scale = Vector3(boundingParticleRadius + particleRadius, boundingParticleRadius + particleRadius, 1);
     renderer.m_ecs.add_component<DynamicModel>(boundary) = emptycircle;
     auto& bo = renderer.m_ecs.add_component<PBDParticle>(boundary);
     bo.invmass = 0.f;
@@ -158,13 +162,21 @@ int main(int argc, char** argv)
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
           auto particle = renderer.m_ecs.create_entity();
-          renderer.m_ecs.add_component<PBDParticle>(particle).position = Vec((float)(i % 10) * 2.5f-12.5f, (float)(i / 10) * 2.5f-10.f);
-          renderer.m_ecs.add_component<Transform>(particle);
-          renderer.m_ecs.add_component<DynamicModel>(particle) = ball;
+          if (i != PARTICLE_COUNT - 1)
+          {
+                renderer.m_ecs.add_component<PBDParticle>(particle).position = Vec((float)(i % 10) * 2.5f-12.5f, (float)(i / 10) * 2.5f-10.f);
+                renderer.m_ecs.add_component<Transform>(particle);
 
-          auto constraint = pbd.add_constraint<CollisionConstraint>({ boundary, particle }, InverseInequality);
-          constraint->m_distance = 50.f;
-          constraint->m_stiffness = 1.f;
+                auto constraint = pbd.add_constraint<CollisionConstraint>({ boundary, particle }, InverseInequality);
+                constraint->m_distance = boundingParticleRadius;
+                constraint->m_stiffness = 1.f;
+          }
+          else
+          {
+                renderer.m_ecs.add_component<PBDParticle>(particle).position = Vec(20, 20);
+                renderer.m_ecs.add_component<Transform>(particle).scale = Vector3(mouseParticleRadius, mouseParticleRadius, 1.f);
+          }
+          renderer.m_ecs.add_component<DynamicModel>(particle) = ball;
 
           particles.push_back(particle);
     }
@@ -173,11 +185,14 @@ int main(int argc, char** argv)
           for (int j = i + 1; j < PARTICLE_COUNT; j++)
           {
                 auto constraint = pbd.add_constraint<CollisionConstraint>({ particles[i], particles[j] }, Inequality);
-                constraint->m_distance = 2.f;
+                if (j != PARTICLE_COUNT - 1)
+                      constraint->m_distance = particleRadius;
+                else
+                      constraint->m_distance = mouseParticleRadius;
                 constraint->m_stiffness = 1.f;
           }
     }
-
+    renderer.m_ecs.get_component<PBDParticle>(particles.back()).invmass = 0.f;
 
     float profilerTime = 0.f;
 
@@ -202,6 +217,21 @@ int main(int argc, char** argv)
         profiler.start_measure("total time");
 
         //profiler.start_measure("gui");
+
+        // mouse interaction
+        auto mousePos = renderer.mouse_to_screen(renderer.get_mouse_pos());
+        if (renderer.get_mouse_button(GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        {
+              float zoom = 1.f / math::max(0.001f, camera.m_position.z + 1);
+              float ratio = (float) renderConfig.height / renderConfig.width;
+              Vec worldPos = Vec(
+                    mousePos.x / zoom / ratio,
+                    mousePos.y / zoom
+              );
+              renderer.m_ecs.get_component<PBDParticle>(particles.back()).position = worldPos;
+              renderer.m_ecs.get_component<PBDParticle>(particles.back()).oldPosition
+                    = renderer.m_ecs.get_component<PBDParticle>(particles.back()).position;
+        }
 
         // GUI
         renderer.draw_engine_gui([&]() {

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(NewVulkan CXX)
+project(NewVulkan)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
@@ -13,6 +13,7 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(external/glfw)
+add_subdirectory(external/gsl)
 
 set(SOURCE_DIR src)
 set(INCLUDE_DIR include)
@@ -37,6 +38,7 @@ set(
 	
 	${SOURCE_DIR}/simple_fluid.cpp
 	${SOURCE_DIR}/pbd.cpp
+    ${SOURCE_DIR}/spatial_hash_grid.cpp
 )
 
 set(
@@ -63,6 +65,7 @@ set(
 
 	${INCLUDE_DIR}/simple_fluid.h
 	${INCLUDE_DIR}/pbd.h
+    ${INCLUDE_DIR}/spatial_hash_grid.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
@@ -111,6 +114,6 @@ target_include_directories(nve PUBLIC external/imgui)
 target_include_directories(nve PUBLIC external/tinyobjloader)
 target_include_directories(nve PUBLIC external/stbimage)
 target_include_directories(nve PUBLIC external/mini)
-target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw)
+target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw gsl)
 
 add_definitions(-DROOT_DIRECTORY=\"${CMAKE_SOURCE_DIR}\")

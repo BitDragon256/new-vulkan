@@ -1,6 +1,12 @@
 build/
 make-build/
-external/
+
+external/glfw
+external/imgui
+external/mini
+external/stbimage
+external/tinyobjloader
+
 .obsidian/
 .vscode/
 .VSCodeCounter/
