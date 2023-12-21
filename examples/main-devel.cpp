@@ -183,6 +183,8 @@ int main(int argc, char** argv)
 
           particles.push_back(particle);
     }
+    CollisionConstraintGenerator colConstGen;
+    pbd.register_self_generating_constraint(&colConstGen);
 
     float profilerTime = 0.f;
 

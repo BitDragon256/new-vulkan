@@ -2,6 +2,7 @@
 
 #include <array>
 #include <vector>
+#include <functional>
 
 #include "ecs.h"
 #include "model-handler.h"
@@ -53,6 +54,16 @@ public:
       virtual Vec constraint_gradient(size_t der, InParticles particles) = 0;
 };
 
+class PBDSystem;
+class ConstraintGenerator
+{
+public:
+      virtual std::vector<Constraint*> create(
+            EntityId particle, std::vector<EntityId> surrounding,
+            ECSManager* ecs
+      ) = 0;
+};
+
 class CollisionConstraint : public Constraint
 {
 public:
@@ -62,6 +73,16 @@ public:
       Vec constraint_gradient(size_t der, InParticles particles) override;
 
       float m_distance;
+};
+class CollisionConstraintGenerator : public ConstraintGenerator
+{
+public:
+      std::vector<Constraint*> create(
+            EntityId particle, std::vector<EntityId> surrounding,
+            ECSManager* ecs
+      ) override;
+
+      float m_radius;
 };
 
 class PBDSystem : System<PBDParticle, Transform>
@@ -83,13 +104,16 @@ public:
             constraint->m_type = type;
             return dynamic_cast<C*>(constraint);
       }
+      void register_self_generating_constraint(ConstraintGenerator* generator);
 private:
       PBDParticle& get_particle(EntityId id);
       Vec external_force(Vec pos);
 
       void damp_velocities();
       void velocity_update();
-      void generate_collision_constraints();
+
+      void generate_constraints();
+      std::vector<ConstraintGenerator*> m_constraintGenerators;
 
       void solve_constraints();
 
@@ -98,7 +122,7 @@ private:
       void solve_sys();
 
       std::vector<Constraint*> m_constraints;
-      size_t m_collisionConstraintStart;
+      size_t m_constraintStart;
 
       SpatialHashGrid m_grid;
       const float m_gridSize = 2.f;

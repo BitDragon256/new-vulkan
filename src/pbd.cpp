@@ -9,7 +9,7 @@ PBDParticle::PBDParticle() :
 {}
 
 PBDSystem::PBDSystem() :
-      m_grid{ m_gridSize }, m_collisionConstraintStart{0}
+      m_grid{ m_gridSize }, m_constraintStart{ 0 }
 {}
 
 void PBDSystem::awake(EntityId id)
@@ -47,7 +47,7 @@ void PBDSystem::update(float dt)
       }
 
       m_profiler.start_measure("gen col const");
-      generate_collision_constraints();
+      generate_constraints();
       logger::log("gen col const", m_profiler.end_measure("gen col const"));
 
       m_profiler.start_measure("solve const");
@@ -69,7 +69,12 @@ void PBDSystem::update(float dt)
             m_ecs->get_component<Transform>(entity).position = Vector3(get_particle(entity).position, 0);
 
       // clear collision constraints
-      m_constraints.erase(m_constraints.begin() + m_collisionConstraintStart, m_constraints.end());
+      m_constraints.erase(m_constraints.begin() + m_constraintStart, m_constraints.end());
+}
+
+void PBDSystem::register_self_generating_constraint(ConstraintGenerator* generator)
+{
+      m_constraintGenerators.emplace_back(generator);
 }
 
 // ---------------------------------------
@@ -84,9 +89,9 @@ void PBDSystem::velocity_update()
 {
 
 }
-void PBDSystem::generate_collision_constraints()
+void PBDSystem::generate_constraints()
 {
-      m_collisionConstraintStart = m_constraints.size();
+      m_constraintStart = m_constraints.size();
 
       std::vector<EntityId> surroundingParticles;
       std::sort(m_entities.begin(), m_entities.end());
@@ -100,22 +105,10 @@ void PBDSystem::generate_collision_constraints()
 
             m_grid.surrounding_particles(particle.position, surroundingParticles);
 
-            for (const auto& surroundingParticle : surroundingParticles)
+            for (const auto constraintGenerator : m_constraintGenerators)
             {
-                  if (entity >= surroundingParticle)
-                        continue;
-
-                  const auto& other = get_particle(surroundingParticle);
-                  if (other.radius == 0)
-                        continue;
-
-                  auto constraint = add_constraint<CollisionConstraint>(
-                      { entity, surroundingParticle },
-                      Inequality
-                  );
-
-                  constraint->m_distance = particle.radius + get_particle(surroundingParticle).radius;
-                  constraint->m_stiffness = 0.1f;
+                  auto constraints = constraintGenerator->create(entity, surroundingParticles, m_ecs);
+                  m_constraints.insert(m_constraints.end(), constraints.cbegin(), constraints.cend());
             }
       }
 }
@@ -226,4 +219,34 @@ Vec CollisionConstraint::constraint_gradient(size_t der, InParticles particles)
       if (length != 0)
             d /= length;
       return d * (static_cast<float>(der) * -2.f + 1.f);
+}
+
+std::vector<Constraint*> CollisionConstraintGenerator::create(
+      EntityId particle, std::vector<EntityId> surrounding,
+      ECSManager* ecs
+)
+{
+      std::vector<Constraint*> constraints;
+      const auto& pbdParticle = ecs->get_component<PBDParticle>(particle);
+
+      for (const auto& surroundingParticle : surrounding)
+      {
+            if (particle >= surroundingParticle)
+                  continue;
+
+            const auto& other = ecs->get_component<PBDParticle>(surroundingParticle);
+            if (other.radius == 0)
+                  continue;
+
+            auto constraint = new CollisionConstraint(
+                  pbdParticle.radius + ecs->get_component<PBDParticle>(surroundingParticle).radius,
+                  { particle, surroundingParticle }
+            );
+            constraint->m_stiffness = 0.1f;
+            constraint->m_type = Inequality;
+
+            constraints.emplace_back(constraint);
+      }
+
+      return constraints;
 }

@@ -37,8 +37,11 @@ set(
 	${SOURCE_DIR}/thread_pool.cpp
 	
 	${SOURCE_DIR}/simple_fluid.cpp
-	${SOURCE_DIR}/pbd.cpp
     ${SOURCE_DIR}/spatial_hash_grid.cpp
+
+    # Position Based Dynamics
+	${SOURCE_DIR}/pbd.cpp
+    ${SOURCE_DIR}/pbd/fluid_constraints.cpp
 )
 
 set(
@@ -64,8 +67,11 @@ set(
 	${INCLUDE_DIR}/thread_pool.h
 
 	${INCLUDE_DIR}/simple_fluid.h
-	${INCLUDE_DIR}/pbd.h
     ${INCLUDE_DIR}/spatial_hash_grid.h
+
+    # Position Based Dynamics
+	${INCLUDE_DIR}/pbd.h
+    ${INCLUDE_DIR}/pbd/fluid_constraints.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
