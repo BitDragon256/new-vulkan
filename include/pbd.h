@@ -5,8 +5,11 @@
 
 #include "ecs.h"
 #include "model-handler.h"
+#include "spatial_hash_grid.h"
+#include "gui.h"
 
 #include "nve_types.h"
+#include "profiler.h"
 
 typedef float Real;
 typedef size_t Cardinality;
@@ -17,11 +20,22 @@ struct PBDParticle
 {
       PBDParticle();
       Vec oldPosition;
+      Vec tempPosition;
       Vec position;
       Vec velocity;
       float mass;
       float invmass;
+      float radius;
 };
+
+GUI_PRINT_COMPONENT_START(PBDParticle)
+
+ImGui_DragVector("position", component.position);
+ImGui_DragVector("velocity", component.velocity);
+ImGui::DragFloat("mass", &component.mass);
+ImGui::DragFloat("invmass", &component.invmass);
+
+GUI_PRINT_COMPONENT_END
 
 enum ConstraintType { Equality, Inequality, InverseInequality };
 
@@ -53,6 +67,7 @@ public:
 class PBDSystem : System<PBDParticle, Transform>
 {
 public:
+      PBDSystem();
       void start() override;
       void awake(EntityId id) override;
       void update(float dt) override;
@@ -78,8 +93,16 @@ private:
 
       void solve_constraints();
 
-      const int m_solverIterations = 2;
+      const int m_solverIterations = 10;
       void solve_seidel_gauss();
+      void solve_sys();
 
       std::vector<Constraint*> m_constraints;
+      size_t m_collisionConstraintStart;
+
+      SpatialHashGrid m_grid;
+      const float m_gridSize = 2.f;
+      void sync_grid(PBDParticle& particle, EntityId entity);
+
+      Profiler m_profiler;
 };
