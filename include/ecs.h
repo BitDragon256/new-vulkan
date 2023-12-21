@@ -243,7 +243,7 @@ public:
 	{
 		return typeid(*this).name();
 	}
-	std::vector<EntityId> m_entities;
+	std::vector<EntityId> m_entities; // sorted list of entities
 
 	ECSManager* m_ecs;
 };
