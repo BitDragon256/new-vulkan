@@ -72,3 +72,9 @@ struct Mesh
 	std::vector<Vertex> vertices;
 	std::vector<Index> indices;
 };
+
+enum Direction
+{
+      Forwards, Backwards, Left, Right, Up, Down
+};
+
