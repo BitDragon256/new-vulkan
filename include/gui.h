@@ -22,6 +22,7 @@ struct gui_print_component
 };
 
 void ImGui_DragVector(const char* label, Vector3& vec);
+void ImGui_DragVector(const char* label, Vector2& vec);
 
 std::ostream& operator<< (std::ostream& os, const Vector3& vec);
 

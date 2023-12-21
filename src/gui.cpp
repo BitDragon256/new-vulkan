@@ -115,3 +115,8 @@ void ImGui_DragVector(const char* label, Vector3& vec) {
 	ImGui::DragFloat3(label, vector);
 	vec = { vector[0], vector[1], vector[2] };
 }
+void ImGui_DragVector(const char* label, Vector2& vec) {
+	float vector[] = { vec.x, vec.y };
+	ImGui::DragFloat2(label, vector);
+	vec = { vector[0], vector[1] };
+}
