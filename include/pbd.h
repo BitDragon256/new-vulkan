@@ -85,6 +85,8 @@ public:
       float m_radius;
 };
 
+#define PBD_GRID_SIZE 2.f
+
 class PBDSystem : System<PBDParticle, Transform>
 {
 public:
@@ -125,7 +127,6 @@ private:
       size_t m_constraintStart;
 
       SpatialHashGrid m_grid;
-      const float m_gridSize = 2.f;
       void sync_grid(PBDParticle& particle, EntityId entity);
 
       Profiler m_profiler;

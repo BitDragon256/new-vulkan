@@ -5,11 +5,11 @@
 #include <linalg/gsl_linalg.h>
 
 PBDParticle::PBDParticle() :
-      position{ 0.f }, oldPosition{ 0.f }, velocity{ 0.f }, mass{ 1.f }, invmass{ 1.f }
+      position{ 0.f }, oldPosition{ 0.f }, tempPosition{ 0.f }, velocity{ 0.f }, mass{ 1.f }, invmass{ 1.f }, radius{ 1.f }
 {}
 
 PBDSystem::PBDSystem() :
-      m_grid{ m_gridSize }, m_constraintStart{ 0 }
+      m_grid{ PBD_GRID_SIZE }, m_constraintStart{ 0 }
 {}
 
 void PBDSystem::awake(EntityId id)
@@ -83,7 +83,7 @@ void PBDSystem::register_self_generating_constraint(ConstraintGenerator* generat
 
 void PBDSystem::damp_velocities()
 {
-
+      
 }
 void PBDSystem::velocity_update()
 {
@@ -239,10 +239,10 @@ std::vector<Constraint*> CollisionConstraintGenerator::create(
                   continue;
 
             auto constraint = new CollisionConstraint(
-                  pbdParticle.radius + ecs->get_component<PBDParticle>(surroundingParticle).radius,
+                  pbdParticle.radius + other.radius,
                   { particle, surroundingParticle }
             );
-            constraint->m_stiffness = 0.1f;
+            constraint->m_stiffness = 1.f;
             constraint->m_type = Inequality;
 
             constraints.emplace_back(constraint);

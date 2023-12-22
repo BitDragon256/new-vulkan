@@ -94,12 +94,12 @@ Vector3 SpatialHashGrid::vec23(Vector2 vec)
 void SpatialHashGrid::print_buckets(Vector2 max)
 {
       std::cout << "\n";
-      for (float y = 0; y < max.y * 2.f; y += m_gridSize)
+      for (float y = -max.y; y < max.y; y += m_gridSize)
       {
             std::cout << static_cast<size_t>(y / m_gridSize) << ": |";
-            for (float x = 0; x < max.x * 2.f; x += m_gridSize)
+            for (float x = -max.x; x < max.x; x += m_gridSize)
             {
-                  size_t s = bucket_at({ x - max.x, y - max.y }).size();
+                  size_t s = bucket_at({ x, y }).size();
                   if (s == 0)
                         std::cout << " ";
                   else
