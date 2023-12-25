@@ -256,3 +256,11 @@ private:
 	std::vector<DynamicModelInfo> m_individualModels;
 	uint32_t m_modelCount;
 };
+
+// ---------------------------------
+// HELPER FUNCTIONS
+// ---------------------------------
+
+void bake_transform(StaticMesh& mesh, Transform transform);
+VkCommandBufferBeginInfo create_command_buffer_begin_info(VkRenderPass renderPass, uint32_t subpass, VkFramebuffer framebuffer, VkCommandBufferInheritanceInfo& inheritanceI);
+void set_dynamic_state(VkCommandBuffer commandBuffer, VkExtent2D swapChainExtent, std::array<float, 4> viewportSize);
