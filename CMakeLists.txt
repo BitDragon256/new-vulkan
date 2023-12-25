@@ -13,6 +13,9 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(external/glfw)
+
+set(NO_AMPL_BINDINGS 1)
+set(GSL_DISABLE_TESTS 1)
 add_subdirectory(external/gsl)
 
 set(SOURCE_DIR src)
@@ -35,13 +38,14 @@ set(
 	${SOURCE_DIR}/tritri.cpp
 	${SOURCE_DIR}/post_processing.cpp
 	${SOURCE_DIR}/thread_pool.cpp
+	${SOURCE_DIR}/gizmos.cpp
 	
 	${SOURCE_DIR}/simple_fluid.cpp
-    ${SOURCE_DIR}/spatial_hash_grid.cpp
+      ${SOURCE_DIR}/spatial_hash_grid.cpp
 
-    # Position Based Dynamics
-	${SOURCE_DIR}/pbd.cpp
-    ${SOURCE_DIR}/pbd/fluid_constraints.cpp
+      # Position Based Dynamics
+      ${SOURCE_DIR}/pbd.cpp
+      ${SOURCE_DIR}/pbd/fluid_constraints.cpp
 )
 
 set(
@@ -65,13 +69,14 @@ set(
 	${INCLUDE_DIR}/post_processing.h
 	${INCLUDE_DIR}/space_consistent_vector.h
 	${INCLUDE_DIR}/thread_pool.h
+	${INCLUDE_DIR}/gizmos.h
 
 	${INCLUDE_DIR}/simple_fluid.h
-    ${INCLUDE_DIR}/spatial_hash_grid.h
+      ${INCLUDE_DIR}/spatial_hash_grid.h
 
-    # Position Based Dynamics
-	${INCLUDE_DIR}/pbd.h
-    ${INCLUDE_DIR}/pbd/fluid_constraints.h
+      # Position Based Dynamics
+      ${INCLUDE_DIR}/pbd.h
+      ${INCLUDE_DIR}/pbd/fluid_constraints.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
