@@ -383,8 +383,8 @@ Material& Material::operator= (const tinyobj::material_t& mat)
 
 	if (!mat.ambient_texname.empty())	m_ambientTex  =	m_texBaseDir + mat.ambient_texname;
 	if (!mat.diffuse_texname.empty())	m_diffuseTex  =	m_texBaseDir + mat.diffuse_texname;
-	if (!mat.specular_texname.empty())	m_specularTex = m_texBaseDir + mat.specular_texname;
-	if (!mat.bump_texname.empty())		m_bumpTex	  = m_texBaseDir + mat.bump_texname;
+	if (!mat.specular_texname.empty())	m_specularTex =   m_texBaseDir + mat.specular_texname;
+	if (!mat.bump_texname.empty())	m_bumpTex	  =	m_texBaseDir + mat.bump_texname;
 
 	return *this;
 }
