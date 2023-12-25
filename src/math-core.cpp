@@ -49,6 +49,15 @@ namespace math
 
 		set(axis, w);
 	}
+	quaternion::quaternion(Vector3 start, Vector3 end)
+	{
+		Vector3 delta = end - start;
+		*this = quaternion(Vector3(
+			0,
+			std::asinf(delta.z / glm::length(delta)),
+			std::atanf(delta.y / delta.x)
+		));
+	}
 	quaternion::quaternion(const quaternion& quaternion)
 	{
 		set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);

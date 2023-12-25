@@ -15,6 +15,7 @@ namespace math
 		quaternion(Vector3 euler); // construct from euler angles
 		quaternion(Vector4 v); // construct from (x, y, z, w) vector
 		quaternion(float angle, Vector3 axis); // quaternion to rotate angle (radians) around axis
+		quaternion(Vector3 start, Vector3 end); // look direction
 		quaternion(const quaternion& quaternion); // copy constructor
 
 		float x;
