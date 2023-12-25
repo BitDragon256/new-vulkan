@@ -13,39 +13,6 @@
 #include "logger.h"
 #include "profiler.h"
 
-struct Transform
-{
-	alignas(16) Vector3 position;
-	alignas(16) Vector3 scale;
-	alignas(16) Quaternion rotation;
-	uint32_t materialStart;
-
-	Transform();
-	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
-};
-
-bool operator== (const Transform& a, const Transform& b);
-
-static std::unordered_map<Transform*, Vector3> absRotations;
-
-GUI_PRINT_COMPONENT_START(Transform)
-
-ImGui_DragVector("position", component.position);
-Vector3 rot;
-if (!absRotations.contains(&component))
-	rot = component.rotation.to_euler();
-else
-	rot = absRotations[&component];
-
-Vector3 lastRot = rot;
-ImGui_DragVector("rotation", rot);
-absRotations[&component] = rot;
-if (lastRot != rot)
-	component.rotation.euler(rot);
-ImGui_DragVector("scale", component.scale);
-
-GUI_PRINT_COMPONENT_END
-
 #include "buffer.h"
 #include "ecs.h"
 #include "material.h"

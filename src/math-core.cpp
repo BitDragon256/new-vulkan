@@ -4,6 +4,8 @@
 
 #include <glm/gtc/quaternion.hpp>
 
+#include "nve_types.h"
+
 namespace math
 {
 

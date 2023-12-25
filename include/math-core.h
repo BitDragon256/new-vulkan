@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nve_types.h"
+#include "nve_types_fwd.h"
 
 #define DEG_TO_RAD PI / 180.f
 #define RAD_TO_DEG 180.f / PI
