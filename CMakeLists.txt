@@ -27,6 +27,7 @@ set(
 	${SOURCE_DIR}/math-core.cpp
 	# ${SOURCE_DIR}/models.cpp
 	${SOURCE_DIR}/model-handler.cpp
+	${SOURCE_DIR}/nve_types.cpp
 	${SOURCE_DIR}/render.cpp
 	${SOURCE_DIR}/vulkan_helpers.cpp
 	${SOURCE_DIR}/material.cpp
@@ -57,6 +58,7 @@ set(
 	# ${INCLUDE_DIR}/models.h
 	${INCLUDE_DIR}/model-handler.h
 	${INCLUDE_DIR}/nve_types.h
+	${INCLUDE_DIR}/nve_types_fwd.h
 	${INCLUDE_DIR}/render.h
 	${INCLUDE_DIR}/vulkan_helpers.h
 	${INCLUDE_DIR}/material.h
@@ -70,6 +72,7 @@ set(
 	${INCLUDE_DIR}/space_consistent_vector.h
 	${INCLUDE_DIR}/thread_pool.h
 	${INCLUDE_DIR}/gizmos.h
+	${INCLUDE_DIR}/component-editor.h
 
 	${INCLUDE_DIR}/simple_fluid.h
       ${INCLUDE_DIR}/spatial_hash_grid.h

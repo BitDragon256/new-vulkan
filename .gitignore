@@ -15,3 +15,5 @@ test-models/
 /measure01.png
 /measure02.png
 /render_measures.txt
+
+default_models/gizmos/*.blender
