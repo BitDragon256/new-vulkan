@@ -15,8 +15,8 @@ class GizmosHandler : public GeometryHandler, System<GizmosModel, Transform>
 {
 public:
       
-      void draw_line(Vector3 start, Vector3 end, Color color, float width = 0.1f);
-      void draw_ray(Vector3 start, Vector3 direction, Color color, float width = 0.1f);
+      void draw_line(Vector3 start, Vector3 end, Color color, float width);
+      void draw_ray(Vector3 start, Vector3 direction, Color color, float width);
 
 private:
 
@@ -30,6 +30,7 @@ public:
 	void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
 	void awake(EntityId entity) override;
 	void update(float dt) override;
+	void remove(EntityId entity) override;
 
 protected:
 

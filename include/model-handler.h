@@ -47,6 +47,7 @@ struct MeshDataInfo
 
 	size_t meshGroup;
 };
+bool operator== (const MeshDataInfo& a, const MeshDataInfo& b);
 
 struct MeshGroup // group with individual shaders
 {
@@ -130,6 +131,7 @@ public:
 protected:
 
 	void add_model(Model& model, bool forceNewMeshGroup = false);
+	void remove_model(Model& model);
 	void add_material(Model& model, Transform& transform, bool newMat);
 	virtual void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) = 0;
 	
@@ -232,6 +234,8 @@ struct DynamicModelInfo
 class DynamicGeometryHandler : public GeometryHandler, System<DynamicModel, Transform>
 {
 public:
+
+	DynamicGeometryHandler();
 
 	void start() override;
 	void awake(EntityId entity) override;

@@ -30,6 +30,8 @@ class ISystem;
 template<typename... Types> class System;
 class ECSManager;
 
+class Renderer;
+
 #ifndef ECS_START_ENTITIES
 #define ECS_START_ENTITIES 5000
 #endif
@@ -49,6 +51,7 @@ class IComponentList
 public:
 	virtual void gui_show_component(EntityId entity) = 0;
 	virtual std::string print_type() = 0;
+	virtual void remove(EntityId entity) = 0;
 };
 
 template<typename T>
@@ -63,7 +66,7 @@ public:
 		m_components.push_back(T());
 		m_entities.push_back(entity);
 	}
-	void remove(EntityId entity)
+	void remove(EntityId entity) override
 	{
 		//assert(m_entityToIndex.contains(entity));
 
@@ -84,7 +87,6 @@ public:
 
 	void gui_show_component(EntityId entity) override
 	{
-		std::stringstream ss;
 		gui_print_component<T> g;
 		g(m_components[entity]);
 	}
@@ -177,6 +179,14 @@ public:
 
 	void remove_entity(EntityId entity)
 	{
+		auto components = m_entityComponents[entity];
+		for (size_t i = 0; i < components.size(); i++)
+		{
+			if (components.test(i))
+			{
+				m_components[i]->remove(entity);
+			}
+		}
 		m_entityComponents.erase(entity);
 	}
 
@@ -234,6 +244,7 @@ public:
 	virtual void awake(EntityId entity) {}
 	virtual void update(float dt) {}
 	virtual void update(float dt, EntityId entity) {}
+	virtual void remove(EntityId entity) {}
 	virtual std::vector<const char*> component_types() = 0;
 	virtual void gui_show_system()
 	{
@@ -268,8 +279,8 @@ private:
 class ECSManager
 {
 public:
-	ECSManager() :
-		m_maxEntities(0), m_locked{ false }
+	ECSManager(Renderer* renderer) :
+		m_maxEntities(0), m_locked{ false }, m_renderer{ renderer }
 	{
 		fill_available_entities();
 	}
@@ -305,6 +316,10 @@ public:
 	}
 	void delete_entity(EntityId entity)
 	{
+		for (auto system : m_systems)
+			if (std::find(system->m_entities.cbegin(), system->m_entities.cend(), entity) != system->m_entities.cend())
+				system->remove(entity);
+
 		m_availableEntities.push(entity);
 		std::erase(m_entities, entity);
 
@@ -317,7 +332,6 @@ public:
 		std::erase(m_newEntities, entity);
 	}
 
-	// TODO: require space consistency, so that the address of a component stays the same over its lifespan, or that the accesser is noticed about the change
 	template<typename T> T& add_component(EntityId entity)
 	{
 		m_componentManager.add_component<T>(entity);
@@ -393,6 +407,8 @@ public:
 	{
 		m_locked = false;
 	}
+	Renderer* m_renderer;
+
 private:
 	std::vector<ISystem*> m_systems;
 	std::vector<std::bitset<ECS_MAX_COMPONENTS>> m_systemComponents; // bitset for all systems for used components

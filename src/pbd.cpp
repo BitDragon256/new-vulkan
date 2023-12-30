@@ -4,6 +4,8 @@
 
 #include <linalg/gsl_linalg.h>
 
+#include "render.h"
+
 PBDParticle::PBDParticle() :
       position{ 0.f }, oldPosition{ 0.f }, tempPosition{ 0.f }, velocity{ 0.f }, mass{ 1.f }, invmass{ 1.f }, radius{ 1.f }
 {}
@@ -34,6 +36,8 @@ void PBDSystem::update(float dt)
 
             particle.tempPosition = particle.position;
             particle.oldPosition = particle.position;
+
+            m_ecs->m_renderer->gizmos_draw_line(vec23(particle.position), Vector3(0), Color(1.f), 1.f);
       }
 
       damp_velocities();

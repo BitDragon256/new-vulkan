@@ -17,3 +17,5 @@ test-models/
 /render_measures.txt
 
 default_models/gizmos/*.blender
+/default_models/gizmos/cylinder.blend
+/default_models/gizmos/cylinder.blend1

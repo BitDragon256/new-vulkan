@@ -53,6 +53,8 @@ struct CameraPushConstant
 
 #define VECTOR_NULL Vector3(0)
 
+Vector3 vec23(Vector2 vec);
+
 #define PI 3.14159265f
 
 struct Mesh

@@ -33,6 +33,4 @@ private:
       std::vector<std::vector<EntityId>> m_buckets;
       size_t hash_vec(Vector3 v);
       size_t bucket_index(Vector3 v);
-
-      Vector3 vec23(Vector2 vec);
 };

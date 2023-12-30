@@ -4,7 +4,7 @@
 // GIZMOS HANDLER
 // -----------------------------------------------------------------
 
-void GizmosHandler::draw_line(Vector3 start, Vector3 end, Color color, float width = 0.1f)
+void GizmosHandler::draw_line(Vector3 start, Vector3 end, Color color, float width)
 {
 	EntityId e = m_ecs->create_entity();
 	auto& model = m_ecs->add_component<GizmosModel>(e);
@@ -16,9 +16,28 @@ void GizmosHandler::draw_line(Vector3 start, Vector3 end, Color color, float wid
 	transform.scale.y = width;
 }
 
-void GizmosHandler::draw_ray(Vector3 start, Vector3 direction, Color color, float width = 0.1f)
+void GizmosHandler::draw_ray(Vector3 start, Vector3 direction, Color color, float width)
 {
 	draw_line(start, start + direction, color, width);
+}
+
+void GizmosHandler::awake(EntityId entity)
+{
+	auto transform = m_ecs->get_component<Transform>(entity);
+	auto& model = m_ecs->get_component<GizmosModel>(entity);
+	add_model(model, transform);
+}
+void GizmosHandler::update(float dt)
+{
+	GeometryHandler::update();
+	while (!m_entities.empty())
+	{
+		m_ecs->delete_entity(m_entities.back());
+	}
+}
+void GizmosHandler::remove(EntityId entity)
+{
+	GeometryHandler::remove_model(m_ecs->get_component<GizmosModel>(entity));
 }
 
 // -----------------------------------------------------------------
@@ -27,7 +46,6 @@ void GizmosHandler::draw_ray(Vector3 start, Vector3 direction, Color color, floa
 
 GizmosHandler::GizmosHandler()
 {
-	m_subpassCount = 1;
 }
 void GizmosHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* gui)
 {
@@ -37,6 +55,9 @@ void GizmosHandler::add_model(GizmosModel& model, Transform& transform)
 {
 	for (auto& mesh : model.m_children)
 	{
+            mesh.material.m_shader = new GraphicsShader();
+		mesh.material.m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
+		mesh.material.m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 		bake_transform(mesh, transform);
 	}
 
@@ -108,13 +129,3 @@ std::vector<VkDescriptorSetLayoutBinding> GizmosHandler::other_descriptors()
 	return {};
 }
 
-void GizmosHandler::awake(EntityId entity)
-{
-	auto transform = m_ecs->get_component<Transform>(entity);
-	auto& model = m_ecs->get_component<GizmosModel>(entity);
-	add_model(model, transform);
-}
-void GizmosHandler::update(float dt)
-{
-	GeometryHandler::update();
-}

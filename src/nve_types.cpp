@@ -1,5 +1,10 @@
 #include "nve_types.h"
 
+Vector3 vec23(Vector2 vec)
+{
+	return Vector3(vec, 0);
+}
+
 // ------------------------------------------
 // TRANSFORM
 // ------------------------------------------

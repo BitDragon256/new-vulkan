@@ -24,6 +24,7 @@
 #include "image.h"
 #include "thread_pool.h"
 #include "profiler.h"
+#include "component-editor.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1

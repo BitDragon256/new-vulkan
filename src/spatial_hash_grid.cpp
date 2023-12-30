@@ -86,11 +86,6 @@ void SpatialHashGrid::remove_particle(Vector2 pos, EntityId id)
       remove_particle(vec23(pos), id);
 }
 
-Vector3 SpatialHashGrid::vec23(Vector2 vec)
-{
-      return Vector3(vec, 0);
-}
-
 void SpatialHashGrid::print_buckets(Vector2 max)
 {
       std::cout << "\n";

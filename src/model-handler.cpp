@@ -21,6 +21,15 @@
 // NON-MEMBER FUNCTIONS
 // ------------------------------------------
 
+bool operator== (const MeshDataInfo& a, const MeshDataInfo& b)
+{
+	return
+		a.indexStart == b.indexStart
+		&& a.indexCount == b.indexCount
+		&& a.vertexStart == b.vertexStart
+		&& a.vertexCount == b.vertexCount
+		&& a.meshGroup == b.meshGroup;
+}
 template<typename T>
 void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
 {
@@ -229,8 +238,8 @@ void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUI
 	m_vulkanObjects = vulkanObjects;
 	reloadMeshBuffers = true;
 
-	m_rendererPipelinesCreated = false;
 	m_subpassCount = 0;
+	m_rendererPipelinesCreated = false;
 
 	BufferConfig matBufConf = default_buffer_config();
 	matBufConf.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -327,9 +336,9 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
 	meshGroup.indexBuffer.initialize(config);
 
 	create_group_command_buffers(meshGroup);
-	if (m_rendererPipelinesCreated)
+	//if (m_rendererPipelinesCreated)
 		//create_pipeline(m_meshGroups.size() - 1);
-		m_subpassCount++;
+      m_subpassCount++;
 
 	return &meshGroup;
 }
@@ -456,16 +465,16 @@ void GeometryHandler::create_pipeline_layout()
 		logger::log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
 	}
 }
-void GeometryHandler::create_pipeline(size_t meshGroupIndex)
-{
-	m_pipelineCreationData.push_back({});
-
-	uint32_t subpass = m_vulkanObjects.firstSubpass + m_subpassCount;
-	m_subpassCount++;
-	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
-
-	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
-}
+//void GeometryHandler::create_pipeline(size_t meshGroupIndex)
+//{
+//	m_pipelineCreationData.push_back({});
+//
+//	uint32_t subpass = m_vulkanObjects.firstSubpass + m_subpassCount;
+//	m_subpassCount++;
+//	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
+//
+//	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
+//}
 
 void GeometryHandler::add_material(Model& model, Transform& transform, bool newMat)
 {
@@ -515,6 +524,21 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		reloadMeshBuffers = true;
 	}
 }
+void GeometryHandler::remove_model(Model& model)
+{
+	for (auto& mesh : model.m_children)
+	{
+		size_t index;
+		MeshGroup* meshGroup = find_group(mesh.material.m_shader, index);
+		if (!meshGroup)
+			continue;
+
+		std::erase(m_meshes, MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index });
+
+		meshGroup->reloadMeshBuffers = true;
+		reloadMeshBuffers = true;
+	}
+}
 void GeometryHandler::reload_materials()
 {
 	m_profiler.begin_label("reload materials");
@@ -524,7 +548,7 @@ void GeometryHandler::reload_materials()
 	for (size_t i = 0; i < mats.size(); i++)
 	{
 		mats[i] = *m_materials[i];
-		if (!(*m_materials[i]).m_diffuseTex.empty())
+		if (!m_materials[i]->m_diffuseTex.empty())
 			mats[i].m_textureIndex = m_texturePool.find((*m_materials[i]).m_diffuseTex);
 		else
 			mats[i].m_textureIndex = UINT32_MAX;
@@ -838,6 +862,10 @@ void StaticGeometryHandler::update(float dt)
 // DYNAMIC MODEL HANDLER
 // ------------------------------------------
 
+DynamicGeometryHandler::DynamicGeometryHandler()
+{
+	m_subpassCount = 0;
+}
 void DynamicGeometryHandler::start()
 {
 	BufferConfig bufferConfig = default_buffer_config();

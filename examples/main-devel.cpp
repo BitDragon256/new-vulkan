@@ -159,30 +159,31 @@ int main(int argc, char** argv)
     bo.radius = 0.f;
 
     std::vector<EntityId> particles;
-    const int PARTICLE_COUNT = 500;
     const float PARTICLE_DIST = 2.5f;
 
-    const float maxSize = std::sqrt(2) * boundingParticleRadius - PARTICLE_DIST;
-    const int sqrtPC = (int) std::sqrt(PARTICLE_COUNT);
-    for (int i = 0; i < PARTICLE_COUNT; i++)
-    {
-          auto particle = renderer.m_ecs.create_entity();
-          auto& pbdParticle = renderer.m_ecs.add_component<PBDParticle>(particle);
-          pbdParticle.position = Vec(
-                (float)(i % sqrtPC) * PARTICLE_DIST - maxSize / 2.f + 0.01f,
-                (float)(i / sqrtPC) * PARTICLE_DIST - maxSize / 2.f
-          );
-          pbdParticle.radius = particleRadius;
-          auto& transform = renderer.m_ecs.add_component<Transform>(particle);
-          transform.scale = Vector3(particleRadius);
+    int particleCount = 50;
+    auto genParticles = [&](int count, Vec position) {
+          const int sqrtPC = (int) std::sqrt(count);
+          for (int i = 0; i < count; i++)
+          {
+                auto particle = renderer.m_ecs.create_entity();
+                auto& pbdParticle = renderer.m_ecs.add_component<PBDParticle>(particle);
+                pbdParticle.position = Vec(
+                      (float)(i % sqrtPC) * PARTICLE_DIST - sqrtPC / 2.f + 0.01f + position.x,
+                      (float)(i / sqrtPC) * PARTICLE_DIST - sqrtPC / 2.f + position.y
+                );
+                pbdParticle.radius = particleRadius;
+                auto& transform = renderer.m_ecs.add_component<Transform>(particle);
+                transform.scale = Vector3(particleRadius);
 
-          auto constraint = pbd.add_constraint<CollisionConstraint>({ boundary, particle }, InverseInequality);
-          constraint->m_distance = boundingParticleRadius;
-          constraint->m_stiffness = 1.f;
-          renderer.m_ecs.add_component<DynamicModel>(particle) = ball;
+                auto constraint = pbd.add_constraint<CollisionConstraint>({ boundary, particle }, InverseInequality);
+                constraint->m_distance = boundingParticleRadius;
+                constraint->m_stiffness = 1.f;
+                renderer.m_ecs.add_component<DynamicModel>(particle) = ball;
 
-          particles.push_back(particle);
-    }
+                particles.push_back(particle);
+          }
+    };
     CollisionConstraintGenerator colConstGen;
     pbd.register_self_generating_constraint(&colConstGen);
 
@@ -230,6 +231,12 @@ int main(int argc, char** argv)
 
               ImGui::Begin("General");
 
+              if (ImGui::Button("Generate Particles"))
+              {
+                    genParticles(particleCount, { 0.f, 0.f });
+              }
+              ImGui::DragInt("New Particle Count", &particleCount, 1.f, 0);
+
               if (frame >= fps / 2)
               {
                     fpsText = std::to_string(fps) + " fps";
@@ -269,7 +276,7 @@ int main(int argc, char** argv)
         profiler.start_measure("ecs");
         if (updateECS || singleUpdateECS)
             // renderer.m_ecs.update_systems(1.f / 120.f);
-            renderer.m_ecs.update_systems(1/50.f);
+            renderer.m_ecs.update_systems(deltaTime);
         //std::cout << deltaTime << '\n';
 
         profiler.end_measure("ecs", true);
@@ -287,7 +294,7 @@ int main(int argc, char** argv)
         fps = 1.f / deltaTime;
         fpsQueue.erase(fpsQueue.begin());
         fpsQueue.push_back(deltaTime);
-        avgFps = 1.f / (std::accumulate(fpsQueue.begin(), fpsQueue.end(), 0) / 30.f);
+        avgFps = 1.f / (std::accumulate(fpsQueue.begin(), fpsQueue.end(), 0.0) / 30.f);
         lastTime = now;
 
         profilerTime += deltaTime;
