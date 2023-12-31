@@ -534,6 +534,7 @@ void GeometryHandler::remove_model(Model& model)
 			continue;
 
 		std::erase(m_meshes, MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index });
+		std::erase(m_materials, &mesh.material);
 
 		meshGroup->reloadMeshBuffers = true;
 		reloadMeshBuffers = true;
