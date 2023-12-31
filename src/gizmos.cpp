@@ -23,7 +23,7 @@ void GizmosHandler::draw_ray(Vector3 start, Vector3 direction, Color color, floa
 
 void GizmosHandler::awake(EntityId entity)
 {
-	auto transform = m_ecs->get_component<Transform>(entity);
+	auto& transform = m_ecs->get_component<Transform>(entity);
 	auto& model = m_ecs->get_component<GizmosModel>(entity);
 	add_model(model, transform);
 }
