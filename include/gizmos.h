@@ -40,4 +40,5 @@ protected:
 private:
 
 	void add_model(GizmosModel& model, Transform& transform);
+	std::vector<EntityId> m_newEntities;
 };

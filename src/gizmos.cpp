@@ -11,7 +11,7 @@ void GizmosHandler::draw_line(Vector3 start, Vector3 end, Color color, float wid
 	model.load_mesh("/default_models/gizmos/cylinder.obj");
 	auto& transform = m_ecs->add_component<Transform>(e);
 	transform.position = (start + end) / 2.f;
-	transform.rotation = Quaternion(start, end);
+	transform.rotation = Quaternion(end - start, VECTOR_UP);
 	transform.scale.x = glm::length(start - end);
 	transform.scale.y = width;
 }
@@ -26,13 +26,23 @@ void GizmosHandler::awake(EntityId entity)
 	auto& transform = m_ecs->get_component<Transform>(entity);
 	auto& model = m_ecs->get_component<GizmosModel>(entity);
 	add_model(model, transform);
+	m_newEntities.push_back(entity);
 }
 void GizmosHandler::update(float dt)
 {
 	GeometryHandler::update();
-	while (!m_entities.empty())
+	std::vector<EntityId> lastEntities;
+	std::set_difference(
+		m_entities.cbegin(),
+		m_entities.cend(),
+		m_newEntities.cbegin(),
+		m_newEntities.cend(),
+		std::back_inserter(lastEntities)
+	);
+	m_newEntities.clear();
+	for (auto e : lastEntities)
 	{
-		m_ecs->delete_entity(m_entities.back());
+		m_ecs->delete_entity(e);
 	}
 }
 void GizmosHandler::remove(EntityId entity)
@@ -55,9 +65,9 @@ void GizmosHandler::add_model(GizmosModel& model, Transform& transform)
 {
 	for (auto& mesh : model.m_children)
 	{
-            mesh.material.m_shader = new GraphicsShader();
-		mesh.material.m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
-		mesh.material.m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
+            mesh.material->m_shader = new GraphicsShader();
+		mesh.material->m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
+		mesh.material->m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 		bake_transform(mesh, transform);
 	}
 
