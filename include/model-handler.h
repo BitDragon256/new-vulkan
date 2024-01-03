@@ -4,6 +4,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include <vulkan/vulkan.h>
 
@@ -30,7 +31,10 @@
 
 struct StaticMesh : Mesh
 {
-	Material material;
+	std::shared_ptr<Material> material;
+	size_t id;
+
+	StaticMesh();
 };
 struct Model
 {
@@ -46,6 +50,7 @@ struct MeshDataInfo
 	size_t indexCount;
 
 	size_t meshGroup;
+	size_t meshId;
 };
 bool operator== (const MeshDataInfo& a, const MeshDataInfo& b);
 
@@ -165,7 +170,7 @@ private:
 
 	std::vector<MeshGroup> m_meshGroups;
 	std::vector<MeshDataInfo> m_meshes;
-	std::vector<Material*> m_materials;
+	std::vector<std::shared_ptr<Material>> m_materials;
 	Buffer<MaterialSSBO> m_materialBuffer;
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
