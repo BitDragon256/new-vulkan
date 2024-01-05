@@ -36,8 +36,6 @@ void PBDSystem::update(float dt)
 
             particle.tempPosition = particle.position;
             particle.oldPosition = particle.position;
-
-            m_ecs->m_renderer->gizmos_draw_line(vec23(particle.position), Vector3(0), Color(1.f), 1.f);
       }
 
       damp_velocities();
@@ -108,6 +106,12 @@ void PBDSystem::generate_constraints()
             surroundingParticles.clear();
 
             m_grid.surrounding_particles(particle.position, surroundingParticles);
+
+            for (const auto e : surroundingParticles)
+            {
+                  const auto& ep = m_ecs->get_component<PBDParticle>(e);
+                  m_ecs->m_renderer->gizmos_draw_line(vec23(ep.position), vec23(particle.position), Color(1.f), .1f);
+            }
 
             for (const auto constraintGenerator : m_constraintGenerators)
             {

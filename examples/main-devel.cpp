@@ -152,7 +152,7 @@ int main(int argc, char** argv)
     float particleRadius = 1.f;
     float boundingParticleRadius = 50.f;
 
-    renderer.m_ecs.add_component<Transform>(boundary).scale = Vector3(boundingParticleRadius + 1.f);
+    renderer.m_ecs.add_component<Transform>(boundary).scale = Vector3(boundingParticleRadius + 2.f);
     renderer.m_ecs.add_component<DynamicModel>(boundary) = emptycircle;
     auto& bo = renderer.m_ecs.add_component<PBDParticle>(boundary);
     bo.invmass = 0.f;
@@ -174,7 +174,7 @@ int main(int argc, char** argv)
                 );
                 pbdParticle.radius = particleRadius;
                 auto& transform = renderer.m_ecs.add_component<Transform>(particle);
-                transform.scale = Vector3(particleRadius);
+                transform.scale = Vector3(particleRadius / 2.f);
 
                 auto constraint = pbd.add_constraint<CollisionConstraint>({ boundary, particle }, InverseInequality);
                 constraint->m_distance = boundingParticleRadius;
