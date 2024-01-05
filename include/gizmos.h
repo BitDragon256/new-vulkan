@@ -41,4 +41,6 @@ private:
 
 	void add_model(GizmosModel& model, Transform& transform);
 	std::vector<EntityId> m_newEntities;
+
+	GraphicsShader* m_shader;
 };

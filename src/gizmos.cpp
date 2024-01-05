@@ -62,14 +62,15 @@ GizmosHandler::GizmosHandler()
 void GizmosHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* gui)
 {
 	GeometryHandler::initialize(vulkanObjects, gui);
+	m_shader = new GraphicsShader();
+	m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
+	m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 }
 void GizmosHandler::add_model(GizmosModel& model, Transform& transform)
 {
 	for (auto& mesh : model.m_children)
 	{
-            mesh.material->m_shader = new GraphicsShader();
-		mesh.material->m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
-		mesh.material->m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
+            mesh.material->m_shader = m_shader;
 		bake_transform(mesh, transform);
 	}
 
