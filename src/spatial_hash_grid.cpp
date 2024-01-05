@@ -49,6 +49,8 @@ void SpatialHashGrid::surrounding_particles(Vector2 pos, std::vector<EntityId>& 
       {
             for (int sign = -1; sign <= 1; sign += 2)
             {
+                  if (dim == 2 && sign == 1)
+                        break;
                   const auto& bucket = bucket_at(pos + m_gridSize * Vector2 { (dim == 0) * sign, (dim == 1) * sign });
                   particles.insert(particles.end(), bucket.cbegin(), bucket.cend());
             }

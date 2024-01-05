@@ -85,7 +85,7 @@ public:
       float m_radius;
 };
 
-#define PBD_GRID_SIZE 2.f
+#define PBD_GRID_SIZE 2.1f
 
 class PBDSystem : System<PBDParticle, Transform>
 {

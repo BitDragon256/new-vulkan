@@ -27,24 +27,13 @@ void GizmosHandler::awake(EntityId entity)
 	auto& transform = m_ecs->get_component<Transform>(entity);
 	auto& model = m_ecs->get_component<GizmosModel>(entity);
 	add_model(model, transform);
-	m_newEntities.push_back(entity);
 }
 void GizmosHandler::update(float dt)
 {
 	GeometryHandler::update();
-	//std::vector<EntityId> lastEntities;
-	//std::set_difference(
-	//	m_entities.cbegin(),
-	//	m_entities.cend(),
-	//	m_newEntities.cbegin(),
-	//	m_newEntities.cend(),
-	//	std::back_inserter(lastEntities)
-	//);
-	//m_newEntities.clear();
-	////for (auto e : lastEntities)
-	for (auto e : m_entities)
+	while (!m_entities.empty())
 	{
-		m_ecs->delete_entity(e);
+		m_ecs->delete_entity(m_entities.back());
 	}
 }
 void GizmosHandler::remove(EntityId entity)
