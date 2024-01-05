@@ -72,6 +72,23 @@ void PBDSystem::update(float dt)
 
       // clear collision constraints
       m_constraints.erase(m_constraints.begin() + m_constraintStart, m_constraints.end());
+
+      // debug lines
+      std::vector<EntityId> surroundingParticles;
+      for (EntityId entity : m_entities)
+      {
+            const auto& particle = get_particle(entity);
+            if (particle.radius == 0)
+                  continue;
+            surroundingParticles.clear();
+            m_grid.surrounding_particles(particle.position, surroundingParticles);
+            for (const auto e : surroundingParticles)
+            {
+                  const auto& ep = m_ecs->get_component<PBDParticle>(e);
+                  m_ecs->m_renderer->gizmos_draw_line(vec23(ep.position), vec23(particle.position), Color(1.f), .1f);
+            }
+      }
+
 }
 
 void PBDSystem::register_self_generating_constraint(ConstraintGenerator* generator)
@@ -106,12 +123,6 @@ void PBDSystem::generate_constraints()
             surroundingParticles.clear();
 
             m_grid.surrounding_particles(particle.position, surroundingParticles);
-
-            for (const auto e : surroundingParticles)
-            {
-                  const auto& ep = m_ecs->get_component<PBDParticle>(e);
-                  m_ecs->m_renderer->gizmos_draw_line(vec23(ep.position), vec23(particle.position), Color(1.f), .1f);
-            }
 
             for (const auto constraintGenerator : m_constraintGenerators)
             {
