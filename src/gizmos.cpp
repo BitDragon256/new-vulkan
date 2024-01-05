@@ -123,7 +123,7 @@ void GizmosHandler::record_command_buffer(uint32_t subpass, size_t frame, const 
 
 	// ---------------------------------------
 
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), 1, 0, 0, 0);
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indexBuffer.size()), 1, 0, 0, 0);
 
 	// ---------------------------------------
 

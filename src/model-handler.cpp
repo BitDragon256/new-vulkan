@@ -526,12 +526,18 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 			s_destroyedShaders.erase(meshGroup->shader);
 
 		// save mesh
-		size_t meshId = m_meshes.size();
+		size_t meshId = meshGroup->meshes.size();
 		mesh.id = meshId;
-		m_meshes.push_back(MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index, meshId });
+		meshGroup->meshes.push_back(MeshDataInfo{
+			meshGroup->vertices.size(),
+			mesh.vertices.size(),
+			meshGroup->indices.size(),			mesh.indices.size(),
+			index,
+			meshId
+		});
 		append_vector(meshGroup->vertices, mesh.vertices);
-		for (Index& index : mesh.indices)
-			index += meshGroup->indices.size();
+		//for (Index& index : mesh.indices)
+		//	index += meshGroup->indices.size();
 		append_vector(meshGroup->indices, mesh.indices);
 
 		meshGroup->reloadMeshBuffers = true;
@@ -549,7 +555,7 @@ void GeometryHandler::remove_model(Model& model)
 
 		MeshDataInfo meshInfo;
 		bool found = false;
-		for (const auto& mi : m_meshes)
+		for (const auto& mi : meshGroup->meshes)
 		{
                   if (mi.meshId == mesh.id)
                   {
@@ -560,23 +566,23 @@ void GeometryHandler::remove_model(Model& model)
 		}
 		if (!found)
 			continue;
-		for (auto& mi : m_meshes)
-		{
-			if (mi.vertexStart > meshInfo.vertexStart)
-                        mi.vertexStart -= meshInfo.vertexCount;
-			if (mi.indexStart > meshInfo.indexStart)
-                        mi.indexStart -= meshInfo.indexCount;
-		}
+		//for (auto& mi : meshGroup->meshes)
+		//{
+		//	if (mi.vertexStart > meshInfo.vertexStart)
+  //                      mi.vertexStart -= meshInfo.vertexCount;
+		//	if (mi.indexStart > meshInfo.indexStart)
+  //                      mi.indexStart -= meshInfo.indexCount;
+		//}
 
-		meshGroup->vertices.erase(
-			meshGroup->vertices.begin() + meshInfo.vertexStart,
-			meshGroup->vertices.begin() + meshInfo.vertexStart + meshInfo.vertexCount
-		);
-		meshGroup->indices.erase(
-			meshGroup->indices.begin() + meshInfo.indexStart,
-			meshGroup->indices.begin() + meshInfo.indexStart + meshInfo.indexCount
-		);
-		std::erase(m_meshes, meshInfo);
+		//meshGroup->vertices.erase(
+		//	meshGroup->vertices.begin() + meshInfo.vertexStart,
+		//	meshGroup->vertices.begin() + meshInfo.vertexStart + meshInfo.vertexCount
+		//);
+		//meshGroup->indices.erase(
+		//	meshGroup->indices.begin() + meshInfo.indexStart,
+		//	meshGroup->indices.begin() + meshInfo.indexStart + meshInfo.indexCount
+		//);
+		std::erase(meshGroup->meshes, meshInfo);
 		std::erase(m_materials, mesh.material);
 
 		meshGroup->reloadMeshBuffers = true;
@@ -623,8 +629,31 @@ void GeometryHandler::reload_meshes()
 }
 void GeometryHandler::reload_mesh_group(MeshGroup& meshGroup)
 {
-	meshGroup.vertexBuffer.set(meshGroup.vertices);
-	meshGroup.indexBuffer.set(meshGroup.indices);
+	std::vector<Vertex> vertices;
+	std::vector<Index> indices;
+
+	for (const auto& meshInfo : meshGroup.meshes)
+	{
+		Index vertexIndexDelta = static_cast<Index>(vertices.size());
+		vertices.insert(
+			vertices.end(),
+			meshGroup.vertices.cbegin() + meshInfo.vertexStart,
+			meshGroup.vertices.cbegin() + meshInfo.vertexStart + meshInfo.vertexCount
+		);
+		size_t indexStart = indices.size();
+		indices.insert(
+			indices.end(),
+			meshGroup.indices.cbegin() + meshInfo.indexStart,
+			meshGroup.indices.cbegin() + meshInfo.indexStart + meshInfo.indexCount
+		);
+		for (auto it = indices.begin() + indexStart; it != indices.end(); it++)
+		{
+			*it += vertexIndexDelta;
+		}
+	}
+
+	meshGroup.vertexBuffer.set(vertices);
+	meshGroup.indexBuffer.set(indices);
 
 	meshGroup.reloadMeshBuffers = false;
 }
@@ -875,7 +904,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// ---------------------------------------
 
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), 1, 0, 0, 0);
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indexBuffer.size()), 1, 0, 0, 0);
 
 	// ---------------------------------------
 
@@ -1041,7 +1070,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 	// ---------------------------------------
 
 	auto modelInfo = m_individualModels[meshGroupIndex];
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), modelInfo.instanceCount, 0, 0, modelInfo.startIndex);
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indexBuffer.size()), modelInfo.instanceCount, 0, 0, modelInfo.startIndex);
 
 	// ---------------------------------------
 

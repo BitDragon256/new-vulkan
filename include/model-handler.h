@@ -62,6 +62,8 @@ struct MeshGroup // group with individual shaders
 	Buffer<Vertex> vertexBuffer;
 	Buffer<Index> indexBuffer;
 
+	std::vector<MeshDataInfo> meshes;
+
 	GraphicsShader* shader;
 	
 	bool reloadMeshBuffers;
@@ -169,7 +171,6 @@ private:
 	bool m_rendererPipelinesCreated;
 
 	std::vector<MeshGroup> m_meshGroups;
-	std::vector<MeshDataInfo> m_meshes;
 	std::vector<std::shared_ptr<Material>> m_materials;
 	Buffer<MaterialSSBO> m_materialBuffer;
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
