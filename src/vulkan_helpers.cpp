@@ -314,6 +314,7 @@ VkFormat find_supported_format(const std::vector<VkFormat>& candidates, VkImageT
     }
 
     logger::log_err("failed to find supported format");
+    return (VkFormat) 0;
 }
 VkFormat find_depth_format(VkPhysicalDevice physicalDevice) {
     return find_supported_format(

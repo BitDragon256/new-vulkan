@@ -147,6 +147,11 @@ public:
 
     VkBuffer m_buffer;
 
+    size_t size() const
+    {
+          return m_data.size();
+    }
+
 protected:
     void initialize(RawBufferConfig config)
     {

@@ -1,6 +1,12 @@
 build/
 make-build/
-external/
+
+external/glfw
+external/imgui
+external/mini
+external/stbimage
+external/tinyobjloader
+
 .obsidian/
 .vscode/
 .VSCodeCounter/
@@ -9,3 +15,7 @@ test-models/
 /measure01.png
 /measure02.png
 /render_measures.txt
+
+default_models/gizmos/*.blender
+/default_models/gizmos/cylinder.blend
+/default_models/gizmos/cylinder.blend1

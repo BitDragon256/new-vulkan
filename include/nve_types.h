@@ -2,11 +2,10 @@
 
 #include <array>
 
-#include <glm/glm.hpp>
-
 #include "vulkan_helpers.h"
 
-typedef int NVE_RESULT;
+#include "nve_types_fwd.h"
+#include "math-core.h"
 
 // success codes
 #define NVE_SUCCESS 0
@@ -19,17 +18,6 @@ typedef uint32_t Index;
 #define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
 #define VERTEX_ATTRIBUTE_COUNT 5
-
-namespace math
-{
-	class quaternion;
-};
-
-typedef glm::vec2 Vector2;
-typedef glm::vec3 Vector3;
-typedef glm::vec4 Vector4;
-typedef math::quaternion Quaternion;
-typedef Vector3 Color;
 
 typedef struct Vertex
 {
@@ -65,6 +53,8 @@ struct CameraPushConstant
 
 #define VECTOR_NULL Vector3(0)
 
+Vector3 vec23(Vector2 vec);
+
 #define PI 3.14159265f
 
 struct Mesh
@@ -72,3 +62,22 @@ struct Mesh
 	std::vector<Vertex> vertices;
 	std::vector<Index> indices;
 };
+
+enum Direction
+{
+      Forwards, Backwards, Left, Right, Up, Down
+};
+
+struct Transform
+{
+	alignas(16) Vector3 position;
+	alignas(16) Vector3 scale;
+	alignas(16) Quaternion rotation;
+	uint32_t materialStart;
+
+	Transform();
+	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
+};
+
+bool operator== (const Transform& a, const Transform& b);
+

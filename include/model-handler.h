@@ -4,6 +4,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include <vulkan/vulkan.h>
 
@@ -12,39 +13,6 @@
 #include "gui.h"
 #include "logger.h"
 #include "profiler.h"
-
-struct Transform
-{
-	alignas(16) Vector3 position;
-	alignas(16) Vector3 scale;
-	alignas(16) Quaternion rotation;
-	uint32_t materialStart;
-
-	Transform();
-	Transform(Vector3 position, Vector3 scale, Quaternion rotation);
-};
-
-bool operator== (const Transform& a, const Transform& b);
-
-static std::unordered_map<Transform*, Vector3> absRotations;
-
-GUI_PRINT_COMPONENT_START(Transform)
-
-ImGui_DragVector("position", component.position);
-Vector3 rot;
-if (!absRotations.contains(&component))
-	rot = component.rotation.to_euler();
-else
-	rot = absRotations[&component];
-
-Vector3 lastRot = rot;
-ImGui_DragVector("rotation", rot);
-absRotations[&component] = rot;
-if (lastRot != rot)
-	component.rotation.euler(rot);
-ImGui_DragVector("scale", component.scale);
-
-GUI_PRINT_COMPONENT_END
 
 #include "buffer.h"
 #include "ecs.h"
@@ -63,7 +31,10 @@ GUI_PRINT_COMPONENT_END
 
 struct StaticMesh : Mesh
 {
-	Material material;
+	std::shared_ptr<Material> material;
+	size_t id;
+
+	StaticMesh();
 };
 struct Model
 {
@@ -79,7 +50,9 @@ struct MeshDataInfo
 	size_t indexCount;
 
 	size_t meshGroup;
+	size_t meshId;
 };
+bool operator== (const MeshDataInfo& a, const MeshDataInfo& b);
 
 struct MeshGroup // group with individual shaders
 {
@@ -88,6 +61,8 @@ struct MeshGroup // group with individual shaders
 
 	Buffer<Vertex> vertexBuffer;
 	Buffer<Index> indexBuffer;
+
+	std::vector<MeshDataInfo> meshes;
 
 	GraphicsShader* shader;
 	
@@ -163,6 +138,7 @@ public:
 protected:
 
 	void add_model(Model& model, bool forceNewMeshGroup = false);
+	void remove_model(Model& model);
 	void add_material(Model& model, Transform& transform, bool newMat);
 	virtual void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) = 0;
 	
@@ -195,8 +171,7 @@ private:
 	bool m_rendererPipelinesCreated;
 
 	std::vector<MeshGroup> m_meshGroups;
-	std::vector<MeshDataInfo> m_meshes;
-	std::vector<Material*> m_materials;
+	std::vector<std::shared_ptr<Material>> m_materials;
 	Buffer<MaterialSSBO> m_materialBuffer;
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
@@ -266,6 +241,8 @@ class DynamicGeometryHandler : public GeometryHandler, System<DynamicModel, Tran
 {
 public:
 
+	DynamicGeometryHandler();
+
 	void start() override;
 	void awake(EntityId entity) override;
 	void update(float dt) override;
@@ -289,3 +266,11 @@ private:
 	std::vector<DynamicModelInfo> m_individualModels;
 	uint32_t m_modelCount;
 };
+
+// ---------------------------------
+// HELPER FUNCTIONS
+// ---------------------------------
+
+void bake_transform(StaticMesh& mesh, Transform transform);
+VkCommandBufferBeginInfo create_command_buffer_begin_info(VkRenderPass renderPass, uint32_t subpass, VkFramebuffer framebuffer, VkCommandBufferInheritanceInfo& inheritanceI);
+void set_dynamic_state(VkCommandBuffer commandBuffer, VkExtent2D swapChainExtent, std::array<float, 4> viewportSize);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(NewVulkan CXX)
+project(NewVulkan)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
@@ -14,6 +14,10 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(external/glfw)
 
+set(NO_AMPL_BINDINGS 1)
+set(GSL_DISABLE_TESTS 1)
+add_subdirectory(external/gsl)
+
 set(SOURCE_DIR src)
 set(INCLUDE_DIR include)
 
@@ -23,6 +27,7 @@ set(
 	${SOURCE_DIR}/math-core.cpp
 	# ${SOURCE_DIR}/models.cpp
 	${SOURCE_DIR}/model-handler.cpp
+	${SOURCE_DIR}/nve_types.cpp
 	${SOURCE_DIR}/render.cpp
 	${SOURCE_DIR}/vulkan_helpers.cpp
 	${SOURCE_DIR}/material.cpp
@@ -34,9 +39,14 @@ set(
 	${SOURCE_DIR}/tritri.cpp
 	${SOURCE_DIR}/post_processing.cpp
 	${SOURCE_DIR}/thread_pool.cpp
+	${SOURCE_DIR}/gizmos.cpp
 	
 	${SOURCE_DIR}/simple_fluid.cpp
-	${SOURCE_DIR}/pbd.cpp
+      ${SOURCE_DIR}/spatial_hash_grid.cpp
+
+      # Position Based Dynamics
+      ${SOURCE_DIR}/pbd.cpp
+      ${SOURCE_DIR}/pbd/fluid_constraints.cpp
 )
 
 set(
@@ -48,6 +58,7 @@ set(
 	# ${INCLUDE_DIR}/models.h
 	${INCLUDE_DIR}/model-handler.h
 	${INCLUDE_DIR}/nve_types.h
+	${INCLUDE_DIR}/nve_types_fwd.h
 	${INCLUDE_DIR}/render.h
 	${INCLUDE_DIR}/vulkan_helpers.h
 	${INCLUDE_DIR}/material.h
@@ -60,9 +71,15 @@ set(
 	${INCLUDE_DIR}/post_processing.h
 	${INCLUDE_DIR}/space_consistent_vector.h
 	${INCLUDE_DIR}/thread_pool.h
+	${INCLUDE_DIR}/gizmos.h
+	${INCLUDE_DIR}/component-editor.h
 
 	${INCLUDE_DIR}/simple_fluid.h
-	${INCLUDE_DIR}/pbd.h
+      ${INCLUDE_DIR}/spatial_hash_grid.h
+
+      # Position Based Dynamics
+      ${INCLUDE_DIR}/pbd.h
+      ${INCLUDE_DIR}/pbd/fluid_constraints.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
@@ -111,6 +128,6 @@ target_include_directories(nve PUBLIC external/imgui)
 target_include_directories(nve PUBLIC external/tinyobjloader)
 target_include_directories(nve PUBLIC external/stbimage)
 target_include_directories(nve PUBLIC external/mini)
-target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw)
+target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw gsl)
 
 add_definitions(-DROOT_DIRECTORY=\"${CMAKE_SOURCE_DIR}\")

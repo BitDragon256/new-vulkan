@@ -20,9 +20,11 @@
 #include "ecs.h"
 #include "nve_types.h"
 #include "model-handler.h"
+#include "gizmos.h"
 #include "image.h"
 #include "thread_pool.h"
 #include "profiler.h"
+#include "component-editor.h"
 
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1
@@ -60,6 +62,8 @@ class Camera;
 class Renderer
 {
 public:
+	Renderer();
+
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
 	NVE_RESULT set_active_camera(Camera* camera);
@@ -79,6 +83,10 @@ public:
 	void clean_up();
 
 	void set_light_pos(Vector3 pos);
+
+	// gizmos
+	void gizmos_draw_line(Vector3 start, Vector3 end, Color color, float width = 0.1f);
+      void gizmos_draw_ray(Vector3 start, Vector3 direction, Color color, float width = 0.1f);
 
 private:
 	void first_frame();
@@ -129,6 +137,7 @@ private:
 	// model handling
 	StaticGeometryHandler m_staticGeometryHandler;
 	DynamicGeometryHandler m_dynamicGeometryHandler;
+	GizmosHandler m_gizmosHandler;
 
 	std::vector<GeometryHandler*> all_geometry_handlers();
 
@@ -195,6 +204,7 @@ private:
 	NVE_RESULT create_swapchain();
 	NVE_RESULT create_swapchain_image_views();
 	NVE_RESULT create_render_pass();
+	void recreate_render_pass();
 	NVE_RESULT create_framebuffers();
 	NVE_RESULT create_commandpool();
 	NVE_RESULT create_commandbuffers();

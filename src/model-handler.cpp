@@ -18,18 +18,28 @@
 #endif
 
 // ------------------------------------------
+// STATIC MESH
+// ------------------------------------------
+
+StaticMesh::StaticMesh() :
+	id{ 0 }
+{
+	material = std::make_shared<Material>();
+}
+
+// ------------------------------------------
 // NON-MEMBER FUNCTIONS
 // ------------------------------------------
 
-bool operator== (const Transform& a, const Transform& b)
+bool operator== (const MeshDataInfo& a, const MeshDataInfo& b)
 {
 	return
-		a.position == b.position &&
-		a.scale == b.scale &&
-		a.rotation == b.rotation &&
-		a.materialStart == b.materialStart;
+		a.indexStart == b.indexStart
+		&& a.indexCount == b.indexCount
+		&& a.vertexStart == b.vertexStart
+		&& a.vertexCount == b.vertexCount
+		&& a.meshGroup == b.meshGroup;
 }
-
 template<typename T>
 void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
 {
@@ -238,8 +248,8 @@ void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUI
 	m_vulkanObjects = vulkanObjects;
 	reloadMeshBuffers = true;
 
-	m_rendererPipelinesCreated = false;
 	m_subpassCount = 0;
+	m_rendererPipelinesCreated = false;
 
 	BufferConfig matBufConf = default_buffer_config();
 	matBufConf.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -336,9 +346,9 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
 	meshGroup.indexBuffer.initialize(config);
 
 	create_group_command_buffers(meshGroup);
-	if (m_rendererPipelinesCreated)
+	//if (m_rendererPipelinesCreated)
 		//create_pipeline(m_meshGroups.size() - 1);
-		m_subpassCount++;
+      m_subpassCount++;
 
 	return &meshGroup;
 }
@@ -465,16 +475,16 @@ void GeometryHandler::create_pipeline_layout()
 		logger::log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
 	}
 }
-void GeometryHandler::create_pipeline(size_t meshGroupIndex)
-{
-	m_pipelineCreationData.push_back({});
-
-	uint32_t subpass = m_vulkanObjects.firstSubpass + m_subpassCount;
-	m_subpassCount++;
-	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
-
-	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
-}
+//void GeometryHandler::create_pipeline(size_t meshGroupIndex)
+//{
+//	m_pipelineCreationData.push_back({});
+//
+//	uint32_t subpass = m_vulkanObjects.firstSubpass + m_subpassCount;
+//	m_subpassCount++;
+//	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
+//
+//	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
+//}
 
 void GeometryHandler::add_material(Model& model, Transform& transform, bool newMat)
 {
@@ -497,7 +507,7 @@ void GeometryHandler::add_material(Model& model, Transform& transform, bool newM
 	uint32_t i = 0;
 	for (auto& mesh : model.m_children)
 	{
-		m_materials.push_back(&mesh.material);
+		m_materials.push_back(mesh.material);
 		for (auto& v : mesh.vertices)
 			v.material = i;
 		i++;
@@ -508,17 +518,72 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 	for (auto& mesh : model.m_children)
 	{
 		size_t index;
-		MeshGroup* meshGroup = find_group(mesh.material.m_shader, index);
+		MeshGroup* meshGroup = find_group(mesh.material->m_shader, index);
 		if (!meshGroup || forceNewMeshGroup) // no group found or a new group must be created
-			meshGroup = push_mesh_group(mesh.material.m_shader);
+			meshGroup = push_mesh_group(mesh.material->m_shader);
 
 		if (s_destroyedShaders.contains(meshGroup->shader))
 			s_destroyedShaders.erase(meshGroup->shader);
 
 		// save mesh
-		m_meshes.push_back(MeshDataInfo{ meshGroup->vertices.size(), mesh.vertices.size(), meshGroup->indices.size(), mesh.indices.size(), index });
+		size_t meshId = meshGroup->meshes.size();
+		mesh.id = meshId;
+		meshGroup->meshes.push_back(MeshDataInfo{
+			meshGroup->vertices.size(),
+			mesh.vertices.size(),
+			meshGroup->indices.size(),			mesh.indices.size(),
+			index,
+			meshId
+		});
 		append_vector(meshGroup->vertices, mesh.vertices);
+		//for (Index& index : mesh.indices)
+		//	index += meshGroup->indices.size();
 		append_vector(meshGroup->indices, mesh.indices);
+
+		meshGroup->reloadMeshBuffers = true;
+		reloadMeshBuffers = true;
+	}
+}
+void GeometryHandler::remove_model(Model& model)
+{
+	for (auto& mesh : model.m_children)
+	{
+		size_t index;
+		MeshGroup* meshGroup = find_group(mesh.material->m_shader, index);
+		if (!meshGroup)
+			continue;
+
+		MeshDataInfo meshInfo;
+		bool found = false;
+		for (const auto& mi : meshGroup->meshes)
+		{
+                  if (mi.meshId == mesh.id)
+                  {
+                        meshInfo = mi;
+				found = true;
+				break;
+                  }
+		}
+		if (!found)
+			continue;
+		//for (auto& mi : meshGroup->meshes)
+		//{
+		//	if (mi.vertexStart > meshInfo.vertexStart)
+  //                      mi.vertexStart -= meshInfo.vertexCount;
+		//	if (mi.indexStart > meshInfo.indexStart)
+  //                      mi.indexStart -= meshInfo.indexCount;
+		//}
+
+		//meshGroup->vertices.erase(
+		//	meshGroup->vertices.begin() + meshInfo.vertexStart,
+		//	meshGroup->vertices.begin() + meshInfo.vertexStart + meshInfo.vertexCount
+		//);
+		//meshGroup->indices.erase(
+		//	meshGroup->indices.begin() + meshInfo.indexStart,
+		//	meshGroup->indices.begin() + meshInfo.indexStart + meshInfo.indexCount
+		//);
+		std::erase(meshGroup->meshes, meshInfo);
+		std::erase(m_materials, mesh.material);
 
 		meshGroup->reloadMeshBuffers = true;
 		reloadMeshBuffers = true;
@@ -532,11 +597,11 @@ void GeometryHandler::reload_materials()
 	std::vector<MaterialSSBO> mats(m_materials.size());
 	for (size_t i = 0; i < mats.size(); i++)
 	{
-		mats[i] = *m_materials[i];
-		if (!(*m_materials[i]).m_diffuseTex.empty())
-			mats[i].m_textureIndex = m_texturePool.find((*m_materials[i]).m_diffuseTex);
-		else
-			mats[i].m_textureIndex = UINT32_MAX;
+            mats[i] = *m_materials[i];
+            if (!m_materials[i]->m_diffuseTex.empty())
+                  mats[i].m_textureIndex = m_texturePool.find((*m_materials[i]).m_diffuseTex);
+            else
+                  mats[i].m_textureIndex = UINT32_MAX;
 	}
 	PROFILE_END("iterate through mats");
 	PROFILE_START("update buffer");
@@ -564,8 +629,31 @@ void GeometryHandler::reload_meshes()
 }
 void GeometryHandler::reload_mesh_group(MeshGroup& meshGroup)
 {
-	meshGroup.vertexBuffer.set(meshGroup.vertices);
-	meshGroup.indexBuffer.set(meshGroup.indices);
+	std::vector<Vertex> vertices;
+	std::vector<Index> indices;
+
+	for (const auto& meshInfo : meshGroup.meshes)
+	{
+		Index vertexIndexDelta = static_cast<Index>(vertices.size());
+		vertices.insert(
+			vertices.end(),
+			meshGroup.vertices.cbegin() + meshInfo.vertexStart,
+			meshGroup.vertices.cbegin() + meshInfo.vertexStart + meshInfo.vertexCount
+		);
+		size_t indexStart = indices.size();
+		indices.insert(
+			indices.end(),
+			meshGroup.indices.cbegin() + meshInfo.indexStart,
+			meshGroup.indices.cbegin() + meshInfo.indexStart + meshInfo.indexCount
+		);
+		for (auto it = indices.begin() + indexStart; it != indices.end(); it++)
+		{
+			*it += vertexIndexDelta;
+		}
+	}
+
+	meshGroup.vertexBuffer.set(vertices);
+	meshGroup.indexBuffer.set(indices);
 
 	meshGroup.reloadMeshBuffers = false;
 }
@@ -744,9 +832,9 @@ void StaticGeometryHandler::load_dummy_model()
 	StaticMesh mesh;
 	mesh.vertices = { NULL_VERTEX, NULL_VERTEX, NULL_VERTEX };
 	mesh.indices = { 0, 1, 2 };
-	mesh.material.m_shader = new GraphicsShader();
-	mesh.material.m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
-	mesh.material.m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
+	mesh.material->m_shader = new GraphicsShader();
+	mesh.material->m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
+	mesh.material->m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 
 	m_dummyModel.m_children.push_back(mesh);
 	Transform transform;
@@ -816,7 +904,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// ---------------------------------------
 
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), 1, 0, 0, 0);
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indexBuffer.size()), 1, 0, 0, 0);
 
 	// ---------------------------------------
 
@@ -847,6 +935,10 @@ void StaticGeometryHandler::update(float dt)
 // DYNAMIC MODEL HANDLER
 // ------------------------------------------
 
+DynamicGeometryHandler::DynamicGeometryHandler()
+{
+	m_subpassCount = 0;
+}
 void DynamicGeometryHandler::start()
 {
 	BufferConfig bufferConfig = default_buffer_config();
@@ -978,7 +1070,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 	// ---------------------------------------
 
 	auto modelInfo = m_individualModels[meshGroupIndex];
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indices.size()), modelInfo.instanceCount, 0, 0, modelInfo.startIndex);
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshGroup.indexBuffer.size()), modelInfo.instanceCount, 0, 0, modelInfo.startIndex);
 
 	// ---------------------------------------
 
@@ -1042,21 +1134,10 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 			hashSum ^= (DynamicModelHashSum) (child.vertices[index].pos.x * 23626325 + child.vertices[index].pos.y * 9738346 + child.vertices[index].pos.z * 283756898967) * index + 2355901;
 			hashSum >>= 11;
 		}
-		hashSum ^= (DynamicModelHashSum) child.material.m_shader;
+		hashSum ^= (DynamicModelHashSum) child.material->m_shader;
 	}
 	return hashSum;
 }
-
-// ------------------------------------------
-// TRANSFORM
-// ------------------------------------------
-
-Transform::Transform() :
-	position{ VECTOR_NULL }, scale{ 1, 1, 1 }, rotation{}, materialStart(0)
-{}
-Transform::Transform(Vector3 position, Vector3 scale, Quaternion rotation) :
-	position{ position }, scale{ scale }, rotation{ rotation }
-{}
 
 // ------------------------------------------
 // TINY OBJ LOADER HELPER
@@ -1247,7 +1328,8 @@ void Model::load_mesh(std::string file)
 	{
 		m_children.push_back(StaticMesh{});
 		StaticMesh& mesh = m_children.back();
-		mesh.material = objMesh.mat;
+		mesh.material = std::make_shared<Material>();
+		*mesh.material = objMesh.mat;
 		mesh.vertices = objMesh.vertices;
 		mesh.indices = objMesh.indices;
 		meshProfiler.passing_measure("model transfer");

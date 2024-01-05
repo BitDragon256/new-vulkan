@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nve_types.h"
+#include "nve_types_fwd.h"
 
 #define DEG_TO_RAD PI / 180.f
 #define RAD_TO_DEG 180.f / PI
@@ -15,6 +15,7 @@ namespace math
 		quaternion(Vector3 euler); // construct from euler angles
 		quaternion(Vector4 v); // construct from (x, y, z, w) vector
 		quaternion(float angle, Vector3 axis); // quaternion to rotate angle (radians) around axis
+		quaternion(Vector3 dir, Vector3 up); // look direction
 		quaternion(const quaternion& quaternion); // copy constructor
 
 		float x;
