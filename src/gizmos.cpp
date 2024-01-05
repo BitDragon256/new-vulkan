@@ -11,9 +11,10 @@ void GizmosHandler::draw_line(Vector3 start, Vector3 end, Color color, float wid
 	model.load_mesh("/default_models/gizmos/cylinder.obj");
 	auto& transform = m_ecs->add_component<Transform>(e);
 	transform.position = (start + end) / 2.f;
-	transform.rotation = Quaternion(end - start, VECTOR_UP);
+	transform.rotation = Quaternion(end - start, VECTOR_RIGHT);
 	transform.scale.x = glm::length(start - end);
 	transform.scale.y = width;
+	transform.scale.z = width;
 }
 
 void GizmosHandler::draw_ray(Vector3 start, Vector3 direction, Color color, float width)
@@ -31,16 +32,17 @@ void GizmosHandler::awake(EntityId entity)
 void GizmosHandler::update(float dt)
 {
 	GeometryHandler::update();
-	std::vector<EntityId> lastEntities;
-	std::set_difference(
-		m_entities.cbegin(),
-		m_entities.cend(),
-		m_newEntities.cbegin(),
-		m_newEntities.cend(),
-		std::back_inserter(lastEntities)
-	);
-	m_newEntities.clear();
-	for (auto e : lastEntities)
+	//std::vector<EntityId> lastEntities;
+	//std::set_difference(
+	//	m_entities.cbegin(),
+	//	m_entities.cend(),
+	//	m_newEntities.cbegin(),
+	//	m_newEntities.cend(),
+	//	std::back_inserter(lastEntities)
+	//);
+	//m_newEntities.clear();
+	////for (auto e : lastEntities)
+	for (auto e : m_entities)
 	{
 		m_ecs->delete_entity(e);
 	}

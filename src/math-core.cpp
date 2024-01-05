@@ -54,8 +54,8 @@ namespace math
 		dir = glm::normalize(dir);
 		up = glm::normalize(up);
 
-		Vector3 side = glm::cross(dir, up);
-		Vector3 rotUp = glm::cross(dir, side);
+		Vector3 side = glm::cross(up, dir);
+		Vector3 rotUp = glm::cross(side, dir);
 
 		float m00 = dir.x;
 		float m01 = dir.y;
