@@ -68,26 +68,36 @@ void PBDSystem::update(float dt)
 
       // sync transform
       for (EntityId entity : m_entities)
+      {
+#ifdef PBD_3D
+            m_ecs->get_component<Transform>(entity).position = get_particle(entity).position;
+#else
             m_ecs->get_component<Transform>(entity).position = Vector3(get_particle(entity).position, 0);
+#endif
+      }
 
       // clear collision constraints
       m_constraints.erase(m_constraints.begin() + m_constraintStart, m_constraints.end());
 
       // debug lines
-      std::vector<EntityId> surroundingParticles;
-      for (EntityId entity : m_entities)
-      {
-            const auto& particle = get_particle(entity);
-            if (particle.radius == 0)
-                  continue;
-            surroundingParticles.clear();
-            m_grid.surrounding_particles(particle.position, surroundingParticles);
-            for (const auto e : surroundingParticles)
-            {
-                  const auto& ep = m_ecs->get_component<PBDParticle>(e);
-                  m_ecs->m_renderer->gizmos_draw_line(vec23(ep.position), vec23(particle.position), Color(1.f), .1f);
-            }
-      }
+//      std::vector<EntityId> surroundingParticles;
+//      for (EntityId entity : m_entities)
+//      {
+//            const auto& particle = get_particle(entity);
+//            if (particle.radius == 0)
+//                  continue;
+//            surroundingParticles.clear();
+//            m_grid.surrounding_particles(particle.position, surroundingParticles);
+//            for (const auto e : surroundingParticles)
+//            {
+//                  const auto& ep = m_ecs->get_component<PBDParticle>(e);
+//#ifdef PBD_3D
+//                  m_ecs->m_renderer->gizmos_draw_line(ep.position, particle.position, Color(1.f), .1f);
+//#else
+//                  m_ecs->m_renderer->gizmos_draw_line(vec23(ep.position), vec23(particle.position), Color(1.f), .1f);
+//#endif
+//            }
+//      }
 
 }
 
@@ -171,6 +181,8 @@ void PBDSystem::solve_seidel_gauss()
                         continue;
 
                   float scalingFactor = constraintErr / acc;
+                  if (scalingFactor != scalingFactor)
+                        continue;
 
                   deltas.clear();
                   for (size_t j = 0; j < particles.size(); j++)
@@ -181,7 +193,7 @@ void PBDSystem::solve_seidel_gauss()
                               * constraint->constraint_gradient(j, particles)
                         );
                   }
-                  float correctedStiffness = 1 - std::pow(1 - constraint->m_stiffness, constraint->m_cardinality);
+                  float correctedStiffness = 1.f - std::pow(1.f - constraint->m_stiffness, constraint->m_cardinality);
                   for (size_t j = 0; j < particles.size(); j++)
                   {
                         Vec delta = correctedStiffness * deltas[j];
@@ -204,7 +216,11 @@ PBDParticle& PBDSystem::get_particle(EntityId id)
 }
 Vec PBDSystem::external_force(Vec pos)
 {
+#ifdef PBD_3D
+      return Vector3(0.f, 0.f, -9.81f);
+#else
       return Vector2(0, 9.81f);
+#endif
 }
 void PBDSystem::sync_grid(PBDParticle& particle, EntityId entity)
 {

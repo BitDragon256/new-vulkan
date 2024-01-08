@@ -15,7 +15,17 @@
 typedef float Real;
 typedef size_t Cardinality;
 
+#define PBD_3D
+
+#ifdef PBD_3D
+
+typedef Vector3 Vec;
+
+#else
+
 typedef Vector2 Vec;
+
+#endif
 
 struct PBDParticle
 {
@@ -85,7 +95,7 @@ public:
       float m_radius;
 };
 
-#define PBD_GRID_SIZE 2.1f
+#define PBD_GRID_SIZE 32.f
 
 class PBDSystem : System<PBDParticle, Transform>
 {

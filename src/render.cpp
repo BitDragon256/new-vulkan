@@ -1423,7 +1423,7 @@ bool Vertex::operator<(const Vertex& other)
 // CAMERA
 // ---------------------------------------
 Camera::Camera() :
-      m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(100.f), m_extent(1080, 1920), renderer(nullptr)
+      m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(1000.f), m_extent(1080, 1920), renderer(nullptr)
 {}
 glm::mat4 Camera::view_matrix()
 {
