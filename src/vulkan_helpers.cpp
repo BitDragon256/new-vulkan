@@ -198,7 +198,6 @@ std::vector<char> read_file(const std::string& filename)
 }
 VkShaderModule create_shader_module(const std::string& file, VkDevice device)
 {
-
     std::string prefix = ROOT_DIRECTORY;
 
     std::vector<char> shaderCode = read_file(prefix + "/shaders/" + file);

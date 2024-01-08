@@ -214,18 +214,18 @@ VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreatio
 	return graphicsPipelineCI;
 }
 
-void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelineCI, PipelineCreationData& pipelineCreationData, const GraphicsShader& shader)
+void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelineCI, PipelineCreationData& pipelineCreationData, const GraphicsShader shader)
 {
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = shader.vertex.m_module;
+	vertShaderStageInfo.module = shader->vertex.m_module;
 	vertShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = shader.fragment.m_module;
+	fragShaderStageInfo.module = shader->fragment.m_module;
 	fragShaderStageInfo.pName = "main";
 
 	pipelineCreationData.stages[0] = vertShaderStageInfo;
@@ -239,7 +239,7 @@ void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelin
 // GEOMETRY HANDLER
 // ------------------------------------------
 
-std::set<GraphicsShader*> GeometryHandler::s_destroyedShaders = std::set<GraphicsShader*>();
+//std::set<GraphicsShader_T*> GeometryHandler::s_destroyedShaders = std::set<GraphicsShader_T*>();
 GeometryHandler::GeometryHandler() : m_subpassCount{ 0 }
 {}
 
@@ -301,14 +301,14 @@ std::vector<VkFence> GeometryHandler::buffer_cpy_fences()
 	return fences;
 }
 
-MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
+MeshGroup* GeometryHandler::find_group(GraphicsShader& shader, size_t& index)
 {
 	if (!shader)
 	{
 		// automatically assign the first best
 		if (m_meshGroups.size() > 0)
 		{
-			shader = m_meshGroups[0].shader;
+			shader = m_meshGroups[0].shader.lock();
 			return &m_meshGroups[0];
 		}
 		return nullptr;
@@ -317,21 +317,20 @@ MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
 	index = 0;
 	while (index < m_meshGroups.size())
 	{
-		if ((*m_meshGroups[index].shader) == (*shader))
+		if ((*m_meshGroups[index].shader.lock()) == (*shader))
 			return &m_meshGroups[index];
 		index++;
 	}
 	return nullptr;
 }
-MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
+MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader& shader)
 {
 	m_meshGroups.push_back(MeshGroup {});
 	auto& meshGroup = m_meshGroups.back();
 	if (!shader)
 	{
-		meshGroup.shader = new GraphicsShader();
-		meshGroup.shader->set_default_shader();
-		shader = meshGroup.shader;
+		meshGroup.shader = make_default_shader();
+		shader = meshGroup.shader.lock();
 	}
 	else
 	{
@@ -434,7 +433,7 @@ VkGraphicsPipelineCreateInfo GeometryHandler::create_pipeline_create_info(uint32
 
 	// ---------------------------------------
 
-	create_pipeline_shader_stages(graphicsPipelineCI, pipelineCreationData, *m_meshGroups[pipelineIndex].shader);
+	create_pipeline_shader_stages(graphicsPipelineCI, pipelineCreationData, m_meshGroups[pipelineIndex].shader.lock());
 
 	// ---------------------------------------
 
@@ -522,8 +521,8 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		if (!meshGroup || forceNewMeshGroup) // no group found or a new group must be created
 			meshGroup = push_mesh_group(mesh.material->m_shader);
 
-		if (s_destroyedShaders.contains(meshGroup->shader))
-			s_destroyedShaders.erase(meshGroup->shader);
+		//if (s_destroyedShaders.contains(meshGroup->shader))
+		//	s_destroyedShaders.erase(meshGroup->shader);
 
 		// save mesh
 		size_t meshId = meshGroup->meshes.size();
@@ -531,7 +530,8 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		meshGroup->meshes.push_back(MeshDataInfo{
 			meshGroup->vertices.size(),
 			mesh.vertices.size(),
-			meshGroup->indices.size(),			mesh.indices.size(),
+			meshGroup->indices.size(),
+			mesh.indices.size(),
 			index,
 			meshId
 		});
@@ -784,12 +784,13 @@ void GeometryHandler::cleanup()
 		vkFreeCommandBuffers(m_vulkanObjects.device, meshGroup.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 		vkDestroyCommandPool(m_vulkanObjects.device, meshGroup.commandPool, nullptr);
 
-		if (meshGroup.shader && !s_destroyedShaders.contains(meshGroup.shader))
+		auto shaderPtr = meshGroup.shader.lock();
+		//if (shaderPtr && !s_destroyedShaders.contains(meshGroup.shader))
+		if (shaderPtr)
 		{
-			meshGroup.shader->fragment.destroy();
-			meshGroup.shader->vertex.destroy();
-			s_destroyedShaders.insert(meshGroup.shader);
-			free(meshGroup.shader);
+			shaderPtr->fragment.destroy();
+			shaderPtr->vertex.destroy();
+			//s_destroyedShaders.insert(meshGroup.shader);
 		}
 	}
 
@@ -832,7 +833,7 @@ void StaticGeometryHandler::load_dummy_model()
 	StaticMesh mesh;
 	mesh.vertices = { NULL_VERTEX, NULL_VERTEX, NULL_VERTEX };
 	mesh.indices = { 0, 1, 2 };
-	mesh.material->m_shader = new GraphicsShader();
+	mesh.material->m_shader = make_default_shader();
 	mesh.material->m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
 	mesh.material->m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 
@@ -1134,7 +1135,7 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 			hashSum ^= (DynamicModelHashSum) (child.vertices[index].pos.x * 23626325 + child.vertices[index].pos.y * 9738346 + child.vertices[index].pos.z * 283756898967) * index + 2355901;
 			hashSum >>= 11;
 		}
-		hashSum ^= (DynamicModelHashSum) child.material->m_shader;
+		hashSum ^= (DynamicModelHashSum) child.material->m_shader.get();
 	}
 	return hashSum;
 }

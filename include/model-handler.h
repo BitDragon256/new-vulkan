@@ -64,7 +64,7 @@ struct MeshGroup // group with individual shaders
 
 	std::vector<MeshDataInfo> meshes;
 
-	GraphicsShader* shader;
+	GraphicsShaderRef shader;
 	
 	bool reloadMeshBuffers;
 
@@ -159,8 +159,8 @@ protected:
 
 private:
 
-	MeshGroup* find_group(GraphicsShader*& shader, size_t& index);
-	MeshGroup* push_mesh_group(GraphicsShader*& shader);
+	MeshGroup* find_group(GraphicsShader& shader, size_t& index);
+	MeshGroup* push_mesh_group(GraphicsShader& shader);
 
 	void create_group_command_buffers(MeshGroup& meshGroup);
 
@@ -192,7 +192,7 @@ private:
 
 	TexturePool m_texturePool;
 
-	static std::set<GraphicsShader*> s_destroyedShaders;
+	//static std::set<GraphicsShader_T*> s_destroyedShaders;
 };
 
 struct StaticModel : Model

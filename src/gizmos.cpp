@@ -40,6 +40,12 @@ void GizmosHandler::remove(EntityId entity)
 {
 	GeometryHandler::remove_model(m_ecs->get_component<GizmosModel>(entity));
 }
+void GizmosHandler::cleanup()
+{
+	GeometryHandler::cleanup();
+	m_shader->fragment.destroy();
+	m_shader->vertex.destroy();
+}
 
 // -----------------------------------------------------------------
 // GEOMETRY HANDLER STUFF
@@ -51,7 +57,7 @@ GizmosHandler::GizmosHandler()
 void GizmosHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* gui)
 {
 	GeometryHandler::initialize(vulkanObjects, gui);
-	m_shader = new GraphicsShader();
+	m_shader = make_default_shader();
 	m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
 	m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 }
