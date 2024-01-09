@@ -30,6 +30,8 @@ void PBDSystem::update(float dt)
       for (EntityId entity : m_entities)
       {
             auto& particle = get_particle(entity);
+            particle.scale = m_ecs->get_component<Transform>(entity).scale;
+
             if (particle.invmass != 0)
                   particle.invmass = 1.f / particle.mass;
             particle.velocity += dt * particle.invmass * external_force(particle.position);
@@ -112,7 +114,77 @@ void PBDSystem::register_self_generating_constraint(ConstraintGenerator* generat
 
 void PBDSystem::damp_velocities()
 {
-      
+      for (auto e : m_entities)
+      {
+            auto& p = get_particle(e);
+            p.velocity *= m_dampingConstant;
+      }
+
+//      float massSum = 0.f; for (auto e : m_entities) massSum += get_particle(e).mass;
+//
+//      Vec xcm{ 0.f };
+//      for (auto e : m_entities)
+//      {
+//           const auto& p = get_particle(e);
+//           if (p.invmass == 0.f)
+//           {
+//                 xcm = Vec(p.position);
+//                 massSum = 1.f;
+//                 break;
+//           }
+//           xcm += p.position * p.mass;
+//      }
+//      xcm /= massSum;
+//
+//      Vec vcm{ 0.f };
+//      for (auto e : m_entities)
+//      {
+//           const auto& p = get_particle(e);
+//           if (p.invmass == 0.f)
+//           {
+//                 vcm = Vec(p.velocity);
+//                 massSum = 1.f;
+//                 break;
+//           }
+//           vcm += p.velocity * p.mass;
+//      }
+//      vcm /= massSum;
+//
+//      // Rotational Impulse
+//      Vec L{ 0.f };
+//      for (auto e : m_entities)
+//      {
+//            const auto& p = get_particle(e);
+//            L += glm::cross(p.position - xcm, p.mass * p.velocity);
+//      }
+//
+//#ifdef PBD_3D
+//      glm::mat3x3 I{ 0.f };
+//#else
+//      glm::mat2x2 I{ 0.f }
+//#endif
+//      for (auto e : m_entities)
+//      {
+//            const auto& p = get_particle(e);
+//            Vec r = p.position - xcm;
+//#ifdef PBD_3D
+//            glm::mat3x3 rs {
+//                  0, r[2], -r[1],
+//                  -r[2], 0, r[0],
+//                  r[1], -r[0], 0
+//            };
+//            I += rs * glm::transpose(rs) * p.mass;
+//#endif
+//      }
+//
+//      Vec omega = glm::inverse(I) * L;
+//      for (auto e : m_entities)
+//      {
+//            auto& p = get_particle(e);
+//            Vec dv = vcm + glm::cross(omega, p.position - xcm) - p.velocity;
+//            if (p.invmass != 0.f)
+//                  p.velocity += m_dampingConstant * dv;
+//      }
 }
 void PBDSystem::velocity_update()
 {
@@ -245,7 +317,25 @@ CollisionConstraint::CollisionConstraint(float distance, std::vector<EntityId> e
 {}
 float CollisionConstraint::constraint(InParticles particles)
 {
-      return glm::length(particles[0]->position - particles[1]->position) - m_distance;
+      // box constraint
+      Vec d = particles[0]->position - particles[1]->position;
+#ifdef PBD_3D
+      d = Vec(std::fabsf(d.x), std::fabsf(d.y), std::fabsf(d.z));
+      return glm::length(Vec(
+            std::fmaxf(d.x - particles[0]->scale.x / 2.f, 0.f),
+            std::fmaxf(d.y - particles[0]->scale.y / 2.f, 0.f),
+            std::fmaxf(d.z - particles[0]->scale.z / 2.f, 0.f)
+      ));
+#else
+      d = Vec(std::fabsf(d.x), std::fabsf(d.y));
+      return glm::length(Vec(
+            std::fmaxf(d.x, particles[0]->scale.x),
+            std::fmaxf(d.y, particles[0]->scale.y)
+      ));
+#endif
+
+      // sphere constraint
+      // return glm::length(particles[0]->position - particles[1]->position) - m_distance;
 }
 Vec CollisionConstraint::constraint_gradient(size_t der, InParticles particles)
 {

@@ -37,6 +37,10 @@ struct PBDParticle
       float mass;
       float invmass;
       float radius;
+
+      Vec scale;
+
+      float density;
 };
 
 GUI_PRINT_COMPONENT_START(PBDParticle)
@@ -45,6 +49,7 @@ ImGui_DragVector("position", component.position);
 ImGui_DragVector("velocity", component.velocity);
 ImGui::DragFloat("mass", &component.mass);
 ImGui::DragFloat("invmass", &component.invmass);
+ImGui::DragFloat("density", &component.density);
 
 GUI_PRINT_COMPONENT_END
 
@@ -95,7 +100,7 @@ public:
       float m_radius;
 };
 
-#define PBD_GRID_SIZE 32.f
+#define PBD_GRID_SIZE 1.1f
 
 class PBDSystem : System<PBDParticle, Transform>
 {
@@ -117,6 +122,9 @@ public:
             return dynamic_cast<C*>(constraint);
       }
       void register_self_generating_constraint(ConstraintGenerator* generator);
+
+      float m_dampingConstant = 0.95f;
+
 private:
       PBDParticle& get_particle(EntityId id);
       Vec external_force(Vec pos);
