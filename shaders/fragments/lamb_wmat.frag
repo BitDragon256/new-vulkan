@@ -48,7 +48,7 @@ void main()
     vec3 N = normalize(inNormal);
     vec3 L = normalize(CPC.lightPos - inPos);
     // Lambert's cosine law
-    float lambertian = max(dot(N, L), 0.0);
+    float lambertian = max(dot(N, L), 0.2);
     float specular = 0.0;
     if(lambertian > 0.0)
     {
