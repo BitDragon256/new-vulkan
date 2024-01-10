@@ -123,7 +123,8 @@ public:
       }
       void register_self_generating_constraint(ConstraintGenerator* generator);
 
-      float m_dampingConstant = 0.95f;
+      float m_dampingConstant = 0.995f;
+      int m_solverIterations = 10;
 
 private:
       PBDParticle& get_particle(EntityId id);
@@ -137,7 +138,6 @@ private:
 
       void solve_constraints();
 
-      const int m_solverIterations = 10;
       void solve_seidel_gauss();
       void solve_sys();
 

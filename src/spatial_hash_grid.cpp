@@ -7,7 +7,7 @@
 SpatialHashGrid::SpatialHashGrid(float gridSize) :
       m_gridSize{ gridSize }
 {
-      m_buckets.resize(100*100);
+      m_buckets.resize(100*100*10);
 }
 
 size_t SpatialHashGrid::hash_vec(Vector3 v)

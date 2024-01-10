@@ -17,7 +17,7 @@ float camDistance = 5;
 Vector3 camPos = { 0,0,0 };
 Vector3 camRot = { 0,0,0 };
 
-Vector3 lightPos = Vector3(0);
+Vector3 lightPos = { -8.f, 6.f, -11.f };
 
 void str_camera_movement(Renderer& renderer, Camera& camera)
 {
@@ -113,7 +113,8 @@ int main(int argc, char** argv)
       renderConfig.title = "Vulkan";
       renderConfig.dataMode = RenderConfig::Indexed;
       renderConfig.enableValidationLayers = true;
-      renderConfig.clearColor = Vector3(0, 187, 233);
+      // renderConfig.clearColor = Vector3(0, 187, 233);
+      renderConfig.clearColor = Vector3(0);
       renderConfig.cameraEnabled = true;
       renderConfig.autoECSUpdate = false;
 
@@ -163,7 +164,7 @@ int main(int argc, char** argv)
       float particleRadius = .3f;
       float boundingParticleRadius = 20.f;
 
-      renderer.m_ecs.add_component<Transform>(boundary).scale = Vector3(boundingParticleRadius * 2.f + particleRadius);
+      renderer.m_ecs.add_component<Transform>(boundary).scale = { 5.f, 5.f, 10.f };
       renderer.m_ecs.add_component<DynamicModel>(boundary) = emptycircle;
       auto& bo = renderer.m_ecs.add_component<PBDParticle>(boundary);
       bo.invmass = 0.f;
@@ -172,7 +173,7 @@ int main(int argc, char** argv)
       std::vector<EntityId> particles;
       float PARTICLE_DIST = particleRadius * 2.1f;
 
-      int particleCount = 4;
+      int particleCount = 100;
       auto genParticles = [&](int count, Vec position) {
             const int sqrtPC = (int)std::sqrt(count);
             for (int i = 0; i < count; i++)
@@ -192,6 +193,7 @@ int main(int argc, char** argv)
                   constraint->m_distance = boundingParticleRadius;
                   constraint->m_stiffness = 1.f;
                   renderer.m_ecs.add_component<DynamicModel>(particle) = ball;
+                  renderer.m_ecs.get_component<DynamicModel>(particle).m_children.front().material = std::make_shared<Material>();
 
                   particles.push_back(particle);
             }
@@ -206,7 +208,10 @@ int main(int argc, char** argv)
 
       int particleCounter = 1;
 
-      bool updateECS = false;
+      bool ecsUpdateDT = false;
+      float ecsTimeStep = 0.001f;
+
+      bool updateECS = true;
       bool singleUpdateECS = false;
       bool running = true;
       while (running)
@@ -275,6 +280,8 @@ int main(int argc, char** argv)
 
                   ImGui::SliderFloat("Velocity Damping", &pbd.m_dampingConstant, 0.f, 1.f);
 
+                  ImGui::SliderInt("Solver Steps", &pbd.m_solverIterations, 1, 10);
+
                   ImGui::SliderFloat("speed", &moveSpeed, 0.f, 4.f);
                   ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
 
@@ -288,6 +295,18 @@ int main(int argc, char** argv)
                         ImGui::Text("ECS activated");
                   else
                         ImGui::Text("ECS deactivated");
+
+                  if (ecsUpdateDT)
+                  {
+                        if (ImGui::Button("ECS Delta Time Update (on)"))
+                              ecsUpdateDT = false;
+                  }
+                  else
+                  {
+                        if (ImGui::Button("ECS Delta Time Update (off)"))
+                              ecsUpdateDT = true;
+                  }
+                  ImGui::SliderFloat("ECS Timestep", &ecsTimeStep, 0.001f, 0.1f);
 
                   if (ImGui::Button("Ortho / Persp"))
                   {
@@ -305,8 +324,10 @@ int main(int argc, char** argv)
 
             profiler.start_measure("ecs");
             if (updateECS || singleUpdateECS)
-                  // renderer.m_ecs.update_systems(1.f / 120.f);
-                  renderer.m_ecs.update_systems(deltaTime);
+                  if (ecsUpdateDT)
+                        renderer.m_ecs.update_systems(deltaTime);
+                  else
+                        renderer.m_ecs.update_systems(ecsTimeStep);
             //std::cout << deltaTime << '\n';
 
             profiler.end_measure("ecs", true);

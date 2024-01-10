@@ -136,13 +136,17 @@ std::vector<Constraint*> SPHConstraintGenerator::create(
       auto& pbdParticle = ecs->get_component<PBDParticle>(particle);
 
       pbdParticle.density = 0;
-      for (auto s : surrounding)
+      #pragma omp parallel default(shared)
       {
-            if (s == particle)
-                  continue;
-            pbdParticle.density += kernel(
-                  glm::length(ecs->get_component<PBDParticle>(s).position - pbdParticle.position)
-            );
+            #pragma omp for schedule(static)
+            for (auto s : surrounding)
+            {
+                  if (s == particle)
+                        continue;
+                  pbdParticle.density += kernel(
+                        glm::length(ecs->get_component<PBDParticle>(s).position - pbdParticle.position)
+                  );
+            }
       }
 
       surrounding.insert(surrounding.begin(), particle);
