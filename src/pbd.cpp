@@ -27,6 +27,12 @@ void PBDSystem::start()
 }
 void PBDSystem::update(float dt)
 {
+      xpbd_update(dt);
+
+      sync_transform();
+}
+void PBDSystem::pbd_update(float dt)
+{
       for (EntityId entity : m_entities)
       {
             auto& particle = get_particle(entity);
@@ -68,45 +74,61 @@ void PBDSystem::update(float dt)
 
       velocity_update();
 
-      // sync transform
-      for (EntityId entity : m_entities)
+      // draw_debug_lines();
+}
+void PBDSystem::xpbd_update(float dt)
+{
+      float sdt = dt / static_cast<float>(m_substeps);
+
+      m_profiler.start_measure("gen const");
+      generate_constraints();
+      logger::log("generate constraints", m_profiler.end_measure("gen const"));
+
+      m_profiler.start_measure("substeps");
+
+      for (int substep = 0; substep < m_substeps; substep++)
       {
-#ifdef PBD_3D
-            m_ecs->get_component<Transform>(entity).position = get_particle(entity).position;
-            if (entity != 0)
-                  m_ecs->get_component<DynamicModel>(entity).m_children.front().material->m_diffuse
-                  = Color(
-                        0.f, 0.f,
-                        glm::length(get_particle(entity).velocity) / 25.f
-                        );
-#else
-            m_ecs->get_component<Transform>(entity).position = Vector3(get_particle(entity).position, 0);
-#endif
+            xpbd_substep(sdt);
       }
 
-      // clear collision constraints
-      m_constraints.erase(m_constraints.begin() + m_constraintStart, m_constraints.end());
+      logger::log("substeps", m_profiler.end_measure("substeps"));
+}
+void PBDSystem::xpbd_substep(float dt)
+{
+      for (EntityId entity : m_entities)
+      {
+            auto& particle = get_particle(entity);
+            particle.scale = m_ecs->get_component<Transform>(entity).scale;
 
-      // debug lines
-//      std::vector<EntityId> surroundingParticles;
-//      for (EntityId entity : m_entities)
-//      {
-//            const auto& particle = get_particle(entity);
-//            if (particle.radius == 0)
-//                  continue;
-//            surroundingParticles.clear();
-//            m_grid.surrounding_particles(particle.position, surroundingParticles);
-//            for (const auto e : surroundingParticles)
-//            {
-//                  const auto& ep = m_ecs->get_component<PBDParticle>(e);
-//#ifdef PBD_3D
-//                  m_ecs->m_renderer->gizmos_draw_line(ep.position, particle.position, Color(1.f), .1f);
-//#else
-//                  m_ecs->m_renderer->gizmos_draw_line(vec23(ep.position), vec23(particle.position), Color(1.f), .1f);
-//#endif
-//            }
-//      }
+            if (particle.invmass != 0)
+                  particle.invmass = 1.f / particle.mass;
+            particle.velocity += dt * particle.invmass * external_force(particle.position);
 
+            particle.tempPosition = particle.position;
+            particle.oldPosition = particle.position;
+      }
+
+      damp_velocities();
+
+      for (EntityId entity : m_entities)
+      {
+            auto& particle = get_particle(entity);
+            particle.position = particle.position + dt * particle.velocity;
+
+            sync_grid(particle, entity);
+      }
+
+      xpbd_solve(dt);
+
+      for (EntityId entity : m_entities)
+      {
+            auto& particle = get_particle(entity);
+            particle.velocity = (particle.position - particle.oldPosition) / dt;
+      
+            sync_grid(particle, entity);
+      }
+
+      velocity_update();
 }
 
 void PBDSystem::register_self_generating_constraint(ConstraintGenerator* generator)
@@ -117,6 +139,7 @@ void PBDSystem::register_self_generating_constraint(ConstraintGenerator* generat
 // ---------------------------------------
 // PRIVATE MEHODS
 // ---------------------------------------
+
 
 void PBDSystem::damp_velocities()
 {
@@ -198,6 +221,9 @@ void PBDSystem::velocity_update()
 }
 void PBDSystem::generate_constraints()
 {
+      // clear collision constraints
+      m_constraints.erase(m_constraints.begin() + m_constraintStart, m_constraints.end());
+
       m_constraintStart = m_constraints.size();
 
       float avgNeighbors{ 0.f };
@@ -241,7 +267,7 @@ void PBDSystem::generate_constraints()
       }
 
       avgNeighbors /= static_cast<float>(m_entities.size());
-      logger::log("Avg Neighbors: ", avgNeighbors);
+      logger::log("average neighbors", avgNeighbors);
 }
 void PBDSystem::solve_constraints()
 {
@@ -250,62 +276,85 @@ void PBDSystem::solve_constraints()
 }
 void PBDSystem::solve_seidel_gauss()
 {
-      std::vector<PBDParticle*> particles;
+      // TODO get from git history
+}
+void PBDSystem::xpbd_solve(float dt)
+{
       std::vector<Vec> deltas;
+      std::vector<bool> isConstraint;
       for (int i = 0; i < m_solverIterations; i++)
       {
+            isConstraint.resize(m_constraints.size());
             // project constraints
-            #pragma omp parallel default(shared)
+            //#pragma omp parallel default(shared)
             {
-                  #pragma omp for schedule(static)
-                  for (Constraint* constraint : m_constraints)
+                  //#pragma omp for schedule(static)
+                  for (size_t constraintIndex = 0; constraintIndex < m_constraints.size(); constraintIndex++)
                   {
-                        particles.clear();
-                        for (auto eId : constraint->m_entities)
-                              particles.push_back(&get_particle(eId));
+                        Constraint* constraint = m_constraints[constraintIndex];
 
-                        float acc = 0; Vec g;
-                        for (size_t j = 0; j < particles.size(); j++)
-                        {
-                              g = constraint->constraint_gradient(j, particles);
-                              acc += particles[j]->invmass * glm::dot(g, g);
-                        }
-                        //if (acc < 0.01f && acc >= 0.f)
-                        //      acc = 0.01f;
-                        //if (acc > -0.01f && acc < 0.f)
-                        //      acc = -0.01f;
-                        if (acc == 0.f)
-                              continue;
+                        isConstraint[constraintIndex] = false;
 
-                        float constraintErr = constraint->constraint(particles);
+                        constraint->m_gradients.clear();
+                        constraint->m_gradients.reserve(constraint->m_entities.size());
+                        for (size_t j = 0; j < constraint->m_particles.size(); j++)
+                              constraint->m_gradients.push_back(constraint->constraint_gradient(j, constraint->m_particles));
+
+                        float constraintErr = constraint->constraint(constraint->m_particles);
+
                         if (
                               constraint->m_type == Inequality && constraintErr >= 0
                               || constraint->m_type == InverseInequality && constraintErr <= 0
                               )
                               continue;
 
-                        float scalingFactor = constraintErr / acc;
+                        // calculate the overall constraint gradient
+
+                        float sqrGradientSum = 0;
+                        Vec gradientSum{ 0.f };
+                        for (size_t j = 0; j < constraint->m_particles.size(); j++)
+                        {
+                              gradientSum += constraint->m_gradients[j];
+                              sqrGradientSum +=
+                                    constraint->m_particles[j]->invmass
+                                    * glm::dot(constraint->m_gradients[j], constraint->m_gradients[j]);
+                        }
+
+                        // sqrGradientSum += glm::dot(gradientSum, gradientSum);
+                        sqrGradientSum += constraint->m_compliance / std::powf(dt, 2.f);
+
+                        if (sqrGradientSum == 0.f)
+                              continue;
+
+                        float scalingFactor = constraintErr / (sqrGradientSum + .000001f);
                         if (scalingFactor != scalingFactor)
                               continue;
 
-                        deltas.clear();
-                        for (size_t j = 0; j < particles.size(); j++)
-                        {
-                              deltas.push_back(
-                                    -scalingFactor
-                                    * particles[j]->invmass
-                                    * constraint->constraint_gradient(j, particles)
-                              );
-                        }
-                        float correctedStiffness = 1.f - std::pow(1.f - constraint->m_stiffness, constraint->m_cardinality);
-                        for (size_t j = 0; j < particles.size(); j++)
-                        {
-                              Vec delta = correctedStiffness * deltas[j];
-                              //if (delta != delta)
-                              //      delta = Vec(0);
-                              particles[j]->position += delta;
+                        constraint->m_particles.front()->scalingFactor = scalingFactor;
+                        isConstraint[constraintIndex] = true;
+                  }
+            }
 
+            //#pragma omp parallel default(shared)
+            {
+                  //#pragma omp for schedule(static)
+                  for (size_t constraintIndex = 0; constraintIndex < m_constraints.size(); constraintIndex++)
+                  {
+                        if (!isConstraint[constraintIndex])
+                              continue;
+                        Constraint* constraint = m_constraints[constraintIndex];
+
+                        // calculate delta
+                        Vec delta{ 0.f };
+                        for (size_t j = 0; j < constraint->m_particles.size(); j++)
+                        {
+                              delta +=
+                                    -(constraint->m_particles.front()->scalingFactor) // +particles[j]->scalingFactor)
+                                    * constraint->m_particles[j]->invmass
+                                    * constraint->m_gradients[j];
                         }
+                        
+                        constraint->m_particles.front()->position += delta;
                   }
             }
       }
@@ -332,21 +381,64 @@ void PBDSystem::sync_grid(PBDParticle& particle, EntityId entity)
       m_grid.change_particle(particle.tempPosition, particle.position, entity);
       particle.tempPosition = particle.position;
 }
+void PBDSystem::sync_transform()
+{
+      for (EntityId entity : m_entities)
+      {
+#ifdef PBD_3D
+            m_ecs->get_component<Transform>(entity).position = get_particle(entity).position;
+            if (entity != 0)
+                  m_ecs->get_component<DynamicModel>(entity).m_children.front().material->m_diffuse
+                  = Color(
+                        0.f, 0.f,
+                        glm::length(get_particle(entity).velocity) / 25.f
+                        );
+#else
+            m_ecs->get_component<Transform>(entity).position = Vector3(get_particle(entity).position, 0);
+#endif
+      }
+}
+
+void PBDSystem::draw_debug_lines()
+{
+      // debug lines
+      std::vector<EntityId> surroundingParticles;
+      for (EntityId entity : m_entities)
+      {
+            const auto& particle = get_particle(entity);
+            if (particle.radius == 0)
+                  continue;
+            surroundingParticles.clear();
+            m_grid.surrounding_particles(particle.position, surroundingParticles);
+            for (const auto e : surroundingParticles)
+            {
+                  const auto& ep = m_ecs->get_component<PBDParticle>(e);
+#ifdef PBD_3D
+                  m_ecs->m_renderer->gizmos_draw_line(ep.position, particle.position, Color(1.f), .1f);
+#else
+                  m_ecs->m_renderer->gizmos_draw_line(vec23(ep.position), vec23(particle.position), Color(1.f), .1f);
+#endif
+            }
+      }
+}
 
 // ---------------------------------------
 // CONSTRAINT
 // ---------------------------------------
 
-Constraint::Constraint(Cardinality cardinality, std::vector<EntityId> entities) :
-      m_cardinality { cardinality }, m_entities{ entities }, m_stiffness{ 1.f }, m_type{ Equality }
-{}
+Constraint::Constraint(Cardinality cardinality, std::vector<EntityId> entities, ECSManager* ecs) :
+      m_cardinality { cardinality }, m_entities{ entities }, m_compliance{ 0.f }, m_type{ Equality }
+{
+      for (size_t j = 0; j < entities.size(); j++)
+            m_particles.push_back(&ecs->get_component<PBDParticle>(entities[j]));
+}
 
 // ---------------------------------------
 // COLLISION CONSTRAINT
 // ---------------------------------------
 
-CollisionConstraint::CollisionConstraint(float distance, std::vector<EntityId> entities) :
-      Constraint(2, entities), m_distance{ distance }
+CollisionConstraint::CollisionConstraint(float distance, std::vector<EntityId> entities, ECSManager* ecs) :
+      Constraint(2, entities, ecs), m_distance{ distance }
 {}
 float CollisionConstraint::constraint(InParticles particles)
 {
@@ -423,9 +515,10 @@ std::vector<Constraint*> CollisionConstraintGenerator::create(
 
                   auto constraint = new CollisionConstraint(
                         pbdParticle.radius + other.radius,
-                        { particle, surroundingParticle }
+                        { particle, surroundingParticle },
+                        ecs
                   );
-                  constraint->m_stiffness = 1.f;
+                  constraint->m_compliance = 0.f;
                   constraint->m_type = Inequality;
 
                   constraints.emplace_back(constraint);

@@ -2,15 +2,17 @@
 
 #include "pbd.h"
 
-inline float KernelMultiplier = 1.f;
+inline float KernelMultiplier = 8.f / PI;
+inline float KernelGradientMultiplier = 48.f / PI;
 inline float TargetPressure = 2.5f;
 inline float PressureMultiplier = .001f;
 inline float KernelRadius = 1.f;
+inline float BaseDensity = 1000.f;
 
 class SPHConstraint : public Constraint
 {
 public:
-      SPHConstraint(std::vector<EntityId> entities);
+      SPHConstraint(std::vector<EntityId> entities, ECSManager* ecs);
 
       float constraint(InParticles particles) override;
       Vec constraint_gradient(size_t der, InParticles particles) override;

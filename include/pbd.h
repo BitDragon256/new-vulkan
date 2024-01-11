@@ -41,6 +41,8 @@ struct PBDParticle
       Vec scale;
 
       float density;
+      float fluidMass;
+      float scalingFactor;
 };
 
 GUI_PRINT_COMPONENT_START(PBDParticle)
@@ -59,11 +61,14 @@ typedef std::vector<PBDParticle*> InParticles;
 class Constraint
 {
 public:
-      Constraint(Cardinality cardinality, std::vector<EntityId> entities);
+      Constraint(Cardinality cardinality, std::vector<EntityId> entities, ECSManager* ecs);
 
       const Cardinality m_cardinality;
-      float m_stiffness;
+      float m_compliance;
       std::vector<EntityId> m_entities;
+      std::vector<PBDParticle*> m_particles;
+      std::vector<Vec> m_gradients;
+
       ConstraintType m_type;
       virtual float constraint(InParticles particles) = 0;
       virtual Vec constraint_gradient(size_t der, InParticles particles) = 0;
@@ -82,7 +87,7 @@ public:
 class CollisionConstraint : public Constraint
 {
 public:
-      CollisionConstraint(float distance, std::vector<EntityId> entities);
+      CollisionConstraint(float distance, std::vector<EntityId> entities, ECSManager* ecs);
 
       float constraint(InParticles particles) override;
       Vec constraint_gradient(size_t der, InParticles particles) override;
@@ -112,7 +117,7 @@ public:
 
       template<typename C> C* add_constraint(std::vector<EntityId> particles)
       {
-            m_constraints.emplace_back(new C(1.f, particles));
+            m_constraints.emplace_back(new C(1.f, particles, m_ecs));
             return dynamic_cast<C*>(m_constraints.back());
       }
       template<typename C> C* add_constraint(std::vector<EntityId> particles, ConstraintType type)
@@ -124,11 +129,19 @@ public:
       void register_self_generating_constraint(ConstraintGenerator* generator);
 
       float m_dampingConstant = 0.995f;
-      int m_solverIterations = 10;
+      int m_solverIterations = 5;
+      int m_substeps = 1;
 
 private:
       PBDParticle& get_particle(EntityId id);
       Vec external_force(Vec pos);
+
+      void pbd_update(float dt);
+      void xpbd_update(float dt);
+      void xpbd_substep(float dt);
+
+      void draw_debug_lines();
+      void sync_transform();
 
       void damp_velocities();
       void velocity_update();
@@ -139,6 +152,7 @@ private:
       void solve_constraints();
 
       void solve_seidel_gauss();
+      void xpbd_solve(float dt);
       void solve_sys();
 
       std::vector<Constraint*> m_constraints;

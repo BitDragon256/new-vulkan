@@ -189,9 +189,9 @@ int main(int argc, char** argv)
                   auto& transform = renderer.m_ecs.add_component<Transform>(particle);
                   transform.scale = Vector3(particleRadius * 2.f);
 
-                  auto constraint = pbd.add_constraint<CollisionConstraint>({ boundary, particle }, InverseInequality);
+                  auto constraint = pbd.add_constraint<CollisionConstraint>({ particle, boundary }, InverseInequality);
                   constraint->m_distance = boundingParticleRadius;
-                  constraint->m_stiffness = 1.f;
+                  constraint->m_compliance = 0.f;
                   renderer.m_ecs.add_component<DynamicModel>(particle) = ball;
                   renderer.m_ecs.get_component<DynamicModel>(particle).m_children.front().material = std::make_shared<Material>();
 

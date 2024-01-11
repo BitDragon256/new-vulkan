@@ -63,12 +63,12 @@ Vec cubic_kernel_gradient(Vec d, float h)
                   const Vec gradq = d * (1.f / (rl * h));
                   if (q <= 0.5)
                   {
-                        res = KernelMultiplier * q * (3.f * q - 2.f) * gradq;
+                        res = KernelGradientMultiplier * q * (3.f * q - 2.f) * gradq;
                   }
                   else
                   {
                         const float factor = 1.f - q;
-                        res = KernelMultiplier * (-factor * factor) * gradq;
+                        res = KernelGradientMultiplier * (-factor * factor) * gradq;
                   }
             }
       }
@@ -99,29 +99,27 @@ float density_to_pressure(float density)
 // PUBLIC METHODS
 // ---------------------------------
 
-SPHConstraint::SPHConstraint(std::vector<EntityId> entities) :
-      Constraint(entities.size(), entities)
+SPHConstraint::SPHConstraint(std::vector<EntityId> entities, ECSManager* ecs) :
+      Constraint(entities.size(), entities, ecs)
 {}
 
 // returns the pressure onto particles.front()
 float SPHConstraint::constraint(InParticles particles)
 {
-      float density = particles.front()->density;
-      return density_to_pressure(density);
+      // return density_to_pressure(particles.front()->density);
+      // return std::max(particles.front()->density / BaseDensity - 1.f, 0.f);
+      return density_to_pressure(particles.front()->density / BaseDensity);
 }
 // returns the influence gradient
 Vec SPHConstraint::constraint_gradient(size_t der, InParticles particles)
 {
-      if (der != 0)
+      if (der == 0)
             return Vec(0.f);
-      Vec delta{ 0 };
-      for (auto p = particles.begin() + 1; p != particles.end(); p++)
-      {
-            delta +=
-                  kernel_gradient((*p)->position - particles.front()->position)
-                  / particles.front()->density;
-      }
-      return delta;
+      return
+            //(density_to_pressure(particles.front()->density) + density_to_pressure(particles[der]->density))
+            kernel_gradient(particles[der]->position - particles.front()->position)
+            / BaseDensity
+            * particles[der]->fluidMass;
 }
 
 // ---------------------------------
@@ -135,7 +133,8 @@ std::vector<Constraint*> SPHConstraintGenerator::create(
       std::vector<Constraint*> constraints;
       auto& pbdParticle = ecs->get_component<PBDParticle>(particle);
 
-      pbdParticle.density = 0;
+      pbdParticle.density = pbdParticle.fluidMass * kernel(0);
+      pbdParticle.fluidMass = 0.8f * std::powf(2.f * KernelRadius, 3.f) * BaseDensity;
       #pragma omp parallel default(shared)
       {
             #pragma omp for schedule(static)
@@ -143,17 +142,22 @@ std::vector<Constraint*> SPHConstraintGenerator::create(
             {
                   if (s == particle)
                         continue;
-                  pbdParticle.density += kernel(
-                        glm::length(ecs->get_component<PBDParticle>(s).position - pbdParticle.position)
-                  );
+                  pbdParticle.density
+                        += pbdParticle.fluidMass
+                        * kernel(
+                              glm::length(
+                                    ecs->get_component<PBDParticle>(s).position
+                                    - pbdParticle.position
+                              )
+                        );
             }
       }
 
       surrounding.insert(surrounding.begin(), particle);
       auto constraint = new SPHConstraint(
-            surrounding
+            surrounding, ecs
       );
-      constraint->m_stiffness = 1.f;
+      constraint->m_compliance = 0.f;
       constraint->m_type = Equality;
 
       constraints.emplace_back(constraint);
