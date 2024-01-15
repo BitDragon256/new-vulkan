@@ -282,6 +282,7 @@ void PBDSystem::xpbd_solve(float dt)
 {
       std::vector<Vec> deltas;
       std::vector<bool> isConstraint;
+
       for (int i = 0; i < m_solverIterations; i++)
       {
             isConstraint.resize(m_constraints.size());
@@ -320,7 +321,7 @@ void PBDSystem::xpbd_solve(float dt)
                                     * glm::dot(constraint->m_gradients[j], constraint->m_gradients[j]);
                         }
 
-                        // sqrGradientSum += glm::dot(gradientSum, gradientSum);
+                        sqrGradientSum += glm::dot(gradientSum, gradientSum);
                         sqrGradientSum += constraint->m_compliance / std::powf(dt, 2.f);
 
                         if (sqrGradientSum == 0.f)
@@ -330,7 +331,7 @@ void PBDSystem::xpbd_solve(float dt)
                         if (scalingFactor != scalingFactor)
                               continue;
 
-                        constraint->m_particles.front()->scalingFactor = scalingFactor;
+                        constraint->m_scalingFactor = scalingFactor;
                         isConstraint[constraintIndex] = true;
                   }
             }
@@ -349,7 +350,7 @@ void PBDSystem::xpbd_solve(float dt)
                         for (size_t j = 0; j < constraint->m_particles.size(); j++)
                         {
                               delta +=
-                                    -(constraint->m_particles.front()->scalingFactor) // +particles[j]->scalingFactor)
+                                    -(constraint->m_scalingFactor) // +particles[j]->scalingFactor)
                                     * constraint->m_particles[j]->invmass
                                     * constraint->m_gradients[j];
                         }
@@ -440,6 +441,8 @@ Constraint::Constraint(Cardinality cardinality, std::vector<EntityId> entities, 
 CollisionConstraint::CollisionConstraint(float distance, std::vector<EntityId> entities, ECSManager* ecs) :
       Constraint(2, entities, ecs), m_distance{ distance }
 {}
+
+float BoxEdgeRadius = 0.2f;
 float CollisionConstraint::constraint(InParticles particles)
 {
       // box constraint
@@ -447,10 +450,10 @@ float CollisionConstraint::constraint(InParticles particles)
 #ifdef PBD_3D
       d = Vec(std::fabsf(d.x), std::fabsf(d.y), std::fabsf(d.z));
       return glm::length(Vec(
-            std::fmaxf(d.x - particles[0]->scale.x / 2.f, 0.f),
-            std::fmaxf(d.y - particles[0]->scale.y / 2.f, 0.f),
-            std::fmaxf(d.z - particles[0]->scale.z / 2.f, 0.f)
-      )) - 0.2f;
+            std::fmaxf(d.x - (particles[1]->scale.x + particles[0]->scale.x) / 2.f + BoxEdgeRadius, 0.f),
+            std::fmaxf(d.y - (particles[1]->scale.y + particles[0]->scale.y) / 2.f + BoxEdgeRadius, 0.f),
+            std::fmaxf(d.z - (particles[1]->scale.z + particles[0]->scale.z) / 2.f + BoxEdgeRadius, 0.f)
+      )) - BoxEdgeRadius;
 #else
       d = Vec(std::fabsf(d.x), std::fabsf(d.y));
       return glm::length(Vec(
@@ -469,9 +472,9 @@ Vec CollisionConstraint::constraint_gradient(size_t der, InParticles particles)
 #ifdef PBD_3D
       Vec ud = Vec(std::fabsf(d.x), std::fabsf(d.y), std::fabsf(d.z));
       Vec n = Vec(
-            std::fmaxf(ud.x - particles[0]->scale.x / 2.f, 0.f) * d.x / ud.x,
-            std::fmaxf(ud.y - particles[0]->scale.y / 2.f, 0.f) * d.y / ud.y,
-            std::fmaxf(ud.z - particles[0]->scale.z / 2.f, 0.f) * d.z / ud.z
+            std::fmaxf(ud.x - (particles[1]->scale.x + particles[0]->scale.x) / 2.f, 0.f) * d.x / ud.x,
+            std::fmaxf(ud.y - (particles[1]->scale.y + particles[0]->scale.y) / 2.f, 0.f) * d.y / ud.y,
+            std::fmaxf(ud.z - (particles[1]->scale.z + particles[0]->scale.z) / 2.f, 0.f) * d.z / ud.z
       );
 #else
       d = Vec(std::fabsf(d.x), std::fabsf(d.y));

@@ -42,7 +42,6 @@ struct PBDParticle
 
       float density;
       float fluidMass;
-      float scalingFactor;
 };
 
 GUI_PRINT_COMPONENT_START(PBDParticle)
@@ -68,6 +67,7 @@ public:
       std::vector<EntityId> m_entities;
       std::vector<PBDParticle*> m_particles;
       std::vector<Vec> m_gradients;
+      float m_scalingFactor;
 
       ConstraintType m_type;
       virtual float constraint(InParticles particles) = 0;
@@ -118,12 +118,14 @@ public:
       template<typename C> C* add_constraint(std::vector<EntityId> particles)
       {
             m_constraints.emplace_back(new C(1.f, particles, m_ecs));
+            m_constraintStart = m_constraints.size();
             return dynamic_cast<C*>(m_constraints.back());
       }
       template<typename C> C* add_constraint(std::vector<EntityId> particles, ConstraintType type)
       {
             auto constraint = dynamic_cast<Constraint*>(add_constraint<C>(particles));
             constraint->m_type = type;
+            m_constraintStart = m_constraints.size();
             return dynamic_cast<C*>(constraint);
       }
       void register_self_generating_constraint(ConstraintGenerator* generator);

@@ -114,7 +114,7 @@ int main(int argc, char** argv)
       renderConfig.dataMode = RenderConfig::Indexed;
       renderConfig.enableValidationLayers = true;
       // renderConfig.clearColor = Vector3(0, 187, 233);
-      renderConfig.clearColor = Vector3(0);
+      renderConfig.clearColor = Vector3(42 / 2);
       renderConfig.cameraEnabled = true;
       renderConfig.autoECSUpdate = false;
 
@@ -164,30 +164,32 @@ int main(int argc, char** argv)
       float particleRadius = .3f;
       float boundingParticleRadius = 20.f;
 
-      renderer.m_ecs.add_component<Transform>(boundary).scale = { 5.f, 5.f, 10.f };
+      renderer.m_ecs.add_component<Transform>(boundary).scale = { 3.f, 3.f, 3.f };
       renderer.m_ecs.add_component<DynamicModel>(boundary) = emptycircle;
       auto& bo = renderer.m_ecs.add_component<PBDParticle>(boundary);
       bo.invmass = 0.f;
       bo.radius = 0.f;
 
       std::vector<EntityId> particles;
-      float PARTICLE_DIST = particleRadius * 2.1f;
+      float PARTICLE_DIST = KernelRadius * 2.f;
 
-      int particleCount = 100;
+      int particleCount = 81;
       auto genParticles = [&](int count, Vec position) {
-            const int sqrtPC = (int)std::sqrt(count);
-            for (int i = 0; i < count; i++)
+            const int rtPC = (int)std::pow(count, 1.f / 3.f);
+
+            for (int x = 0; x < rtPC; x++)
+            for (int y = 0; y < rtPC; y++)
+            for (int z = 0; z < rtPC; z++)
             {
                   auto particle = renderer.m_ecs.create_entity();
                   auto& pbdParticle = renderer.m_ecs.add_component<PBDParticle>(particle);
                   pbdParticle.position = Vec(
-                        (float)(i % sqrtPC) * PARTICLE_DIST - sqrtPC / 2.f + 0.01f + position.x,
-                        (float)(i / sqrtPC) * PARTICLE_DIST - sqrtPC / 2.f + position.y,
-                        position.z
+                        x * PARTICLE_DIST - rtPC / 2.f + static_cast<float>(z) / rtPC + position.x,
+                        y * PARTICLE_DIST - rtPC / 2.f + static_cast<float>(x) / rtPC + position.y,
+                        z * PARTICLE_DIST - rtPC / 2.f + static_cast<float>(y) / rtPC + position.z
                   );
-                  pbdParticle.radius = particleRadius;
+                  pbdParticle.radius = KernelRadius;
                   auto& transform = renderer.m_ecs.add_component<Transform>(particle);
-                  transform.scale = Vector3(particleRadius * 2.f);
 
                   auto constraint = pbd.add_constraint<CollisionConstraint>({ particle, boundary }, InverseInequality);
                   constraint->m_distance = boundingParticleRadius;
@@ -209,7 +211,7 @@ int main(int argc, char** argv)
       int particleCounter = 1;
 
       bool ecsUpdateDT = false;
-      float ecsTimeStep = 0.001f;
+      float ecsTimeStep = 0.01f;
 
       bool updateECS = true;
       bool singleUpdateECS = false;
@@ -251,6 +253,13 @@ int main(int argc, char** argv)
             //            = renderer.m_ecs.get_component<PBDParticle>(particles.back()).position;
             //}
 
+            // update particle scale
+            for (const auto e : particles)
+            {
+                  auto& transform = renderer.m_ecs.get_component<Transform>(e);
+                  transform.scale = Vector3(KernelRadius);
+            }
+
             // GUI
             renderer.draw_engine_gui([&]() {
 
@@ -274,13 +283,19 @@ int main(int argc, char** argv)
                   frame++;
 
                   ImGui::DragFloat("Kernel Multiplier", &KernelMultiplier);
+                  ImGui::DragFloat("Kernel Gradient Multiplier", &KernelGradientMultiplier);
                   ImGui::DragFloat("Target Pressure", &TargetPressure);
                   ImGui::DragFloat("Pressure Multiplier", &PressureMultiplier);
                   ImGui::DragFloat("Kernel Radius", &KernelRadius);
+                  ImGui::DragFloat("Base Density", &BaseDensity);
 
                   ImGui::SliderFloat("Velocity Damping", &pbd.m_dampingConstant, 0.f, 1.f);
 
                   ImGui::SliderInt("Solver Steps", &pbd.m_solverIterations, 1, 10);
+                  ImGui::SliderInt("Substeps", &pbd.m_substeps, 1, 10);
+
+                  KernelMultiplier = 8.f / (PI * std::powf(KernelRadius, 3.f));
+                  KernelGradientMultiplier = 48.f / (PI * std::powf(KernelRadius, 3.f));
 
                   ImGui::SliderFloat("speed", &moveSpeed, 0.f, 4.f);
                   ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);
