@@ -450,9 +450,9 @@ float CollisionConstraint::constraint(InParticles particles)
 #ifdef PBD_3D
       d = Vec(std::fabsf(d.x), std::fabsf(d.y), std::fabsf(d.z));
       return glm::length(Vec(
-            std::fmaxf(d.x - (particles[1]->scale.x + particles[0]->scale.x) / 2.f + BoxEdgeRadius, 0.f),
-            std::fmaxf(d.y - (particles[1]->scale.y + particles[0]->scale.y) / 2.f + BoxEdgeRadius, 0.f),
-            std::fmaxf(d.z - (particles[1]->scale.z + particles[0]->scale.z) / 2.f + BoxEdgeRadius, 0.f)
+            std::fmaxf(d.x - (particles[1]->scale.x - particles[0]->scale.x) / 2.f + BoxEdgeRadius, 0.f),
+            std::fmaxf(d.y - (particles[1]->scale.y - particles[0]->scale.y) / 2.f + BoxEdgeRadius, 0.f),
+            std::fmaxf(d.z - (particles[1]->scale.z - particles[0]->scale.z) / 2.f + BoxEdgeRadius, 0.f)
       )) - BoxEdgeRadius;
 #else
       d = Vec(std::fabsf(d.x), std::fabsf(d.y));
@@ -472,9 +472,9 @@ Vec CollisionConstraint::constraint_gradient(size_t der, InParticles particles)
 #ifdef PBD_3D
       Vec ud = Vec(std::fabsf(d.x), std::fabsf(d.y), std::fabsf(d.z));
       Vec n = Vec(
-            std::fmaxf(ud.x - (particles[1]->scale.x + particles[0]->scale.x) / 2.f, 0.f) * d.x / ud.x,
-            std::fmaxf(ud.y - (particles[1]->scale.y + particles[0]->scale.y) / 2.f, 0.f) * d.y / ud.y,
-            std::fmaxf(ud.z - (particles[1]->scale.z + particles[0]->scale.z) / 2.f, 0.f) * d.z / ud.z
+            std::fmaxf(ud.x - (particles[1]->scale.x - particles[0]->scale.x) / 2.f, 0.f) * d.x / ud.x,
+            std::fmaxf(ud.y - (particles[1]->scale.y - particles[0]->scale.y) / 2.f, 0.f) * d.y / ud.y,
+            std::fmaxf(ud.z - (particles[1]->scale.z - particles[0]->scale.z) / 2.f, 0.f) * d.z / ud.z
       );
 #else
       d = Vec(std::fabsf(d.x), std::fabsf(d.y));
