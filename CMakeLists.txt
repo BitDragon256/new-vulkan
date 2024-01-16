@@ -7,16 +7,35 @@ set(CMAKE_CXX_STANDARD_REQUIRED On)
 # vulkan
 find_package(Vulkan REQUIRED)
 
-#glfw
+# glfw
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(external/glfw)
 
-set(NO_AMPL_BINDINGS 1)
-set(GSL_DISABLE_TESTS 1)
-add_subdirectory(external/gsl)
+# physx
+# option(PHYSX_BUILD_TYPE "The build type of PhysX, i.e., one of {debug, checked, profile, release}" "Debug")
+# set(PHYSX_BUILD_TYPE "checked")
+
+# include_directories(PhysX/include)
+
+# if(CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+#     message("Building snippet in debug configuration")
+#     add_compile_definitions(_DEBUG)
+#     link_directories("external/PhysX/physx/bin/win.x86_64.vc143.mt/debug") # This is the path where PhysX libraries are installed
+# else()
+#     message("Building snippet in release configuration with PhysX ${PHYSX_BUILD_TYPE} configuration")
+#     add_compile_definitions(NDEBUG)
+#     link_directories("external/PhysX/physx/bin/win.x86_64.vc143.mt/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
+# endif()
+
+# gsl
+# set(NO_AMPL_BINDINGS 1)
+# set(GSL_DISABLE_TESTS 1)
+# add_subdirectory(external/gsl)
+
+# engine source
 
 set(SOURCE_DIR src)
 set(INCLUDE_DIR include)
@@ -128,6 +147,15 @@ target_include_directories(nve PUBLIC external/imgui)
 target_include_directories(nve PUBLIC external/tinyobjloader)
 target_include_directories(nve PUBLIC external/stbimage)
 target_include_directories(nve PUBLIC external/mini)
-target_link_libraries(nve PUBLIC Vulkan::Vulkan glfw gsl)
+target_include_directories(nve PUBLIC external/PhysX/physx/include)
+target_link_libraries(
+	nve PUBLIC
+	Vulkan::Vulkan
+	glfw
+	# gsl
+	# PhysX_64
+	# PhysXCommon_64
+	# PhysXFoundation_64
+)
 
 add_definitions(-DROOT_DIRECTORY=\"${CMAKE_SOURCE_DIR}\")

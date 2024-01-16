@@ -2,7 +2,7 @@
 
 #include <numeric>
 
-#include <linalg/gsl_linalg.h>
+// #include <linalg/gsl_linalg.h>
 
 #include "render.h"
 
