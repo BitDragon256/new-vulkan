@@ -271,3 +271,51 @@ std::vector<Constraint*> SPHConstraintGenerator::create(
 
       return constraints;
 }
+
+std::vector<Constraint*> AttractionFluidConstraintGenerator::create(
+      EntityId particle, std::vector<EntityId> surrounding,
+      ECSManager* ecs
+)
+{
+      std::vector<Constraint*> constraints;
+      const auto& pbdParticle = ecs->get_component<PBDParticle>(particle);
+
+      #pragma omp parallel default(shared)
+      {
+            #pragma omp for schedule(static)
+            for (const auto& surroundingParticle : surrounding)
+            {
+                  if (particle >= surroundingParticle)
+                        continue;
+
+                  const auto& other = ecs->get_component<PBDParticle>(surroundingParticle);
+                  if (other.radius == 0)
+                        continue;
+
+                  {
+                        auto constraint = new CollisionConstraint(
+                              AttractionDistance,
+                              { particle, surroundingParticle },
+                              ecs
+                        );
+                        constraint->m_compliance = AttractionCompliance;
+                        constraint->m_type = InverseInequality;
+
+                        constraints.emplace_back(constraint);
+                  }
+                  {
+                        auto constraint = new CollisionConstraint(
+                              DetentionDistance,
+                              { particle, surroundingParticle },
+                              ecs
+                        );
+                        constraint->m_compliance = DetentionCompliance;
+                        constraint->m_type = Inequality;
+
+                        constraints.emplace_back(constraint);
+                  }
+            }
+      }
+
+      return constraints;
+}

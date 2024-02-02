@@ -34,3 +34,17 @@ public:
             ECSManager* ecs
       ) override;
 };
+
+inline float AttractionDistance = 1.4f;
+inline float AttractionCompliance = 3.f;
+inline float DetentionDistance = 1.f;
+inline float DetentionCompliance = 4.f;
+
+class AttractionFluidConstraintGenerator : public ConstraintGenerator
+{
+public:
+      std::vector<Constraint*> create(
+            EntityId particle, std::vector<EntityId> surrounding,
+            ECSManager* ecs
+      ) override;
+};

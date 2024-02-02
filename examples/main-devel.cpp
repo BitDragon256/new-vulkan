@@ -164,7 +164,7 @@ int main(int argc, char** argv)
       float particleRadius = .3f;
       float boundingParticleRadius = 20.f;
 
-      renderer.m_ecs.add_component<Transform>(boundary).scale = { 10.f, 10.f, 10.f };
+      renderer.m_ecs.add_component<Transform>(boundary).scale = Vec { boundingParticleRadius * 2.f };
       renderer.m_ecs.add_component<DynamicModel>(boundary) = emptycircle;
       auto& bo = renderer.m_ecs.add_component<PBDParticle>(boundary);
       bo.invmass = 0.f;
@@ -202,6 +202,9 @@ int main(int argc, char** argv)
       };
       CollisionConstraintGenerator colConstGen;
       pbd.register_self_generating_constraint(&colConstGen);
+
+      AttractionFluidConstraintGenerator fluidConstGen;
+      pbd.register_self_generating_constraint(&fluidConstGen);
 
       //SPHConstraintGenerator sphConstGen;
       //pbd.register_self_generating_constraint(&sphConstGen);
@@ -258,6 +261,8 @@ int main(int argc, char** argv)
             {
                   auto& transform = renderer.m_ecs.get_component<Transform>(e);
                   transform.scale = Vector3(particleRadius * 2.f);
+                  auto& pbdComponent = renderer.m_ecs.get_component<PBDParticle>(e);
+                  pbdComponent.radius = particleRadius;
             }
 
             // GUI
@@ -282,63 +287,13 @@ int main(int argc, char** argv)
                   ImGui::Text(avgFpsText.c_str());
                   frame++;
 
-                  ImGui::DragFloat("Kernel Multiplier", &KernelMultiplier);
-                  ImGui::DragFloat("Kernel Gradient Multiplier", &KernelGradientMultiplier);
-                  ImGui::DragFloat("Target Pressure", &TargetPressure);
-                  ImGui::DragFloat("Pressure Multiplier", &PressureMultiplier);
-                  ImGui::DragFloat("Kernel Radius", &KernelRadius);
-                  ImGui::DragFloat("Particle Radius", &ParticleRadius);
-                  ImGui::DragFloat("View Particle Radius", &particleRadius);
-                  ImGui::DragFloat("Base Density", &BaseDensity);
+                  ImGui::DragFloat("Particle Radius", &particleRadius);
+                  ImGui::DragFloat("Attraction Distance", &AttractionDistance);
+                  ImGui::DragFloat("Attraction Compliance", &AttractionCompliance);
+                  ImGui::DragFloat("Detention Distance", &DetentionDistance);
+                  ImGui::DragFloat("Detention Compliance", &DetentionCompliance);
 
-                  ImGui::SliderFloat("Velocity Damping", &pbd.m_dampingConstant, 0.f, 1.f);
-
-                  // apply kernel radius
-                  for (const auto p : particles)
-                  {
-                        renderer.m_ecs.get_component<PBDParticle>(p).radius = particleRadius;
-                  }
-
-                  static const char* kernelFunctionName = KernelFunctionNames[KernelFunctionIndex];
-                  static const char* kernelGradientFunctionName = KernelFunctionNames[KernelGradientFunctionIndex];
-
-                  if (ImGui::BeginCombo("Kernel Function", kernelFunctionName)) // The second parameter is the label previewed before opening the combo.
-                  {
-                      for (int n = 0; n < IM_ARRAYSIZE(KernelFunctionNames); n++)
-                      {
-                          bool is_selected = (kernelFunctionName == KernelFunctionNames[n]); // You can store your selection however you want, outside or inside your objects
-                          if (ImGui::Selectable(KernelFunctionNames[n], is_selected))
-                          {
-                                kernelFunctionName = KernelFunctionNames[n];
-                                KernelFunctionIndex = n;
-                          }
-                          if (is_selected)
-                              ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
-                      }
-                      ImGui::EndCombo();
-                  }
-                  if (ImGui::BeginCombo("Kernel Gradient Function", kernelGradientFunctionName)) // The second parameter is the label previewed before opening the combo.
-                  {
-                      for (int n = 0; n < IM_ARRAYSIZE(KernelFunctionNames); n++)
-                      {
-                          bool is_selected = (kernelGradientFunctionName == KernelFunctionNames[n]); // You can store your selection however you want, outside or inside your objects
-                          if (ImGui::Selectable(KernelFunctionNames[n], is_selected))
-                          {
-                                kernelGradientFunctionName = KernelFunctionNames[n];
-                                KernelGradientFunctionIndex = n;
-                          }
-                          if (is_selected)
-                              ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
-                      }
-                      ImGui::EndCombo();
-                  }
-
-                  if (ImGui::Button("Reset Multipliers"))
-                  {
-                        KernelMultiplier = 8.f / (PI * std::powf(KernelRadius, 3.f));
-                        KernelGradientMultiplier = 48.f / (PI * std::powf(KernelRadius, 3.f));
-                  }
-
+                  ImGui::DragFloat("Velocity Damping", &pbd.m_dampingConstant);
                   ImGui::SliderInt("Solver Steps", &pbd.m_solverIterations, 1, 10);
                   ImGui::SliderInt("Substeps", &pbd.m_substeps, 1, 10);
 

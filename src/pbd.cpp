@@ -56,13 +56,13 @@ void PBDSystem::pbd_update(float dt)
             sync_grid(particle, entity);
       }
 
-      m_profiler.start_measure("gen col const");
+      //m_profiler.start_measure("gen col const");
       generate_constraints();
-      logger::log("gen col const", m_profiler.end_measure("gen col const"));
+      //logger::log("gen col const", m_profiler.end_measure("gen col const"));
 
-      m_profiler.start_measure("solve const");
+      //m_profiler.start_measure("solve const");
       solve_constraints();
-      logger::log("solve const: ", m_profiler.end_measure("solve const"));
+      //logger::log("solve const: ", m_profiler.end_measure("solve const"));
 
       for (EntityId entity : m_entities)
       {
@@ -80,18 +80,18 @@ void PBDSystem::xpbd_update(float dt)
 {
       float sdt = dt / static_cast<float>(m_substeps);
 
-      m_profiler.start_measure("gen const");
+      //m_profiler.start_measure("gen const");
       generate_constraints();
-      logger::log("generate constraints", m_profiler.end_measure("gen const"));
+      //logger::log("generate constraints", m_profiler.end_measure("gen const"));
 
-      m_profiler.start_measure("substeps");
+      //m_profiler.start_measure("substeps");
 
       for (int substep = 0; substep < m_substeps; substep++)
       {
             xpbd_substep(sdt);
       }
 
-      logger::log("substeps", m_profiler.end_measure("substeps"));
+      //logger::log("substeps", m_profiler.end_measure("substeps"));
 }
 void PBDSystem::xpbd_substep(float dt)
 {
