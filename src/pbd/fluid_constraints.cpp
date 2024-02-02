@@ -1,5 +1,8 @@
 #include "pbd/fluid_constraints.h"
 
+#include <time.h>
+#include <stdlib.h>
+
 // ---------------------------------
 // KERNEL FUNCTIONS
 // ---------------------------------
@@ -19,8 +22,9 @@ float cubic_spline(float q, float h)
       return W;
 }
 
-float cubic_spline_gradient(float q, float h)
+Vec cubic_spline_gradient(Vec d, float h)
 {
+      float q = glm::length(d);
       float sigma = 1.f / (PI * std::powf(h, 3.f));
       float W;
       if (q <= 1)
@@ -29,12 +33,12 @@ float cubic_spline_gradient(float q, float h)
             W = sigma * 3.f / 4.f * std::powf(2.f - q, 2.f);
       else
             W = 0;
-      return W;
+      return W * d / q;
 }
 
 float cubic_kernel(float l, float h)
 {
-      float res = 0.0;
+      float res = 0.f;
       const float q = l / h;
       if (q <= 1.0)
       {
@@ -42,51 +46,130 @@ float cubic_kernel(float l, float h)
             {
                   const float q2 = q * q;
                   const float q3 = q2 * q;
-                  res = KernelMultiplier * (6.f * q3 - 6.f * q2 + 1.f);
+                  res = (6.f * q3 - 6.f * q2 + 1.f);
             }
             else
             {
-                  res = KernelMultiplier * (2.f * std::pow(1.f - q, 3.f));
+                  res = (2.f * std::pow(1.f - q, 3.f));
             }
       }
       return res;
 }
 Vec cubic_kernel_gradient(Vec d, float h)
 {
-      Vec res{ 0 };
+      Vec res{ 0.f };
       const float rl = glm::length(d);
       const float q = rl / h;
       if (q <= 1.0)
       {
             if (rl > 1.0e-6)
             {
-                  const Vec gradq = d * (1.f / (rl * h));
+                  const Vec gradq = d / (rl * h);
                   if (q <= 0.5)
                   {
-                        res = KernelGradientMultiplier * q * (3.f * q - 2.f) * gradq;
+                        res = q * (3.f * q - 2.f) * gradq;
                   }
                   else
                   {
                         const float factor = 1.f - q;
-                        res = KernelGradientMultiplier * (-factor * factor) * gradq;
+                        res = (-factor * factor) * gradq;
                   }
+            }
+            else
+            {
+                  res = Vec(
+                        (rand() % 1000) / 1000.f - .5f,
+                        (rand() % 1000) / 1000.f - .5f,
+                        (rand() % 1000) / 1000.f - .5f
+                  );
             }
       }
 
       return res;
 }
 
+float spiky_kernel(float l, float h)
+{
+      float res = 0.f;
+      const float q = l / h;
+      if (q <= 1.0)
+      {
+            res = (2.f * std::pow(1.f - q, 3.f));
+      }
+      return res;
+}
+Vec spiky_kernel_gradient(Vec d, float h)
+{
+      Vec res{ 0.f };
+      const float rl = glm::length(d);
+      const float q = rl / h;
+      if (q <= 1.0)
+      {
+            if (rl > 1.0e-6)
+            {
+                  const Vec gradq = d / (rl * h);
+                  const float factor = 1.f - q;
+                  res = (-factor * factor) * gradq;
+            }
+            else
+            {
+                  res = Vec(
+                        (rand() % 1000) / 1000.f - .5f,
+                        (rand() % 1000) / 1000.f - .5f,
+                        (rand() % 1000) / 1000.f - .5f
+                  );
+            }
+      }
+
+      return res;
+}
 // ---------------------------------
 // FINAL KERNEL
 // ---------------------------------
 
 float kernel(float distance)
 {
-      return KernelMultiplier * cubic_kernel(distance, KernelRadius);
+      float res = 0.f;
+      switch (KernelFunctionIndex)
+      {
+      case 0:
+            res = cubic_spline(distance, KernelRadius);
+            break;
+
+      case 1:
+            res = cubic_kernel(distance, KernelRadius);
+            break;
+
+      case 2:
+            res = spiky_kernel(distance, KernelRadius);
+            break;
+
+      default:
+            break;
+      }
+      return KernelMultiplier * res;
 }
 Vec kernel_gradient(Vec d)
 {
-      return KernelMultiplier * cubic_kernel_gradient(d, KernelRadius);
+      Vec res = Vec(0.f);
+      switch (KernelFunctionIndex)
+      {
+      case 0:
+            res = cubic_spline_gradient(d, KernelRadius);
+            break;
+
+      case 1:
+            res = cubic_kernel_gradient(d, KernelRadius);
+            break;
+
+      case 2:
+            res = spiky_kernel_gradient(d, KernelRadius);
+            break;
+
+      default:
+            break;
+      }
+      return KernelGradientMultiplier * res;
 }
 
 
@@ -101,13 +184,18 @@ float density_to_pressure(float density)
 
 SPHConstraint::SPHConstraint(std::vector<EntityId> entities, ECSManager* ecs) :
       Constraint(entities.size(), entities, ecs)
-{}
+{
+      srand(time(0));
+      m_compliance = 0.f;
+      m_type = Equality;
+}
 
 // returns the pressure onto particles.front()
 float SPHConstraint::constraint(InParticles particles)
 {
       // return density_to_pressure(particles.front()->density);
       // return std::max(particles.front()->density / BaseDensity - 1.f, 0.f);
+
       return density_to_pressure(particles.front()->density / BaseDensity);
 }
 // returns the influence gradient
@@ -116,7 +204,8 @@ Vec SPHConstraint::constraint_gradient(size_t der, InParticles particles)
       if (der == 0)
             return Vec(0.f);
       return
-            //(density_to_pressure(particles.front()->density) + density_to_pressure(particles[der]->density))
+            (density_to_pressure(particles.front()->density) + density_to_pressure(particles[der]->density)) *
+            //density_to_pressure(particles.front()->density) *
             kernel_gradient(particles[der]->position - particles.front()->position)
             / BaseDensity
             * particles[der]->fluidMass;
@@ -131,10 +220,14 @@ std::vector<Constraint*> SPHConstraintGenerator::create(
 )
 {
       std::vector<Constraint*> constraints;
+
+      if (surrounding.size() <= 1)
+            return constraints;
+
       auto& pbdParticle = ecs->get_component<PBDParticle>(particle);
 
+      pbdParticle.fluidMass = 0.8f * std::powf(2.f * ParticleRadius, 3.f) * BaseDensity;
       pbdParticle.density = pbdParticle.fluidMass * kernel(0);
-      pbdParticle.fluidMass = 0.8f * std::powf(2.f * KernelRadius, 3.f) * BaseDensity;
       #pragma omp parallel default(shared)
       {
             #pragma omp for schedule(static)
@@ -157,8 +250,6 @@ std::vector<Constraint*> SPHConstraintGenerator::create(
       auto constraint = new SPHConstraint(
             surrounding, ecs
       );
-      constraint->m_compliance = 0.f;
-      constraint->m_type = Equality;
 
       constraints.emplace_back(constraint);
 

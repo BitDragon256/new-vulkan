@@ -105,7 +105,7 @@ public:
       float m_radius;
 };
 
-#define PBD_GRID_SIZE 1.1f
+#define PBD_GRID_SIZE 3.1f
 
 class PBDSystem : System<PBDParticle, Transform>
 {
@@ -120,13 +120,6 @@ public:
             m_constraints.emplace_back(new C(1.f, particles, m_ecs));
             m_constraintStart = m_constraints.size();
             return dynamic_cast<C*>(m_constraints.back());
-      }
-      template<typename C> C* add_constraint(std::vector<EntityId> particles, ConstraintType type)
-      {
-            auto constraint = dynamic_cast<Constraint*>(add_constraint<C>(particles));
-            constraint->m_type = type;
-            m_constraintStart = m_constraints.size();
-            return dynamic_cast<C*>(constraint);
       }
       void register_self_generating_constraint(ConstraintGenerator* generator);
 

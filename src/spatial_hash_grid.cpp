@@ -2,6 +2,8 @@
 
 #include <math.h>
 
+#include <algorithm>
+
 #include "logger.h"
 
 SpatialHashGrid::SpatialHashGrid(float gridSize) :
@@ -45,6 +47,13 @@ void SpatialHashGrid::surrounding_particles(Vector3 pos, std::vector<EntityId>& 
                   }
             }
       }
+      //std::set<int> s;
+      //size_t size = particles.size();
+      //for (size_t i = 0; i < size; ++i) s.insert(particles[i]);
+      //particles.assign(s.begin(), s.end());
+
+      std::sort(particles.begin(), particles.end());
+      particles.erase(std::unique(particles.begin(), particles.end()), particles.end());
 }
 void SpatialHashGrid::surrounding_particles(Vector2 pos, std::vector<EntityId>& particles)
 {

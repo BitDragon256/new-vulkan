@@ -12,7 +12,7 @@
 #include "pbd/fluid_constraints.h"
 
 float turningSpeed = 50.f;
-float moveSpeed = 20.f;
+float moveSpeed = 2.5f;
 float camDistance = 5;
 Vector3 camPos = { 0,0,0 };
 Vector3 camRot = { 0,0,0 };
@@ -123,7 +123,7 @@ int main(int argc, char** argv)
       // Camera
 
       Camera camera;
-      camera.m_position = Vector3(0.f, 0.f, 0.f);
+      camera.m_position = Vector3(-30.f, 0.f, 0.f);
       camera.m_orthographic = false;
       renderer.set_active_camera(&camera);
 
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
 
       DynamicModel emptycircle;
       //emptycircle.load_mesh("/default_models/circle/emptycirclemesh.obj");
-      emptycircle.load_mesh("/default_models/inv_cube.obj");
+      emptycircle.load_mesh("/default_models/inv_sphere.obj");
       emptycircle.m_children.front().material->m_shader = make_default_shader();
       emptycircle.m_children.front().material->m_shader->fragment.load_shader("fragments/lamb_wmat.frag.spv");
       emptycircle.m_children.front().material->m_diffuse = Color(1.f);
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
       float particleRadius = .3f;
       float boundingParticleRadius = 20.f;
 
-      renderer.m_ecs.add_component<Transform>(boundary).scale = { 3.f, 3.f, 3.f };
+      renderer.m_ecs.add_component<Transform>(boundary).scale = { 10.f, 10.f, 10.f };
       renderer.m_ecs.add_component<DynamicModel>(boundary) = emptycircle;
       auto& bo = renderer.m_ecs.add_component<PBDParticle>(boundary);
       bo.invmass = 0.f;
@@ -188,10 +188,10 @@ int main(int argc, char** argv)
                         y * PARTICLE_DIST - rtPC / 2.f + static_cast<float>(x) / rtPC + position.y,
                         z * PARTICLE_DIST - rtPC / 2.f + static_cast<float>(y) / rtPC + position.z
                   );
-                  pbdParticle.radius = KernelRadius;
+                  pbdParticle.radius = particleRadius;
                   auto& transform = renderer.m_ecs.add_component<Transform>(particle);
 
-                  auto constraint = pbd.add_constraint<CollisionConstraint>({ particle, boundary }, InverseInequality);
+                  auto constraint = pbd.add_constraint<CollisionConstraint>({ particle, boundary });
                   constraint->m_distance = boundingParticleRadius;
                   constraint->m_compliance = 0.f;
                   renderer.m_ecs.add_component<DynamicModel>(particle) = ball;
@@ -200,11 +200,11 @@ int main(int argc, char** argv)
                   particles.push_back(particle);
             }
       };
-      //CollisionConstraintGenerator colConstGen;
-      //pbd.register_self_generating_constraint(&colConstGen);
+      CollisionConstraintGenerator colConstGen;
+      pbd.register_self_generating_constraint(&colConstGen);
 
-      SPHConstraintGenerator sphConstGen;
-      pbd.register_self_generating_constraint(&sphConstGen);
+      //SPHConstraintGenerator sphConstGen;
+      //pbd.register_self_generating_constraint(&sphConstGen);
 
       float profilerTime = 0.f;
 
@@ -257,7 +257,7 @@ int main(int argc, char** argv)
             for (const auto e : particles)
             {
                   auto& transform = renderer.m_ecs.get_component<Transform>(e);
-                  transform.scale = Vector3(KernelRadius);
+                  transform.scale = Vector3(particleRadius * 2.f);
             }
 
             // GUI
@@ -287,15 +287,60 @@ int main(int argc, char** argv)
                   ImGui::DragFloat("Target Pressure", &TargetPressure);
                   ImGui::DragFloat("Pressure Multiplier", &PressureMultiplier);
                   ImGui::DragFloat("Kernel Radius", &KernelRadius);
+                  ImGui::DragFloat("Particle Radius", &ParticleRadius);
+                  ImGui::DragFloat("View Particle Radius", &particleRadius);
                   ImGui::DragFloat("Base Density", &BaseDensity);
 
                   ImGui::SliderFloat("Velocity Damping", &pbd.m_dampingConstant, 0.f, 1.f);
 
+                  // apply kernel radius
+                  for (const auto p : particles)
+                  {
+                        renderer.m_ecs.get_component<PBDParticle>(p).radius = particleRadius;
+                  }
+
+                  static const char* kernelFunctionName = KernelFunctionNames[KernelFunctionIndex];
+                  static const char* kernelGradientFunctionName = KernelFunctionNames[KernelGradientFunctionIndex];
+
+                  if (ImGui::BeginCombo("Kernel Function", kernelFunctionName)) // The second parameter is the label previewed before opening the combo.
+                  {
+                      for (int n = 0; n < IM_ARRAYSIZE(KernelFunctionNames); n++)
+                      {
+                          bool is_selected = (kernelFunctionName == KernelFunctionNames[n]); // You can store your selection however you want, outside or inside your objects
+                          if (ImGui::Selectable(KernelFunctionNames[n], is_selected))
+                          {
+                                kernelFunctionName = KernelFunctionNames[n];
+                                KernelFunctionIndex = n;
+                          }
+                          if (is_selected)
+                              ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                      }
+                      ImGui::EndCombo();
+                  }
+                  if (ImGui::BeginCombo("Kernel Gradient Function", kernelGradientFunctionName)) // The second parameter is the label previewed before opening the combo.
+                  {
+                      for (int n = 0; n < IM_ARRAYSIZE(KernelFunctionNames); n++)
+                      {
+                          bool is_selected = (kernelGradientFunctionName == KernelFunctionNames[n]); // You can store your selection however you want, outside or inside your objects
+                          if (ImGui::Selectable(KernelFunctionNames[n], is_selected))
+                          {
+                                kernelGradientFunctionName = KernelFunctionNames[n];
+                                KernelGradientFunctionIndex = n;
+                          }
+                          if (is_selected)
+                              ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                      }
+                      ImGui::EndCombo();
+                  }
+
+                  if (ImGui::Button("Reset Multipliers"))
+                  {
+                        KernelMultiplier = 8.f / (PI * std::powf(KernelRadius, 3.f));
+                        KernelGradientMultiplier = 48.f / (PI * std::powf(KernelRadius, 3.f));
+                  }
+
                   ImGui::SliderInt("Solver Steps", &pbd.m_solverIterations, 1, 10);
                   ImGui::SliderInt("Substeps", &pbd.m_substeps, 1, 10);
-
-                  KernelMultiplier = 8.f / (PI * std::powf(KernelRadius, 3.f));
-                  KernelGradientMultiplier = 48.f / (PI * std::powf(KernelRadius, 3.f));
 
                   ImGui::SliderFloat("speed", &moveSpeed, 0.f, 4.f);
                   ImGui::SliderFloat("sensitivity", &turningSpeed, 0.f, 0.5f);

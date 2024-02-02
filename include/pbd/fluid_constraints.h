@@ -7,7 +7,12 @@ inline float KernelGradientMultiplier = 48.f / PI;
 inline float TargetPressure = 2.5f;
 inline float PressureMultiplier = .001f;
 inline float KernelRadius = 1.f;
+inline float ParticleRadius = .25f;
 inline float BaseDensity = 1000.f;
+
+inline size_t KernelFunctionIndex = 1;
+inline size_t KernelGradientFunctionIndex = 1;
+inline const char* KernelFunctionNames[] = { "Cubic Spline", "Cubic", "Spiky" };
 
 class SPHConstraint : public Constraint
 {
