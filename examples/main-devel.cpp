@@ -162,9 +162,9 @@ int main(int argc, char** argv)
 
       float mouseParticleRadius = 5.f;
       float particleRadius = .3f;
-      float boundingParticleRadius = 20.f;
+      float boundingParticleRadius = 10.f;
 
-      renderer.m_ecs.add_component<Transform>(boundary).scale = { 10.f, 10.f, 10.f };
+      renderer.m_ecs.add_component<Transform>(boundary).scale = Vec { boundingParticleRadius * 2.f };
       renderer.m_ecs.add_component<DynamicModel>(boundary) = emptycircle;
       auto& bo = renderer.m_ecs.add_component<PBDParticle>(boundary);
       bo.invmass = 0.f;

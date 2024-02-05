@@ -57,7 +57,26 @@ struct RenderConfig
 	{}
 };
 
-class Camera;
+class Renderer;
+
+class Camera
+{
+public:
+	Camera();
+	glm::mat4 projection_matrix();
+	glm::mat4 view_matrix();
+
+	Vector3 m_position;
+	Vector3 m_rotation;
+	float m_fov;
+	Vector2 m_extent;
+	float m_nearPlane;
+	float m_farPlane;
+	bool m_orthographic;
+
+private:
+	Renderer* renderer;
+};
 
 class Renderer
 {
@@ -166,6 +185,8 @@ private:
 
 	// camera stuff
 	Camera* m_activeCamera;
+	Camera m_defaultCamera;
+	void init_default_camera();
 	CameraPushConstant m_cameraPushConstant;
 
 	// imgui vulkan objects
@@ -232,22 +253,3 @@ private:
 };
 
 void imgui_error_handle(VkResult err);
-
-class Camera
-{
-public:
-	Camera();
-	glm::mat4 projection_matrix();
-	glm::mat4 view_matrix();
-
-	Vector3 m_position;
-	Vector3 m_rotation;
-	float m_fov;
-	Vector2 m_extent;
-	float m_nearPlane;
-	float m_farPlane;
-	bool m_orthographic;
-
-private:
-	Renderer* renderer;
-};

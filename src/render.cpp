@@ -95,6 +95,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
       m_ecs.lock();
       m_guiManager.initialize(&m_ecs);
 
+      init_default_camera();
+
       return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::render()
@@ -1043,6 +1045,11 @@ uint32_t Renderer::geometry_handler_subpass_count()
       for (auto handler : handlers)
             subpassCount += handler->subpass_count();
       return subpassCount;
+}
+
+void Renderer::init_default_camera()
+{
+      set_active_camera(&m_defaultCamera);
 }
 
 //void Renderer::add_descriptors()
