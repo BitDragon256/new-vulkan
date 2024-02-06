@@ -274,3 +274,20 @@ private:
 void bake_transform(StaticMesh& mesh, Transform transform);
 VkCommandBufferBeginInfo create_command_buffer_begin_info(VkRenderPass renderPass, uint32_t subpass, VkFramebuffer framebuffer, VkCommandBufferInheritanceInfo& inheritanceI);
 void set_dynamic_state(VkCommandBuffer commandBuffer, VkExtent2D swapChainExtent, std::array<float, 4> viewportSize);
+
+// ---------------------------------
+// DEFAULT MODELS
+// ---------------------------------
+namespace DefaultModel
+{
+	enum DefaultModel
+	{
+		Cube, Sphere, Quad, Triangle
+	};
+}
+inline std::unordered_map<DefaultModel::DefaultModel, std::string> s_defaultModelToPath = {
+	{ DefaultModel::Cube, "/default_models/cube.obj" },
+	{ DefaultModel::Sphere, "/default_models/sphere.obj" },
+	{ DefaultModel::Quad, "/default_models/quad.obj" },
+	{ DefaultModel::Triangle, "/default_models/triangle.obj" }
+};

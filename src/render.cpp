@@ -182,6 +182,21 @@ void Renderer::gizmos_draw_ray(Vector3 start, Vector3 direction, Color color, fl
       m_gizmosHandler.draw_ray(start, direction, color, width);
 }
 
+
+EntityId Renderer::create_empty_game_object()
+{
+      const auto entity = m_ecs.create_entity();
+      m_ecs.add_component<Transform>(entity);
+      return entity;
+}
+EntityId Renderer::create_default_model(DefaultModel::DefaultModel defaultModel)
+{
+      const auto entity = create_empty_game_object();
+      auto& model = m_ecs.add_component<DynamicModel>(entity);
+      model.load_mesh(s_defaultModelToPath[defaultModel]);
+      return entity;
+}
+
 // PRIVATE METHODS
 
 NVE_RESULT Renderer::create_instance()
@@ -1050,6 +1065,7 @@ uint32_t Renderer::geometry_handler_subpass_count()
 void Renderer::init_default_camera()
 {
       set_active_camera(&m_defaultCamera);
+      m_defaultCamera.m_position = Vector3{ -3.f, 0.f, 0.f };
 }
 
 //void Renderer::add_descriptors()

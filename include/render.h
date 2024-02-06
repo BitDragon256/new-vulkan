@@ -107,6 +107,13 @@ public:
 	void gizmos_draw_line(Vector3 start, Vector3 end, Color color, float width = 0.1f);
       void gizmos_draw_ray(Vector3 start, Vector3 direction, Color color, float width = 0.1f);
 
+	// ecs
+
+	// create an entity with a transform attached to it
+	EntityId create_empty_game_object();
+	// create an entity with a transform and a dynamic model with the given default model attached to it
+	EntityId create_default_model(DefaultModel::DefaultModel model);
+
 private:
 	void first_frame();
 	bool m_firstFrame;
