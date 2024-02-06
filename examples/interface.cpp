@@ -18,6 +18,16 @@ int main(int argc, char** argv)
             if (res == NVE_RENDER_EXIT_SUCCESS)
                   break;
             std::cout << "\r" << i;
+            if (i % 400 == 0)
+            {
+                  renderer.m_ecs.get_component<DynamicModel>(cube).set_fragment_shader("fragments/lamb_wmat.frag.spv");
+                  renderer.reload_pipelines();
+            }
+            else if (i % 400 == 200)
+            {
+                  renderer.m_ecs.get_component<DynamicModel>(cube).set_fragment_shader("fragments/unlit_wmat.frag.spv");
+                  renderer.reload_pipelines();
+            }
       }
       std::cout << "\n";
       renderer.clean_up();

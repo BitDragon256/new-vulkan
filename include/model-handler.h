@@ -97,11 +97,11 @@ struct GeometryHandlerVulkanObjects
 
 struct PipelineCreationData
 {
-	VkPipelineShaderStageCreateInfo			stages[2];
+	VkPipelineShaderStageCreateInfo		stages[2];
 
 	VkPipelineVertexInputStateCreateInfo	vertexInputState;
 	std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> vertexAttributeDescriptions;
-	VkVertexInputBindingDescription			vertexBindingDescription;
+	VkVertexInputBindingDescription		vertexBindingDescription;
 
 	VkPipelineInputAssemblyStateCreateInfo	inputAssemblyState;
 	VkPipelineTessellationStateCreateInfo	tessellationState;
@@ -114,13 +114,12 @@ struct PipelineCreationData
 	VkPipelineColorBlendAttachmentState		colorBlendAttachment;
 
 	VkPipelineDynamicStateCreateInfo		dynamicState;
-	std::vector<VkDynamicState>				dynamicStates;
+	std::vector<VkDynamicState>			dynamicStates;
 };
 
 class GeometryHandler
 {
 public:
-	// void create_command_buffers();
 	void record_command_buffers(uint32_t frame);
 	std::vector<VkCommandBuffer> get_command_buffers(uint32_t frame);
 
@@ -172,6 +171,8 @@ private:
 	void create_pipeline(size_t meshGroupIndex);
 
 	bool m_rendererPipelinesCreated;
+	std::vector<VkPipeline> m_pipelineDestructionQueue;
+	void destroy_pipelines();
 
 	std::vector<MeshGroup> m_meshGroups;
 	std::vector<std::shared_ptr<Material>> m_materials;

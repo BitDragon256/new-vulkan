@@ -205,6 +205,12 @@ EntityId Renderer::create_default_model(DefaultModel::DefaultModel defaultModel)
       return entity;
 }
 
+void Renderer::reload_pipelines()
+{
+      await_last_frame_render();
+      create_geometry_pipelines();
+}
+
 // PRIVATE METHODS
 
 NVE_RESULT Renderer::create_instance()
@@ -1116,6 +1122,10 @@ void Renderer::genCmdBuf(GeometryHandler* geometryHandler)
 {
       geometryHandler->record_command_buffers(m_frame);
 };
+void Renderer::await_last_frame_render()
+{
+      vkWaitForFences(m_device, 1, &m_inFlightFences[(m_frame + m_inFlightFences.size() - 1) % m_inFlightFences.size()], VK_TRUE, UINT64_MAX);
+}
 
 
 // ---------------------------------------

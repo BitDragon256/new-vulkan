@@ -116,6 +116,11 @@ public:
 	// create an entity with a transform and a dynamic model with the given default model attached to it
 	EntityId create_default_model(DefaultModel::DefaultModel model);
 
+	// rendering
+
+	// reloads the pipelines of the geometry handlers
+	void reload_pipelines();
+
 private:
 	void first_frame();
 	bool m_firstFrame;
@@ -160,6 +165,8 @@ private:
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;
 	std::vector<VkFence> m_inFlightFences;
+
+	void await_last_frame_render();
 
 	VkDebugUtilsMessengerEXT m_debugMessenger;
 
