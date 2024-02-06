@@ -145,6 +145,10 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
       m_activeCamera->m_extent.y = m_swapchainExtent.height;
       return NVE_SUCCESS;
 }
+Camera& Renderer::active_camera()
+{
+      return *m_activeCamera;
+}
 
 int Renderer::get_key(int key)
 {
@@ -1065,7 +1069,6 @@ uint32_t Renderer::geometry_handler_subpass_count()
 void Renderer::init_default_camera()
 {
       set_active_camera(&m_defaultCamera);
-      m_defaultCamera.m_position = Vector3{ -5.f, 0.f, 0.f };
 }
 
 //void Renderer::add_descriptors()

@@ -86,6 +86,7 @@ public:
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
 	NVE_RESULT set_active_camera(Camera* camera);
+	Camera& active_camera();
 
 	ECSManager m_ecs;
 
