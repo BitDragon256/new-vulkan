@@ -82,6 +82,7 @@ class Renderer
 {
 public:
 	Renderer();
+	~Renderer();
 
 	NVE_RESULT render();
 	NVE_RESULT init(RenderConfig config);
@@ -118,6 +119,7 @@ public:
 private:
 	void first_frame();
 	bool m_firstFrame;
+	bool m_initialized;
 
 	float m_deltaTime;
 	std::chrono::time_point<std::chrono::high_resolution_clock> m_lastFrameTime;

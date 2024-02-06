@@ -47,12 +47,17 @@ void append_vector(std::vector<T>& origin, std::vector<T>& appendage)
 // PUBLIC METHODS
 
 Renderer::Renderer() :
-      m_ecs{ this }
+      m_ecs{ this }, m_initialized{ false }
 {}
+Renderer::~Renderer()
+{
+      clean_up();
+}
 NVE_RESULT Renderer::init(RenderConfig config)
 {
       m_config = config;
       m_firstFrame = true;
+      m_initialized = true;
 
       // add_descriptors();
 
@@ -105,7 +110,6 @@ NVE_RESULT Renderer::render()
       PROFILE_START("glfw window should close poll");
       if (glfwWindowShouldClose(m_window))
       {
-            clean_up();
             return NVE_RENDER_EXIT_SUCCESS;
       }
       PROFILE_END("glfw window should close poll");
@@ -1008,6 +1012,10 @@ void Renderer::first_frame()
 
 void Renderer::clean_up()
 {
+      if (!m_initialized)
+            return;
+      m_initialized = false;
+
       vkDeviceWaitIdle(m_device);
 
       imgui_cleanup();
