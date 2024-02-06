@@ -945,6 +945,7 @@ void DynamicGeometryHandler::start()
 	BufferConfig bufferConfig = default_buffer_config();
 	bufferConfig.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	m_transformBuffer.initialize(bufferConfig);
+	m_updatedTransformDescriptorSets = false;
 
 	m_modelCount = 0;
 }
@@ -974,7 +975,7 @@ void DynamicGeometryHandler::update(float dt)
 	PROFILE_END("update base handler");
 
 	// update descriptor set
-	if (updateDescriptorSet)
+	if (updateDescriptorSet || !m_updatedTransformDescriptorSets)
 	{
 		VkWriteDescriptorSet transformBufferWrite = {};
 		transformBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -994,6 +995,8 @@ void DynamicGeometryHandler::update(float dt)
 		PROFILE_START("update descriptors");
 		vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
 		PROFILE_END("update descriptors");
+
+		m_updatedTransformDescriptorSets = true;
 	}
 	m_profiler.end_label();
 }
@@ -1333,6 +1336,8 @@ void Model::load_mesh(std::string file)
 		*mesh.material = objMesh.mat;
 		mesh.vertices = objMesh.vertices;
 		mesh.indices = objMesh.indices;
+		mesh.material->m_shader = make_default_shader();
+		mesh.material->m_diffuse = Color(1.f);
 		meshProfiler.passing_measure("model transfer");
 		meshProfiler.print_last_measure("model transfer");
 	}

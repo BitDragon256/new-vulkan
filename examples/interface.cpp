@@ -6,6 +6,7 @@ int main(int argc, char** argv)
 {
       Renderer renderer;
       RenderConfig renderConfig;
+      renderConfig.autoECSUpdate = true;
       renderer.init(renderConfig);
       const auto cube = renderer.create_default_model(DefaultModel::Cube);
       for (int i = 0; i < 2000; i++)

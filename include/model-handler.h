@@ -262,6 +262,7 @@ private:
 	void add_model(DynamicModel& model, Transform& transform);
 
 	Buffer<Transform> m_transformBuffer;
+	bool m_updatedTransformDescriptorSets;
 
 	std::vector<DynamicModelInfo> m_individualModels;
 	uint32_t m_modelCount;
