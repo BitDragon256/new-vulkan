@@ -1065,7 +1065,7 @@ uint32_t Renderer::geometry_handler_subpass_count()
 void Renderer::init_default_camera()
 {
       set_active_camera(&m_defaultCamera);
-      m_defaultCamera.m_position = Vector3{ -3.f, 0.f, 0.f };
+      m_defaultCamera.m_position = Vector3{ -5.f, 0.f, 0.f };
 }
 
 //void Renderer::add_descriptors()
@@ -1446,7 +1446,7 @@ bool Vertex::operator<(const Vertex& other)
 // CAMERA
 // ---------------------------------------
 Camera::Camera() :
-      m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(1000.f), m_extent(1080, 1920), renderer(nullptr)
+      m_position(0), m_rotation(0), m_fov(90), m_nearPlane(0.01f), m_farPlane(1000.f), m_extent(1080, 1920), renderer(nullptr), m_orthographic{ false }
 {}
 glm::mat4 Camera::view_matrix()
 {
