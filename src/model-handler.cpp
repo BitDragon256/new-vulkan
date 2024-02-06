@@ -1342,3 +1342,13 @@ void Model::load_mesh(std::string file)
 		meshProfiler.print_last_measure("model transfer");
 	}
 }
+void Model::set_fragment_shader(std::string file)
+{
+	for (auto& mesh : m_children)
+		mesh.material->m_shader->fragment.load_shader(file);
+}
+void Model::set_vertex_shader(std::string file)
+{
+	for (auto& mesh : m_children)
+		mesh.material->m_shader->vertex.load_shader(file);
+}

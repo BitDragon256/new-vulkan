@@ -41,6 +41,9 @@ struct Model
 	std::vector<StaticMesh> m_children;
 
 	void load_mesh(std::string file);
+
+	void set_fragment_shader(std::string file);
+	void set_vertex_shader(std::string file);
 };
 struct MeshDataInfo
 {
