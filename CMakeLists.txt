@@ -48,7 +48,6 @@ set(
 	${SOURCE_DIR}/model-handler.cpp
 	${SOURCE_DIR}/nve_types.cpp
 	${SOURCE_DIR}/render.cpp
-	${SOURCE_DIR}/vulkan_helpers.cpp
 	${SOURCE_DIR}/material.cpp
 	${SOURCE_DIR}/image.cpp
 	${SOURCE_DIR}/profiler.cpp
@@ -59,6 +58,10 @@ set(
 	${SOURCE_DIR}/post_processing.cpp
 	${SOURCE_DIR}/thread_pool.cpp
 	${SOURCE_DIR}/gizmos.cpp
+
+	${SOURCE_DIR}/vulkan/vulkan_helpers.cpp
+	${SOURCE_DIR}/vulkan/pipeline.cpp
+	${SOURCE_DIR}/vulkan/pipeline.cpp
 	
 	${SOURCE_DIR}/simple_fluid.cpp
       ${SOURCE_DIR}/spatial_hash_grid.cpp
@@ -70,7 +73,6 @@ set(
 
 set(
 	INCLUDE_FILES
-	${INCLUDE_DIR}/buffer.h
 	${INCLUDE_DIR}/ecs.h
 	${INCLUDE_DIR}/logger.h
 	${INCLUDE_DIR}/math-core.h
@@ -79,7 +81,6 @@ set(
 	${INCLUDE_DIR}/nve_types.h
 	${INCLUDE_DIR}/nve_types_fwd.h
 	${INCLUDE_DIR}/render.h
-	${INCLUDE_DIR}/vulkan_helpers.h
 	${INCLUDE_DIR}/material.h
 	${INCLUDE_DIR}/image.h
 	${INCLUDE_DIR}/profiler.h
@@ -92,6 +93,10 @@ set(
 	${INCLUDE_DIR}/thread_pool.h
 	${INCLUDE_DIR}/gizmos.h
 	${INCLUDE_DIR}/component-editor.h
+
+	${INCLUDE_DIR}/vulkan/buffer.h
+	${INCLUDE_DIR}/vulkan/vulkan_helpers.h
+	${INCLUDE_DIR}/vulkan/pipeline.h
 
 	${INCLUDE_DIR}/simple_fluid.h
       ${INCLUDE_DIR}/spatial_hash_grid.h

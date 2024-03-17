@@ -16,7 +16,7 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
-#include "buffer.h"
+#include "vulkan/buffer.h"
 #include "ecs.h"
 #include "nve_types.h"
 #include "model-handler.h"

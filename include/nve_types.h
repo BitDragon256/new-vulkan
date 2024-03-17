@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "vulkan_helpers.h"
+#include "vulkan/vulkan_helpers.h"
 
 #include "nve_types_fwd.h"
 #include "math-core.h"

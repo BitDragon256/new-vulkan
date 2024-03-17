@@ -14,7 +14,7 @@
 #include "logger.h"
 #include "profiler.h"
 
-#include "buffer.h"
+#include "vulkan/buffer.h"
 #include "ecs.h"
 #include "material.h"
 #include "math-core.h"

@@ -16,7 +16,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "logger.h"
-#include "vulkan_helpers.h"
+#include "vulkan/vulkan_helpers.h"
 #include "material.h"
 
 #ifdef RENDER_PROFILER
