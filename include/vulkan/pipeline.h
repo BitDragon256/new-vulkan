@@ -9,17 +9,21 @@
 #include "nve_types.h"
 #include "material.h"
 
-using RenderPassRef = std::shared_ptr<VkRenderPass>;
-
 class PipelineLayout
 {
 public:
 
       void create(std::vector<VkDescriptorSetLayout> descriptorSetLayouts, std::vector<VkPushConstantRange> pushConstants, VkDevice device);
+	void destroy();
+
+	operator VkPipelineLayout();
 
       VkPipelineLayout m_layout;
 
 private:
+
+	VkDevice m_device;
+
 };
 
 typedef std::shared_ptr<PipelineLayout> PipelineLayoutRef;
@@ -43,9 +47,11 @@ public:
       VkPipeline m_pipeline;
       PipelineLayoutRef m_layout;
 
+	operator VkPipeline();
+
 };
 
-typedef std::shared_ptr<Pipeline> PipelineRef;
+typedef std::weak_ptr<Pipeline> PipelineRef;
 
 typedef struct GraphicsPipelineCreationData_T
 {

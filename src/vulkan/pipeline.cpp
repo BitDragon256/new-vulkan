@@ -13,6 +13,8 @@ void PipelineLayout::create(
       VkDevice device
 )
 {
+	m_device = device;
+
       VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
       pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
       pipelineLayoutCI.pNext = nullptr;
@@ -25,6 +27,14 @@ void PipelineLayout::create(
       pipelineLayoutCI.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
 
       auto res = vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &m_layout);
+}
+void PipelineLayout::destroy()
+{
+	vkDestroyPipelineLayout(m_device, m_layout, nullptr);
+}
+PipelineLayout::operator VkPipelineLayout()
+{
+	return m_layout;
 }
 
 // --------------------------------------
@@ -41,6 +51,18 @@ void Pipeline::initialize(VkDevice device, PipelineLayoutRef layout)
 {
 	m_device = device;
 	m_layout = layout;
+}
+void Pipeline::destroy()
+{
+	vkDestroyPipeline(
+		m_device,
+		m_pipeline,
+		nullptr
+	);
+}
+Pipeline::operator VkPipeline()
+{
+	return m_pipeline;
 }
 
 // --------------------------------------
@@ -63,7 +85,7 @@ void GraphicsPipeline::create_create_info()
 	set_shader_stages();
 
 	m_createInfo.layout = m_layout->m_layout;
-	m_createInfo.renderPass = *m_renderPass;
+	m_createInfo.renderPass = *m_renderPass.lock();
 	m_createInfo.subpass = m_subpass;
 }
 void GraphicsPipeline::create()
@@ -258,7 +280,7 @@ void PipelineBatchCreator::create_cache()
 	if (m_cacheCreated || m_pipelines.empty())
 		return;
 
-	m_device = m_pipelines.front()->m_device;
+	m_device = m_pipelines.front().lock()->m_device;
 
 	VkPipelineCacheCreateInfo cacheCI = {};
 	cacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
