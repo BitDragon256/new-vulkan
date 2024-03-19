@@ -148,8 +148,6 @@ private:
 	void create_pipeline_layout();
 
 	bool m_rendererPipelinesCreated;
-	std::vector<PipelineRef> m_pipelineDestructionQueue;
-	void destroy_pipelines();
 
 	std::vector<MeshGroup> m_meshGroups;
 	std::vector<std::shared_ptr<Material>> m_materials;

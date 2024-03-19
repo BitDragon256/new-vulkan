@@ -272,7 +272,6 @@ void GeometryHandler::get_pipelines(std::vector<PipelineRef>& pipelines)
 	for (size_t i = 0; i < m_meshGroups.size(); i++)
 	{
 		pipelines.push_back(&m_meshGroups[i].pipeline);
-		// m_pipelineDestructionQueue.push_back(&m_meshGroups[i].pipeline);
 	}
 }
 
@@ -289,26 +288,6 @@ void GeometryHandler::create_pipeline_layout()
 
 	m_pipelineLayout.create(descriptorSetLayouts, pushConstants, m_vulkanObjects.device);
 
-}
-//void GeometryHandler::create_pipeline(size_t meshGroupIndex)
-//{
-//	m_pipelineCreationData.push_back({});
-//
-//	uint32_t subpass = m_vulkanObjects.firstSubpass + m_subpassCount;
-//	m_subpassCount++;
-//	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
-//
-//	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
-//}
-void GeometryHandler::destroy_pipelines()
-{
-	if (m_pipelineDestructionQueue.empty())
-		return;
-
-	for (auto pipeline : m_pipelineDestructionQueue)
-		pipeline->destroy();
-
-	m_pipelineDestructionQueue.clear();
 }
 
 void GeometryHandler::add_material(Model& model, Transform& transform, bool newMat)
@@ -644,8 +623,6 @@ void GeometryHandler::update()
 		reload_materials();
 		PROFILE_END("reload mats");
 	}
-
-	destroy_pipelines();
 }
 
 // ------------------------------------------
