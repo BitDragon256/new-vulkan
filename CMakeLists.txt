@@ -71,6 +71,7 @@ set(
       ${SOURCE_DIR}/pbd/fluid_constraints.cpp
 
 	${SOURCE_DIR}/reference.cpp
+	${SOURCE_DIR}/dependency.cpp
 )
 
 set(
@@ -108,6 +109,7 @@ set(
       ${INCLUDE_DIR}/pbd/fluid_constraints.h
 
 	${INCLUDE_DIR}/reference.h
+	${INCLUDE_DIR}/dependency.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)
