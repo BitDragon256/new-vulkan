@@ -1,11 +1,13 @@
 #pragma once
 
 #include <array>
+#include <memory>
 
 #include "vulkan/vulkan_helpers.h"
 
 #include "nve_types_fwd.h"
 #include "math-core.h"
+#include "reference.h"
 
 // success codes
 #define NVE_SUCCESS 0
@@ -17,7 +19,7 @@
 typedef uint32_t Index;
 #define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
-typedef std::weak_ptr<VkRenderPass> RenderPassRef;
+typedef Reference<VkRenderPass> RenderPassRef;
 
 #define VERTEX_ATTRIBUTE_COUNT 5
 

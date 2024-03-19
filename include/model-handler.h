@@ -72,7 +72,7 @@ struct MeshGroup // group with individual shaders
 	
 	bool reloadMeshBuffers;
 
-	std::shared_ptr<GraphicsPipeline> pipeline;
+	GraphicsPipeline pipeline;
 	std::vector<VkCommandBuffer> commandBuffers; // the different command buffers for the different frames
 	VkCommandPool commandPool;
 };
@@ -141,7 +141,7 @@ protected:
 private:
 
 	MeshGroup* find_group(GraphicsShader& shader, size_t& index);
-	MeshGroup* push_mesh_group(GraphicsShader& shader);
+	MeshGroup* create_mesh_group(GraphicsShader& shader);
 
 	void create_group_command_buffers(MeshGroup& meshGroup);
 

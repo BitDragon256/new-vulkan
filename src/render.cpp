@@ -750,18 +750,13 @@ void Renderer::create_geometry_pipelines()
 
       for (GeometryHandler* geometryHandler : handlers)
       {
-            std::vector<VkGraphicsPipelineCreateInfo> pipelineCIs;
+            std::vector<PipelineRef> pipelines;
+            geometryHandler->get_pipelines(pipelines);
 
-            geometryHandler->create_pipeline_create_infos(pipelineCIs);
-            if (pipelineCIs.empty())
-                  continue;
-
-            std::vector<VkPipeline> pipelines(pipelineCIs.size());
-            auto res = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, pipelineCIs.size(), pipelineCIs.data(), nullptr, pipelines.data());
-            logger::log_cond_err(res == VK_SUCCESS, "failed to create geometry handler pipelines");
-
-            geometryHandler->set_pipelines(pipelines);
+            for (auto pipeline : pipelines)
+                  m_pipelineBatchCreator.schedule_creation(pipeline);
       }
+      m_pipelineBatchCreator.create_all();
 }
 std::vector<GeometryHandler*> Renderer::all_geometry_handlers()
 {
@@ -1027,6 +1022,7 @@ void Renderer::clean_up()
       imgui_cleanup();
 
       geometry_handler_cleanup();
+      m_pipelineBatchCreator.destroy();
 
       vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
 

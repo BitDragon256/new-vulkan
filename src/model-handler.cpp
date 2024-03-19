@@ -96,7 +96,7 @@ VkCommandBufferBeginInfo create_command_buffer_begin_info(VkRenderPass renderPas
 // ------------------------------------------
 
 //std::set<GraphicsShader_T*> GeometryHandler::s_destroyedShaders = std::set<GraphicsShader_T*>();
-GeometryHandler::GeometryHandler() : m_subpassCount{ 0 }
+GeometryHandler::GeometryHandler() : m_subpassCount{ 0 }, m_pipelineLayout{}
 {}
 
 void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager)
@@ -179,7 +179,7 @@ MeshGroup* GeometryHandler::find_group(GraphicsShader& shader, size_t& index)
 	}
 	return nullptr;
 }
-MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader& shader)
+MeshGroup* GeometryHandler::create_mesh_group(GraphicsShader& shader)
 {
 	m_meshGroups.push_back(MeshGroup {});
 	auto& meshGroup = m_meshGroups.back();
@@ -201,8 +201,6 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader& shader)
 	meshGroup.indexBuffer.initialize(config);
 
 	create_group_command_buffers(meshGroup);
-	//if (m_rendererPipelinesCreated)
-		//create_pipeline(m_meshGroups.size() - 1);
       m_subpassCount++;
 
 	return &meshGroup;
@@ -259,8 +257,8 @@ void GeometryHandler::create_pipeline_create_infos()
 	uint32_t subpass = m_vulkanObjects.firstSubpass;
 	for (MeshGroup& meshGroup : m_meshGroups)
 	{
-		meshGroup.pipeline->initialize(m_vulkanObjects.renderPass, subpass);
-		meshGroup.pipeline->create_create_info();
+		meshGroup.pipeline.initialize(m_vulkanObjects.device, &m_pipelineLayout, m_vulkanObjects.renderPass, subpass, meshGroup.shader);
+		meshGroup.pipeline.create_create_info();
 
 		subpass++;
 	}
@@ -270,10 +268,11 @@ void GeometryHandler::create_pipeline_create_infos()
 }
 void GeometryHandler::get_pipelines(std::vector<PipelineRef>& pipelines)
 {
+	create_pipeline_create_infos();
 	for (size_t i = 0; i < m_meshGroups.size(); i++)
 	{
-		pipelines.push_back(m_meshGroups[i].pipeline);
-		m_pipelineDestructionQueue.push_back(m_meshGroups[i].pipeline);
+		pipelines.push_back(&m_meshGroups[i].pipeline);
+		// m_pipelineDestructionQueue.push_back(&m_meshGroups[i].pipeline);
 	}
 }
 
@@ -307,7 +306,7 @@ void GeometryHandler::destroy_pipelines()
 		return;
 
 	for (auto pipeline : m_pipelineDestructionQueue)
-		pipeline.lock()->destroy();
+		pipeline->destroy();
 
 	m_pipelineDestructionQueue.clear();
 }
@@ -346,7 +345,7 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		size_t index;
 		MeshGroup* meshGroup = find_group(mesh.material->m_shader, index);
 		if (!meshGroup || forceNewMeshGroup) // no group found or a new group must be created
-			meshGroup = push_mesh_group(mesh.material->m_shader);
+			meshGroup = create_mesh_group(mesh.material->m_shader);
 
 		//if (s_destroyedShaders.contains(meshGroup->shader))
 		//	s_destroyedShaders.erase(meshGroup->shader);
@@ -606,7 +605,7 @@ void GeometryHandler::cleanup()
 		meshGroup.indexBuffer.destroy();
 		meshGroup.vertexBuffer.destroy();
 
-		meshGroup.pipeline->destroy();
+		meshGroup.pipeline.destroy();
 
 		vkFreeCommandBuffers(m_vulkanObjects.device, meshGroup.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 		vkDestroyCommandPool(m_vulkanObjects.device, meshGroup.commandPool, nullptr);
@@ -693,7 +692,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 	// ---------------------------------------
 
 	VkCommandBufferInheritanceInfo inheritanceInfo;
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass.lock(), subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
@@ -702,7 +701,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// ---------------------------------------
 
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *meshGroup.pipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
 
 	// ---------------------------------------
 
@@ -861,7 +860,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 	// ---------------------------------------
 
 	VkCommandBufferInheritanceInfo inheritanceInfo;
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass.lock(), subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
@@ -870,7 +869,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	// ---------------------------------------
 
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *meshGroup.pipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
 
 	// ---------------------------------------
 

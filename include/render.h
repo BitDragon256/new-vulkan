@@ -17,6 +17,7 @@
 #include <glm/glm.hpp>
 
 #include "vulkan/buffer.h"
+#include "vulkan/pipeline.h"
 #include "ecs.h"
 #include "nve_types.h"
 #include "model-handler.h"
@@ -174,6 +175,8 @@ private:
 	StaticGeometryHandler m_staticGeometryHandler;
 	DynamicGeometryHandler m_dynamicGeometryHandler;
 	GizmosHandler m_gizmosHandler;
+
+	PipelineBatchCreator m_pipelineBatchCreator;
 
 	std::vector<GeometryHandler*> all_geometry_handlers();
 

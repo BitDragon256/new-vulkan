@@ -32,7 +32,7 @@ void PipelineLayout::destroy()
 {
 	vkDestroyPipelineLayout(m_device, m_layout, nullptr);
 }
-PipelineLayout::operator VkPipelineLayout()
+PipelineLayout::operator VkPipelineLayout() const
 {
 	return m_layout;
 }
@@ -42,7 +42,7 @@ PipelineLayout::operator VkPipelineLayout()
 // --------------------------------------
 
 Pipeline::Pipeline(PipelineType type) :
-      m_type{ type },
+	m_type{ type }, m_created{ false },
       m_pipeline{ VK_NULL_HANDLE }, m_layout{ VK_NULL_HANDLE }
 {
       
@@ -60,7 +60,11 @@ void Pipeline::destroy()
 		nullptr
 	);
 }
-Pipeline::operator VkPipeline()
+void Pipeline::set_created()
+{
+	m_created = true;
+}
+Pipeline::operator VkPipeline() const
 {
 	return m_pipeline;
 }
@@ -70,22 +74,28 @@ Pipeline::operator VkPipeline()
 // --------------------------------------
 
 GraphicsPipeline::GraphicsPipeline() :
-      Pipeline::Pipeline(GraphicsPipeline_E)
+	Pipeline::Pipeline(GraphicsPipeline_E), m_renderPass{}, m_createInfo{}, m_subpass{ 0 }, m_shader{}
 {
 
 }
-void GraphicsPipeline::initialize(RenderPassRef renderPass, uint32_t subpass)
+void GraphicsPipeline::initialize(VkDevice device, PipelineLayoutRef layout, RenderPassRef renderPass, uint32_t subpass, GraphicsShaderRef shader)
 {
+	Pipeline::initialize(device, layout);
+
 	m_renderPass = renderPass;
 	m_subpass = subpass;
+	m_shader = shader;
 }
 void GraphicsPipeline::create_create_info()
 {
+	if (m_created)
+		destroy();
+
 	set_default_create_info();
 	set_shader_stages();
 
 	m_createInfo.layout = m_layout->m_layout;
-	m_createInfo.renderPass = *m_renderPass.lock();
+	m_createInfo.renderPass = *m_renderPass;
 	m_createInfo.subpass = m_subpass;
 }
 void GraphicsPipeline::create()
@@ -97,6 +107,8 @@ void GraphicsPipeline::create()
             nullptr,
             &m_pipeline
       );
+
+	m_created = true;
 }
 
 void GraphicsPipeline::set_default_create_info()
@@ -230,14 +242,16 @@ void GraphicsPipeline::set_shader_stages()
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = m_shader->vertex.m_module;
+	vertShaderStageInfo.module = m_shader.lock()->vertex.m_module;
 	vertShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = m_shader->fragment.m_module;
+	fragShaderStageInfo.module = m_shader.lock()->fragment.m_module;
 	fragShaderStageInfo.pName = "main";
+
+	m_creationData.stages.clear();
 
 	m_creationData.stages.push_back(vertShaderStageInfo);
 	m_creationData.stages.push_back(fragShaderStageInfo);
@@ -268,7 +282,16 @@ void PipelineBatchCreator::create_all()
 	create_compute_pipelines();
 	create_raytracing_pipelines();
 
+	for (auto pipeline : m_pipelines) pipeline->set_created();
 	m_pipelines.clear();
+}
+void PipelineBatchCreator::destroy()
+{
+	vkDestroyPipelineCache(
+		m_device,
+		m_cache,
+		nullptr
+	);
 }
 
 // --------------------------------------
@@ -280,7 +303,7 @@ void PipelineBatchCreator::create_cache()
 	if (m_cacheCreated || m_pipelines.empty())
 		return;
 
-	m_device = m_pipelines.front().lock()->m_device;
+	m_device = m_pipelines.front()->m_device;
 
 	VkPipelineCacheCreateInfo cacheCI = {};
 	cacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -300,9 +323,9 @@ template<typename P> void get_specific_pipelines(const std::vector<PipelineRef>&
 {
 	for (auto pipeline : allPipelines)
 	{
-		if (pipeline->m_type = type)
+		if (pipeline->m_type == type)
 		{
-			auto specificPipeline = dynamic_cast<P*>(pipeline->get());
+			auto specificPipeline = dynamic_cast<P*>(pipeline.get());
 			pipelines.push_back(specificPipeline);
 		}
 	}
@@ -319,7 +342,7 @@ template<typename T> size_t sort_into_buckets(std::vector<std::vector<GraphicsPi
 		mappedPipelines.clear();
 		for (auto pipeline : partitionedPipelines[i])
 			mappedPipelines[accessor(pipeline)].push_back(pipeline);
-		for (auto [device, p] : deviceMappedPipelines)
+		for (auto [device, p] : mappedPipelines)
 			partitionedPipelines.push_back(p);
 	}
 	return endIndex;
@@ -331,7 +354,7 @@ template<typename T> size_t sort_into_buckets(std::vector<std::vector<GraphicsPi
 template<typename T, typename C>
 void create_specific_pipelines(
 	std::vector<PipelineRef>& m_pipelines, VkPipelineCache& m_cache,
-	std::function<void(VkDevice, VkPipelineCache, const std::vector<C>&, std::vector<VkPipeline>&)> createPipelines
+	std::function<void(VkPipelineCache, const std::vector<C>&, std::vector<VkPipeline>&)> createPipelines
 )
 {
 	std::vector<std::vector<T*>> partitionedPipelines = { std::vector<T*>() };
@@ -358,7 +381,6 @@ void create_specific_pipelines(
 		}
 
 		createPipelines(
-			m_device,
 			m_cache,
 			createInfos,
 			vulkanPipelines
@@ -373,14 +395,14 @@ void PipelineBatchCreator::create_graphics_pipelines()
 {
 	create_specific_pipelines<GraphicsPipeline, VkGraphicsPipelineCreateInfo>(
 		m_pipelines, m_cache,
-		[](
-			VkDevice device, VkPipelineCache cache,
+		[this](
+			VkPipelineCache cache,
 			const std::vector<VkGraphicsPipelineCreateInfo>& createInfos,
 			std::vector<VkPipeline>& pipelines
 			)
 		{
 			vkCreateGraphicsPipelines(
-				device,
+				m_device,
 				cache,
 				createInfos.size(),
 				createInfos.data(),

@@ -69,6 +69,8 @@ set(
       # Position Based Dynamics
       ${SOURCE_DIR}/pbd.cpp
       ${SOURCE_DIR}/pbd/fluid_constraints.cpp
+
+	${SOURCE_DIR}/reference.cpp
 )
 
 set(
@@ -104,6 +106,8 @@ set(
       # Position Based Dynamics
       ${INCLUDE_DIR}/pbd.h
       ${INCLUDE_DIR}/pbd/fluid_constraints.h
+
+	${INCLUDE_DIR}/reference.h
 )
 
 option(NVE_BUILD_EXAMPLES "build the example programs" OFF)

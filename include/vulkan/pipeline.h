@@ -6,6 +6,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "reference.h"
+
 #include "nve_types.h"
 #include "material.h"
 
@@ -16,7 +18,7 @@ public:
       void create(std::vector<VkDescriptorSetLayout> descriptorSetLayouts, std::vector<VkPushConstantRange> pushConstants, VkDevice device);
 	void destroy();
 
-	operator VkPipelineLayout();
+	operator VkPipelineLayout() const;
 
       VkPipelineLayout m_layout;
 
@@ -26,7 +28,7 @@ private:
 
 };
 
-typedef std::shared_ptr<PipelineLayout> PipelineLayoutRef;
+typedef Reference<PipelineLayout> PipelineLayoutRef;
 
 enum PipelineType { GraphicsPipeline_E = 0, RayTracingPipeline_E = 1, ComputePipeline_E = 2 };
 
@@ -35,10 +37,10 @@ class Pipeline
 public:
 
 	Pipeline(PipelineType type);
-	void initialize(VkDevice device, PipelineLayoutRef layout);
 	virtual void create_create_info() = 0;
 	virtual void create() = 0;
 	void destroy();
+	void set_created();
 
 	const PipelineType m_type;
 
@@ -47,11 +49,16 @@ public:
       VkPipeline m_pipeline;
       PipelineLayoutRef m_layout;
 
-	operator VkPipeline();
+	operator VkPipeline() const;
 
+protected:
+
+	void initialize(VkDevice device, PipelineLayoutRef layout);
+
+	bool m_created;
 };
 
-typedef std::weak_ptr<Pipeline> PipelineRef;
+typedef Reference<Pipeline> PipelineRef;
 
 typedef struct GraphicsPipelineCreationData_T
 {
@@ -86,7 +93,7 @@ public:
 	void create_create_info() override;
 	void create() override;
 
-	void initialize(RenderPassRef renderPass, uint32_t subpass);
+	void initialize(VkDevice device, PipelineLayoutRef layout, RenderPassRef renderPass, uint32_t subpass, GraphicsShaderRef shader);
 
 	VkGraphicsPipelineCreateInfo m_createInfo;
 
@@ -98,7 +105,7 @@ private:
 
 	uint32_t m_subpass;
 	RenderPassRef m_renderPass;
-	GraphicsShader m_shader;
+	GraphicsShaderRef m_shader;
 
 };
 
@@ -110,6 +117,7 @@ public:
 
 	void schedule_creation(PipelineRef pipeline);
 	void create_all();
+	void destroy();
 
 private:
 
