@@ -15,6 +15,7 @@
 #include "profiler.h"
 
 #include "vulkan/buffer.h"
+#include "vulkan/pipeline.h"
 #include "ecs.h"
 #include "material.h"
 #include "math-core.h"
@@ -71,8 +72,8 @@ struct MeshGroup // group with individual shaders
 	
 	bool reloadMeshBuffers;
 
-	VkPipeline pipeline;
-	std::vector<VkCommandBuffer> commandBuffers;
+	std::shared_ptr<GraphicsPipeline> pipeline;
+	std::vector<VkCommandBuffer> commandBuffers; // the different command buffers for the different frames
 	VkCommandPool commandPool;
 };
 
@@ -80,7 +81,7 @@ struct GeometryHandlerVulkanObjects
 {
 	VkDevice device;
 	VkCommandPool commandPool;
-	VkRenderPass* renderPass; // renderPass can change
+	RenderPassRef renderPass; // renderPass can change
 	uint32_t firstSubpass;
 
 	std::vector<VkFramebuffer> framebuffers;
@@ -95,36 +96,14 @@ struct GeometryHandlerVulkanObjects
 	CameraPushConstant* pCameraPushConstant;
 };
 
-struct PipelineCreationData
-{
-	VkPipelineShaderStageCreateInfo		stages[2];
-
-	VkPipelineVertexInputStateCreateInfo	vertexInputState;
-	std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> vertexAttributeDescriptions;
-	VkVertexInputBindingDescription		vertexBindingDescription;
-
-	VkPipelineInputAssemblyStateCreateInfo	inputAssemblyState;
-	VkPipelineTessellationStateCreateInfo	tessellationState;
-	VkPipelineViewportStateCreateInfo		viewportState;
-	VkPipelineRasterizationStateCreateInfo	rasterizationState;
-	VkPipelineMultisampleStateCreateInfo	multisampleState;
-	VkPipelineDepthStencilStateCreateInfo	depthStencilState;
-
-	VkPipelineColorBlendStateCreateInfo		colorBlendState;
-	VkPipelineColorBlendAttachmentState		colorBlendAttachment;
-
-	VkPipelineDynamicStateCreateInfo		dynamicState;
-	std::vector<VkDynamicState>			dynamicStates;
-};
-
 class GeometryHandler
 {
 public:
 	void record_command_buffers(uint32_t frame);
 	std::vector<VkCommandBuffer> get_command_buffers(uint32_t frame);
 
-	void create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
-	void set_pipelines(std::vector<VkPipeline>& pipelines);
+	void create_pipeline_create_infos();
+	void get_pipelines(std::vector<PipelineRef>& pipelines);
 
 	GeometryHandler();
 	virtual void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
@@ -147,8 +126,8 @@ protected:
 	void update();
 
 	GeometryHandlerVulkanObjects m_vulkanObjects;
-	VkPipelineLayout m_pipelineLayout;
 	VkDescriptorSet m_descriptorSet;
+	PipelineLayout m_pipelineLayout;
 
 	BufferConfig default_buffer_config();
 
@@ -166,12 +145,10 @@ private:
 
 	void create_group_command_buffers(MeshGroup& meshGroup);
 
-	VkGraphicsPipelineCreateInfo create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex);
 	void create_pipeline_layout();
-	void create_pipeline(size_t meshGroupIndex);
 
 	bool m_rendererPipelinesCreated;
-	std::vector<VkPipeline> m_pipelineDestructionQueue;
+	std::vector<PipelineRef> m_pipelineDestructionQueue;
 	void destroy_pipelines();
 
 	std::vector<MeshGroup> m_meshGroups;
@@ -179,8 +156,6 @@ private:
 	Buffer<MaterialSSBO> m_materialBuffer;
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
-
-	std::vector<PipelineCreationData> m_pipelineCreationData;
 
 	bool reloadMeshBuffers;
 
