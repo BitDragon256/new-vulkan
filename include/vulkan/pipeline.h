@@ -34,6 +34,7 @@ public:
 	void initialize(VkDevice device, PipelineLayoutRef layout);
 	virtual void create_create_info() = 0;
 	virtual void create() = 0;
+	void destroy();
 
 	const PipelineType m_type;
 
@@ -41,8 +42,6 @@ public:
 
       VkPipeline m_pipeline;
       PipelineLayoutRef m_layout;
-
-protected:
 
 };
 
