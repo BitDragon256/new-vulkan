@@ -465,9 +465,6 @@ NVE_RESULT Renderer::create_swapchain_image_views()
 }
 NVE_RESULT Renderer::create_render_pass()
 {
-      if (!m_firstFrame)
-            vkDestroyRenderPass(m_device, m_renderPass, nullptr);
-
       // color attachment
 
       VkAttachmentDescription colorAttachment = {};
@@ -556,6 +553,7 @@ void Renderer::recreate_render_pass()
 {
       if (m_lastGeometryHandlerSubpassCount < geometry_handler_subpass_count())
       {
+            vkDestroyRenderPass(m_device, m_renderPass, nullptr);
             create_render_pass();
             create_framebuffers();
             set_geometry_handler_subpasses();
