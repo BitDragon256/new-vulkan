@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 
-// physical m_device
+// physical device
 bool is_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface);
 uint32_t rate_device_suitability(VkPhysicalDevice device, VkSurfaceKHR surface);
 
