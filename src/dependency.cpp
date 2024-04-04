@@ -8,7 +8,7 @@ bool Dependency::try_update()
 {
       for (auto [type, deps] : m_dependencies)
             for (auto dep : deps)
-                  if (!dep->resolved())
+                  if (!dep.dependency->resolved())
                         return false;
 
       on_update();
@@ -16,7 +16,7 @@ bool Dependency::try_update()
 
       for (auto& [type, deps] : m_dependents)
             for (auto dep : deps)
-                  dep->try_update();
+                  dep.dependency->try_update();
 
       return true;
 }
@@ -28,36 +28,35 @@ void Dependency::resolve()
 {
       m_resolved = true;
 }
-void Dependency::add_dependency(DependencyRef dependency, typeName type)
+void Dependency::add_dependency(DependencyRef dependency)
 {
-      if (!m_dependencies.contains(type))
+      if (!m_dependencies.contains(dependency.type))
       {
-            push_to_map(m_dependencies, dependency, type);
-            dependency->add_dependent(DependencyRef(this), type);
+            push_to_map(m_dependencies, dependency);
+            dependency.dependency->add_dependent(make_dependency_ref(this));
       }
 }
-void Dependency::add_dependent(DependencyRef dependent, typeName type)
+void Dependency::add_dependent(DependencyRef dependent)
 {
-      if (!m_dependents.contains(type))
+      if (!m_dependents.contains(dependent.type))
       {
-            push_to_map(m_dependents, dependent, type);
-            dependent->add_dependency(DependencyRef(this), type);
+            push_to_map(m_dependents, dependent);
+            dependent.dependency->add_dependency(make_dependency_ref(this));
       }
 }
-void Dependency::add_dependencies(std::initializer_list<std::pair<std::initializer_list<DependencyRef>, typeName>> dependencies)
+void Dependency::add_dependencies(std::initializer_list<DependencyRef> dependencies)
 {
-      for (auto deps : dependencies)
-            for (auto dep : deps.first)
-                  add_dependency(dep, deps.second);
+      for (auto dep : dependencies)
+            add_dependency(dep);
 }
-void Dependency::push_to_map(std::unordered_map<typeName, std::vector<DependencyRef>>& map, DependencyRef dependency, typeName type)
+void Dependency::push_to_map(std::unordered_map<typeName, std::vector<DependencyRef>>& map, DependencyRef dependency)
 {
-      if (map.contains(type))
-            map[type].push_back(dependency);
+      if (map.contains(dependency.type))
+            map[dependency.type].push_back(dependency);
       else
       {
-            auto& dependencyList = map[type];
-            dependencyList = std::vector<DependencyRef>();
+            auto& dependencyList = map[dependency.type];
+            dependencyList.clear();
             dependencyList.push_back(dependency);
       }
 }
