@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <nve.h>
+#include <vulkan/vulkan_handles.h>
 
 int main(int argc, char** argv)
 {
@@ -24,6 +25,11 @@ int main(int argc, char** argv)
       }
       std::cout << "\n";
       renderer.clean_up();
+
+      vk::Device device;
+      vk::Semaphore semaphore;
+      semaphore.add_dependency(&device, TYPE(vk::Device));
+      semaphore.try_update();
 
       return 0;
 }

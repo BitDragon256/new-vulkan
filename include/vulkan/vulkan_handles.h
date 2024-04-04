@@ -8,28 +8,42 @@
 #include "dependency.h"
 #include "vulkan/vulkan_helpers.h"
 
+#define TYPE(T) typeid(T).name()
+
 namespace vk
 {
 
       class VulkanHandle : public Dependency
       {
       public:
+
             VulkanHandle();
+
+      protected:
+
             virtual void create() = 0;
             virtual void destroy() = 0;
 
             void on_update() override;
+            void initialize();
 
       private:
             bool m_created;
+            bool m_initialized;
       };
+
+      // forward declarations
+      class Surface;
 
       class Instance : public VulkanHandle
       {
       public:
-            void initialize(std::string applicationName, uint32_t applicationVersion, std::string engineName, bool enableValidationLayers = true);
-            void create() override;
-            void destroy() override;
+            void initialize(
+                  std::string applicationName,
+                  uint32_t applicationVersion,
+                  std::string engineName,
+                  bool enableValidationLayers = true
+            );
             operator VkInstance();
 
             std::string m_applicationName, m_engineName;
@@ -38,6 +52,10 @@ namespace vk
 
             std::vector<const char*> m_instanceLayers;
 
+      protected:
+            void create() override;
+            void destroy() override;
+
       private:
 
             VkInstance m_instance;
@@ -45,9 +63,11 @@ namespace vk
       class PhysicalDevice : public VulkanHandle
       {
       public:
+            void initialize(REF(Instance) instance, REF(Surface) surface);
+            operator VkPhysicalDevice();
+      protected:
             void create() override;
             void destroy() override;
-            operator VkPhysicalDevice();
 
       private:
 
@@ -56,9 +76,10 @@ namespace vk
       class Device : public VulkanHandle
       {
       public:
+            operator VkDevice();
+      protected:
             void create() override;
             void destroy() override;
-            operator VkDevice();
 
             QueueFamilyIndices m_queueFamilyIndices;
             
@@ -167,9 +188,14 @@ namespace vk
             void destroy() override;
             operator VkCommandPool();
 
+            struct CommandPoolCreateInfo : public Dependency
+            {
+                  uint32_t queueFamilyIndex;
+            };
+
       private:
 
-            VkCommandPool m_cmdPool;
+            VkCommandPool m_commandPool;
       };
       class CommandBuffer : public VulkanHandle
       {
@@ -180,7 +206,7 @@ namespace vk
 
       private:
 
-            VkCommandBuffer m_cmdBuffer;
+            VkCommandBuffer m_commandBuffer;
       };
       class Semaphore : public VulkanHandle
       {

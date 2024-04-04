@@ -14,6 +14,11 @@ inline void vk_check_error(VkResult result, const char* file, int line)
             fprintf(stderr, "vulkan error in file %s, line %d: %s\n", file, line, string_VkResult(result));
 }
 
+inline void print_not_initialized_error()
+{
+      printf("ERROR: Vulkan Handle is not initialized");
+}
+
 namespace vk
 {
 
@@ -22,14 +27,21 @@ namespace vk
       // --------------------------------
 
       VulkanHandle::VulkanHandle() :
-            m_created{ false }
+            m_created{ false }, m_initialized{ false }
       {}
       void VulkanHandle::on_update()
       {
+            if (!m_initialized)
+                  print_not_initialized_error();
+
             if (m_created)
                   destroy();
             create();
             m_created = true;
+      }
+      void VulkanHandle::initialize()
+      {
+            m_initialized = true;
       }
 
       // --------------------------------
@@ -42,6 +54,8 @@ namespace vk
             m_applicationVersion = applicationVersion;
             m_engineName = engineName;
             m_enableValidationLayers = enableValidationLayers;
+
+            VulkanHandle::initialize();
       }
       void Instance::create()
       {
@@ -83,17 +97,27 @@ namespace vk
             instanceCI.ppEnabledExtensionNames = extensions.data();
             instanceCI.flags = 0;
 
-            VK_CHECK_ERROR(vkCreateInstance(&instanceCI, nullptr, &m_instance));
+            auto res = vkCreateInstance(&instanceCI, nullptr, &m_instance);
+            VK_CHECK_ERROR(res)
       }
       void Instance::destroy()
       {
             vkDestroyInstance(m_instance, nullptr);
+      }
+      Instance::operator VkInstance()
+      {
+            return m_instance;
       }
 
       // --------------------------------
       // PHYSICAL DEVICE
       // --------------------------------
 
+      void PhysicalDevice::initialize(REF(Instance) instance, REF(Surface) surface)
+      {
+            add_dependency(instance);
+            add_dependency(surface);
+      }
       void PhysicalDevice::create()
       {
             auto instance = get_dependency<Instance>();
@@ -132,6 +156,14 @@ namespace vk
             logger::log_cond_err(m_physicalDevice != VK_NULL_HANDLE, "no acceptable physical device found");
 
 #endif
+      }
+      void PhysicalDevice::destroy()
+      {
+
+      }
+      PhysicalDevice::operator VkPhysicalDevice()
+      {
+            return m_physicalDevice;
       }
 
       // --------------------------------
@@ -207,7 +239,8 @@ namespace vk
             auto instance = get_dependency<Instance>();
             auto window = get_dependency<Window>();
             
-            VK_CHECK_ERROR(glfwCreateWindowSurface(*instance, *window, nullptr, &m_surface));
+            auto res = glfwCreateWindowSurface(*instance, *window, nullptr, &m_surface);
+            VK_CHECK_ERROR(res)
       }
       void Surface::destroy()
       {
@@ -344,11 +377,13 @@ namespace vk
       void Image::create_image(const VkImageCreateInfo& imageCI)
       {
             m_extent = imageCI.extent;
-            vkCreateImage(*m_device, &imageCI, nullptr, &m_image);
+            auto res = vkCreateImage(*m_device, &imageCI, nullptr, &m_image);
+            VK_CHECK_ERROR(res)
       }
       void Image::create_image_view(const VkImageViewCreateInfo& imageViewCI)
       {
-            vkCreateImageView(*m_device, &imageViewCI, nullptr, &m_imageView);
+            auto res = vkCreateImageView(*m_device, &imageViewCI, nullptr, &m_imageView);
+            VK_CHECK_ERROR(res)
       }
 
       // --------------------------------
@@ -438,7 +473,8 @@ namespace vk
             renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
             renderPassInfo.pDependencies = dependencies.data();
 
-            VK_CHECK_ERROR(vkCreateRenderPass(*device, &renderPassInfo, nullptr, &m_renderPass));
+            auto res = vkCreateRenderPass(*device, &renderPassInfo, nullptr, &m_renderPass);
+            VK_CHECK_ERROR(res)
       }
       void RenderPass::destroy()
       {
@@ -470,6 +506,7 @@ namespace vk
             framebufferCI.layers = 1;
 
             auto res = vkCreateFramebuffer(*device, &framebufferCI, nullptr, &m_framebuffer);
+            VK_CHECK_ERROR(res)
       }
       void Framebuffer::destroy()
       {
@@ -481,17 +518,87 @@ namespace vk
       // COMMAND POOL
       // --------------------------------
 
+      void CommandPool::create()
+      {
+            auto device = get_dependency<Device>();
+            auto createInfos = get_dependency<CommandPoolCreateInfo>();
+
+            VkCommandPoolCreateInfo createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            createInfo.flags = 0;
+            createInfo.pNext = nullptr;
+            createInfo.queueFamilyIndex = createInfos->queueFamilyIndex;
+
+            auto res = vkCreateCommandPool(*device, &createInfo, nullptr, &m_commandPool);
+            VK_CHECK_ERROR(res)
+      }
+      void CommandPool::destroy()
+      {
+            auto device = get_dependency<Device>();
+            vkDestroyCommandPool(*device, m_commandPool, nullptr);
+      }
+
       // --------------------------------
       // COMMAND BUFFER
       // --------------------------------
+
+      void CommandBuffer::create()
+      {
+            auto device = get_dependency<Device>();
+            auto commandPool = get_dependency<CommandPool>();
+
+            VkCommandBufferAllocateInfo allocInfo = {};
+            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.pNext = nullptr;
+            allocInfo.commandPool = *commandPool;
+
+            auto res = vkAllocateCommandBuffers(*device, &allocInfo, nullptr);
+            VK_CHECK_ERROR(res)
+      }
 
       // --------------------------------
       // SEMAPHORE
       // --------------------------------
 
+      void Semaphore::create()
+      {
+            auto device = get_dependency<Device>();
+
+            VkSemaphoreCreateInfo createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            createInfo.pNext = nullptr;
+            createInfo.flags = 0;
+
+            auto res = vkCreateSemaphore(*device, &createInfo, nullptr, &m_semaphore);
+            VK_CHECK_ERROR(res)
+      }
+      void Semaphore::destroy()
+      {
+            auto device = get_dependency<Device>();
+            vkDestroySemaphore(*device, m_semaphore, nullptr);
+      }
+
       // --------------------------------
       // FENCE
       // --------------------------------
+
+      void Fence::create()
+      {
+            auto device = get_dependency<Device>();
+
+            VkFenceCreateInfo createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            createInfo.pNext = nullptr;
+            createInfo.flags = 0;
+
+            auto res = vkCreateFence(*device, &createInfo, nullptr, &m_fence);
+            VK_CHECK_ERROR(res)
+      }
+      void Fence::destroy()
+      {
+            auto device = get_dependency<Device>();
+            vkDestroyFence(*device, m_fence, nullptr);
+      }
 
       // --------------------------------
       // DEBUG UTILS MESSENGER
@@ -500,5 +607,43 @@ namespace vk
       // --------------------------------
       // DESCRIPTOR POOL
       // --------------------------------
+
+      void DescriptorPool::create()
+      {
+            auto device = get_dependency<Device>();
+
+            // 11
+            VkDescriptorPoolSize poolSizes[] =
+            {
+                { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+                { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+                { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+            };
+            const uint32_t poolSizeCount = 11;
+
+            VkDescriptorPoolCreateInfo createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            createInfo.pNext = nullptr;
+            createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+            createInfo.maxSets = 1000 * poolSizeCount;
+            createInfo.poolSizeCount = poolSizeCount;
+            createInfo.pPoolSizes = poolSizes;
+
+            auto res = vkCreateDescriptorPool(*device, &createInfo, nullptr, &m_descriptorPool);
+            VK_CHECK_ERROR(res)
+      }
+      void DescriptorPool::destroy()
+      {
+            auto device = get_dependency<Device>();
+            vkDestroyDescriptorPool(*device, m_descriptorPool, nullptr);
+      }
 
 }; // namespace vk
