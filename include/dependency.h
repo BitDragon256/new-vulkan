@@ -22,11 +22,11 @@ inline typeName type_to_name()
 }
 
 template<typename T>
-inline DependencyRef make_dependency_ref(T* object)
+inline DependencyRef make_dependency_ref(Reference<T> object)
 {
       DependencyRef ref = {};
       ref.type = type_to_name<T>();
-      ref.dependency = Reference(object);
+      ref.dependency = Reference<Dependency>(object.get());
       return ref;
 }
 
@@ -37,9 +37,18 @@ public:
       Dependency();
       bool try_update();
       bool resolved() const;
-      void add_dependency(DependencyRef dependency);
-      void add_dependent(DependencyRef dependent);
-      void add_dependencies(std::initializer_list<DependencyRef> dependencies);
+
+      template<typename T>
+      void add_dependency(REF(T) dependency) { add_dependency_ref(make_dependency_ref(dependency)); }
+      template<typename T>
+      void add_dependent(REF(T) dependent) { add_dependent_ref(make_dependency_ref(dependent)); }
+      template<typename T>
+      void add_dependencies(std::initializer_list<REF(T)> dependencies)
+      {
+            std::vector<DependencyRef> deps;
+            for (auto dep : dependencies)
+                  add_dependency_ref(make_dependency_ref(dep));
+      }
 
 protected:
 
@@ -65,5 +74,8 @@ private:
       bool m_resolved;
 
       void push_to_map(std::unordered_map<typeName, std::vector<DependencyRef>>& map, DependencyRef dependency);
+
+      void add_dependency_ref(DependencyRef dependency);
+      void add_dependent_ref(DependencyRef dependent);
 
 };

@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#define REF(T) Reference<T>
+
 // basically just a pointer wrapper
 template<typename T>
 class Reference

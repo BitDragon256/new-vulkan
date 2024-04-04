@@ -28,26 +28,21 @@ void Dependency::resolve()
 {
       m_resolved = true;
 }
-void Dependency::add_dependency(DependencyRef dependency)
+void Dependency::add_dependency_ref(DependencyRef dependency)
 {
       if (!m_dependencies.contains(dependency.type))
       {
             push_to_map(m_dependencies, dependency);
-            dependency.dependency->add_dependent(make_dependency_ref(this));
+            dependency.dependency->add_dependent(Reference(this));
       }
 }
-void Dependency::add_dependent(DependencyRef dependent)
+void Dependency::add_dependent_ref(DependencyRef dependent)
 {
       if (!m_dependents.contains(dependent.type))
       {
             push_to_map(m_dependents, dependent);
-            dependent.dependency->add_dependency(make_dependency_ref(this));
+            dependent.dependency->add_dependency(Reference(this));
       }
-}
-void Dependency::add_dependencies(std::initializer_list<DependencyRef> dependencies)
-{
-      for (auto dep : dependencies)
-            add_dependency(dep);
 }
 void Dependency::push_to_map(std::unordered_map<typeName, std::vector<DependencyRef>>& map, DependencyRef dependency)
 {
