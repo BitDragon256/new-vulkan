@@ -76,6 +76,7 @@ namespace vk
       class Device : public VulkanHandle
       {
       public:
+            void initialize(REF(PhysicalDevice) physicalDevice, REF(Surface) surface);
             operator VkDevice();
       protected:
             void create() override;
@@ -95,21 +96,28 @@ namespace vk
       class Window : public VulkanHandle
       {
       public:
-            void create() override;
-            void destroy() override;
+            void initialize(int width, int height, std::string title);
             operator GLFWwindow* ();
 
+      protected:
+            void create() override;
+            void destroy() override;
       private:
 
             GLFWwindow* m_window;
+
+            int m_height, m_width;
+            std::string m_title;
       };
       class Surface : public VulkanHandle
       {
       public:
-            void create() override;
-            void destroy() override;
+            void initialize(REF(Instance) instance, REF(Window) window);
             operator VkSurfaceKHR();
 
+      protected:
+            void create() override;
+            void destroy() override;
       private:
 
             VkSurfaceKHR m_surface;

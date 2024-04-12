@@ -117,6 +117,8 @@ namespace vk
       {
             add_dependency(instance);
             add_dependency(surface);
+
+            VulkanHandle::initialize();
       }
       void PhysicalDevice::create()
       {
@@ -170,6 +172,13 @@ namespace vk
       // DEVICE
       // --------------------------------
 
+      void Device::initialize(REF(PhysicalDevice) physicalDevice, REF(Surface) surface)
+      {
+            add_dependency(physicalDevice);
+            add_dependency(surface);
+
+            VulkanHandle::initialize();
+      }
       void Device::create()
       {
             auto physicalDevice = get_dependency<PhysicalDevice>();
@@ -229,11 +238,49 @@ namespace vk
       {
             vkDestroyDevice(m_device, nullptr);
       }
+      Device::operator VkDevice()
+      {
+            return m_device;
+      }
+
+      // --------------------------------
+      // WINDOW
+      // --------------------------------
+
+      void Window::initialize(int width, int height, std::string title)
+      {
+            m_width = width;
+            m_height = height;
+            m_title = title;
+
+            VulkanHandle::initialize();
+      }
+      void Window::create()
+      {
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+            m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), NULL, NULL);
+      }
+      void Window::destroy()
+      {
+            glfwDestroyWindow(m_window);
+      }
+      Window::operator GLFWwindow* ()
+      {
+            return m_window;
+      }
 
       // --------------------------------
       // SURFACE
       // --------------------------------
 
+      void Surface::initialize(REF(Instance) instance, REF(Window) window)
+      {
+            add_dependency(instance);
+            add_dependency(window);
+
+            VulkanHandle::initialize();
+      }
       void Surface::create()
       {
             auto instance = get_dependency<Instance>();
@@ -247,6 +294,10 @@ namespace vk
             auto instance = get_dependency<Instance>();
 
             vkDestroySurfaceKHR(*instance, m_surface, nullptr);
+      }
+      Surface::operator VkSurfaceKHR()
+      {
+            return m_surface;
       }
 
       // --------------------------------
