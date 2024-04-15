@@ -122,14 +122,18 @@ namespace vk
 
             VkSurfaceKHR m_surface;
       };
+      /// <summary>
+      /// A wrapper class for VkImage and VkImageView.
+      /// On a call of create(), Image creates both vulkan handles with the specified specs.
+      /// </summary>
       class Image : public VulkanHandle
       {
       public:
+            void initialize(REF(Device) device);
+            void initialize(REF(Device) device, VkImage image, const VkImageViewCreateInfo& imageViewCI);
+            void initialize(REF(Device) device, const VkImageCreateInfo& imageCI, const VkImageViewCreateInfo& imageViewCI);
             void create() override;
             void destroy() override;
-            void create(Reference<Device> device, VkImage image, const VkImageViewCreateInfo& imageViewCI);
-            void create(Reference<Device> device, const VkImageCreateInfo& imageCI, const VkImageViewCreateInfo& imageViewCI);
-            void destroy();
             operator VkImage();
 
             VkImageView m_imageView;
@@ -141,10 +145,17 @@ namespace vk
                   VkImageCreateInfo image;
             };
 
+            static VkImageCreateInfo default_image_create_info();
+            static VkImageViewCreateInfo default_image_view_create_info();
+
       private:
 
             void create_image(const VkImageCreateInfo& imageCI);
             void create_image_view(const VkImageViewCreateInfo& imageViewCI);
+
+            VkImageCreateInfo m_imageCI;
+            VkImageViewCreateInfo m_imageViewCI;
+            bool m_onlyCreateImageView;
 
             VkImage m_image;
             Reference<Device> m_device;

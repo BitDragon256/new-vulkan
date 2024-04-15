@@ -396,29 +396,33 @@ namespace vk
       // IMAGE
       // --------------------------------
 
+      void Image::initialize(REF(Device) device)
+      {
+            add_dependency(device);
+            m_onlyCreateImageView = false;
+
+            VulkanHandle::initialize();
+      }
+      void Image::initialize(REF(Device) device, VkImage image, const VkImageViewCreateInfo& imageViewCI)
+      {
+            initialize(device);
+
+            m_imageViewCI = imageViewCI;
+            m_image = image;
+            m_onlyCreateImageView = true;
+      }
+      void Image::initialize(REF(Device) device, const VkImageCreateInfo& imageCI, const VkImageViewCreateInfo& imageViewCI)
+      {
+            initialize(device);
+
+            m_imageCI = imageCI;
+            m_imageViewCI = imageViewCI;
+      }
       void Image::create()
       {
-            auto createInfo = get_dependency<ImageCreateInfo>();
             auto device = get_dependency<Image>();
-            create_image_view(createInfo->imageView);
-            create_image(createInfo->image);
-      }
-      void Image::destroy()
-      {
-
-      }
-      void Image::create(Reference<Device> device, VkImage image, const VkImageViewCreateInfo& imageViewCI)
-      {
-            m_device = device;
-            m_image = image;
-            create_image_view(imageViewCI);
-      }
-      void Image::create(Reference<Device> device, const VkImageCreateInfo& imageCI, const VkImageViewCreateInfo& imageViewCI)
-      {
-            m_device = device;
-
-            create_image(imageCI);
-            create_image_view(imageViewCI);
+            create_image_view();
+            create_image();
       }
       void Image::destroy()
       {
@@ -427,7 +431,6 @@ namespace vk
       }
       void Image::create_image(const VkImageCreateInfo& imageCI)
       {
-            m_extent = imageCI.extent;
             auto res = vkCreateImage(*m_device, &imageCI, nullptr, &m_image);
             VK_CHECK_ERROR(res)
       }
@@ -435,6 +438,10 @@ namespace vk
       {
             auto res = vkCreateImageView(*m_device, &imageViewCI, nullptr, &m_imageView);
             VK_CHECK_ERROR(res)
+      }
+      Image::operator VkImage()
+      {
+            return m_image;
       }
 
       // --------------------------------
