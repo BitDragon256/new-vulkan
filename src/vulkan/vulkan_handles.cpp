@@ -304,12 +304,12 @@ namespace vk
       // SWAPCHAIN
       // --------------------------------
 
-      VkImageViewCreateInfo Swapchain::swapchain_image_view_create_info(uint32_t index)
+      VkImageViewCreateInfo Swapchain::swapchain_image_view_create_info(VkImage image)
       {
             VkImageViewCreateInfo imageViewCI = {};
 
             imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            imageViewCI.image = m_images[index];
+            imageViewCI.image = image;
             imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
             imageViewCI.format = m_imageFormat;
             imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -325,11 +325,23 @@ namespace vk
             return imageViewCI;
       }
 
+      void Swapchain::initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily)
+      {
+            add_dependency(device);
+            add_dependency(physicalDevice);
+            add_dependency(window);
+            add_dependency(surface);
+
+            m_graphicsQueueFamily = graphicsQueueFamily;
+            m_presentationQueueFamily = presentationQueueFamily;
+
+            VulkanHandle::initialize();
+      }
       void Swapchain::create()
       {
-            auto physicalDevice = get_dependency<PhysicalDevice>();
             auto surface = get_dependency<Surface>();
             auto window = get_dependency<Window>();
+            auto physicalDevice = get_dependency<PhysicalDevice>();
             auto device = get_dependency<Device>();
 
             SwapChainSupportDetails swapChainSupport = query_swap_chain_support(*physicalDevice, *surface);
@@ -352,9 +364,9 @@ namespace vk
             swapchainCI.imageArrayLayers = 1;
             swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-            uint32_t queueFamilyIndices[] = { device->m_queueFamilyIndices.graphicsFamily.value(), device->m_queueFamilyIndices.presentationFamily.value() };
+            uint32_t queueFamilyIndices[] = { m_graphicsQueueFamily, m_presentationQueueFamily };
 
-            if (device->m_queueFamilyIndices.graphicsFamily != device->m_queueFamilyIndices.presentationFamily) {
+            if (m_graphicsQueueFamily != m_presentationQueueFamily) {
                   swapchainCI.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
                   swapchainCI.queueFamilyIndexCount = 2;
                   swapchainCI.pQueueFamilyIndices = queueFamilyIndices;
@@ -382,7 +394,10 @@ namespace vk
 
             m_images.resize(imageCount);
             for (size_t i = 0; i < images.size(); i++)
-                  m_images[i].create(device, images[i], swapchain_image_view_create_info(i));
+            {
+                  m_images[i].initialize(device, images[i], swapchain_image_view_create_info(images[i]));
+                  m_images[i].create();
+            }
       }
       void Swapchain::destroy()
       {
@@ -390,6 +405,11 @@ namespace vk
             for (auto& image : m_images)
                   image.destroy();
             vkDestroySwapchainKHR(*device, m_swapchain, nullptr);
+      }
+
+      Swapchain::operator VkSwapchainKHR()
+      {
+            return m_swapchain;
       }
 
       // --------------------------------
@@ -400,6 +420,9 @@ namespace vk
       {
             add_dependency(device);
             m_onlyCreateImageView = false;
+
+            m_imageCI = default_image_create_info();
+            m_imageViewCI = default_image_view_create_info();
 
             VulkanHandle::initialize();
       }
@@ -420,39 +443,137 @@ namespace vk
       }
       void Image::create()
       {
-            auto device = get_dependency<Image>();
+            m_device = get_dependency<Device>();
+
+            if (!m_onlyCreateImageView)
+                  create_image();
             create_image_view();
-            create_image();
       }
       void Image::destroy()
       {
             vkDestroyImageView(*m_device, m_imageView, nullptr);
             vkDestroyImage(*m_device, m_image, nullptr);
       }
-      void Image::create_image(const VkImageCreateInfo& imageCI)
+      void Image::create_image()
       {
-            auto res = vkCreateImage(*m_device, &imageCI, nullptr, &m_image);
+            auto res = vkCreateImage(*m_device, &m_imageCI, nullptr, &m_image);
             VK_CHECK_ERROR(res)
       }
-      void Image::create_image_view(const VkImageViewCreateInfo& imageViewCI)
+      void Image::create_image_view()
       {
-            auto res = vkCreateImageView(*m_device, &imageViewCI, nullptr, &m_imageView);
+            auto res = vkCreateImageView(*m_device, &m_imageViewCI, nullptr, &m_imageView);
             VK_CHECK_ERROR(res)
       }
       Image::operator VkImage()
       {
+            if (m_recreateImage)
+                  create_image();
+            if (m_recreateView || m_recreateImage)
+                  create_image_view();
             return m_image;
+      }
+      VkImageCreateInfo& Image::image_create_info()
+      {
+            m_recreateImage = true;
+            return m_imageCI;
+      }
+      VkImageViewCreateInfo& Image::image_view_create_info()
+      {
+            m_recreateView = true;
+            return m_imageViewCI;
+      }
+
+      VkImageCreateInfo Image::default_image_create_info()
+      {
+            VkImageCreateInfo createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            createInfo.pNext = nullptr;
+
+            createInfo.arrayLayers;
+            createInfo.extent;
+            createInfo.flags;
+            createInfo.format;
+            createInfo.imageType;
+            createInfo.initialLayout;
+            createInfo.mipLevels;
+            createInfo.pQueueFamilyIndices;
+            createInfo.queueFamilyIndexCount;
+            createInfo.samples;
+            createInfo.sharingMode;
+            createInfo.tiling;
+            createInfo.usage;
+
+            return createInfo;
+      }
+      VkImageViewCreateInfo Image::default_image_view_create_info()
+      {
+            VkImageViewCreateInfo imageViewCI = {};
+            imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            imageViewCI.pNext = nullptr;
+
+            imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            imageViewCI.format = m_format;
+            imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imageViewCI.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            imageViewCI.subresourceRange.baseMipLevel = 0;
+            imageViewCI.subresourceRange.levelCount = 1;
+            imageViewCI.subresourceRange.baseArrayLayer = 0;
+            imageViewCI.subresourceRange.layerCount = 1;
+
+            return imageViewCI;
+      }
+
+      // --------------------------------
+      // SUBPASS COUNT HANDLER
+      // --------------------------------
+
+      void SubpassCountHandler::initialize()
+      {
+
+      }
+      void SubpassCountHandler::on_update()
+      {
+
+      }
+      void SubpassCountHandler::add_subpass_count_callback(CallbackFunction callback)
+      {
+            m_callbacks.push_back(callback);
+      }
+      uint32_t SubpassCountHandler::subpass_count() const
+      {
+            uint32_t subpassCount;
+            for (auto callback : m_callbacks)
+                  subpassCount += callback();
+            return subpassCount;
       }
 
       // --------------------------------
       // RENDER PASS
       // --------------------------------
 
+      void RenderPass::initialize(
+            REF(Device) device,
+            REF(PhysicalDevice) physicalDevice,
+            REF(Swapchain) swapchain,
+            REF(SubpassCountHandler) subpassCountHandler
+      )
+      {
+            add_dependency(device);
+            add_dependency(physicalDevice);
+            add_dependency(swapchain);
+            add_dependency(subpassCountHandler);
+
+            VulkanHandle::initialize();
+      }
       void RenderPass::create()
       {
             auto device = get_dependency<Device>();
             auto physicalDevice = get_dependency<PhysicalDevice>();
             auto swapchain = get_dependency<Swapchain>();
+            auto subpassCountHandler = get_dependency<SubpassCountHandler>();
 
             // color attachment
 
@@ -487,8 +608,7 @@ namespace vk
             depthAttachmentRef.attachment = 1;
             depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-            uint32_t subpassCount = geometry_handler_subpass_count();
-            m_lastGeometryHandlerSubpassCount = subpassCount;
+            uint32_t subpassCount = subpassCountHandler->subpass_count();
             std::vector<VkSubpassDescription> subpasses(subpassCount);
 
             for (VkSubpassDescription& subpass : subpasses)
@@ -538,6 +658,10 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyRenderPass(*device, m_renderPass, nullptr);
+      }
+      RenderPass::operator VkRenderPass()
+      {
+            return m_renderPass;
       }
 
       // --------------------------------

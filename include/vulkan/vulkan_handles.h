@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 
 #include <vulkan/vulkan.h>
@@ -136,33 +137,43 @@ namespace vk
             void destroy() override;
             operator VkImage();
 
-            VkImageView m_imageView;
-            VkExtent3D m_extent;
-
             struct ImageCreateInfo : public Dependency
             {
                   VkImageViewCreateInfo imageView;
                   VkImageCreateInfo image;
             };
 
-            static VkImageCreateInfo default_image_create_info();
-            static VkImageViewCreateInfo default_image_view_create_info();
+            VkImageCreateInfo& image_create_info();
+            VkImageViewCreateInfo& image_view_create_info();
+
+            VkImageCreateInfo default_image_create_info();
+            VkImageViewCreateInfo default_image_view_create_info();
 
       private:
 
-            void create_image(const VkImageCreateInfo& imageCI);
-            void create_image_view(const VkImageViewCreateInfo& imageViewCI);
+            void create_image();
+            void create_image_view();
 
             VkImageCreateInfo m_imageCI;
             VkImageViewCreateInfo m_imageViewCI;
             bool m_onlyCreateImageView;
 
+            VkExtent3D m_extent;
+
             VkImage m_image;
+            VkImageView m_imageView;
+
+            bool m_recreateImage;
+            bool m_recreateView;
+
             Reference<Device> m_device;
+
+            VkFormat m_format;
       };
       class Swapchain : public VulkanHandle
       {
       public:
+            void initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily);
             void create() override;
             void destroy() override;
             operator VkSwapchainKHR();
@@ -174,13 +185,36 @@ namespace vk
 
       private:
 
-            VkImageViewCreateInfo swapchain_image_view_create_info(uint32_t index);
+            VkImageViewCreateInfo swapchain_image_view_create_info(VkImage image);
 
             VkSwapchainKHR m_swapchain;
+            uint32_t m_graphicsQueueFamily;
+            uint32_t m_presentationQueueFamily;
       };
+
+      class SubpassCountHandler : public Dependency
+      {
+            using CallbackFunction = std::function<uint32_t(void)>;
+      public:
+            void initialize();
+            void on_update() override;
+
+            uint32_t subpass_count() const;
+            void add_subpass_count_callback(CallbackFunction callback);
+
+      private:
+            std::vector<CallbackFunction> m_callbacks;
+      };
+
       class RenderPass : public VulkanHandle
       {
       public:
+            void initialize(
+                  REF(Device) device,
+                  REF(PhysicalDevice) physicalDevice,
+                  REF(Swapchain) swapchain,
+                  REF(SubpassCountHandler) subpassCountHandler
+            );
             void create() override;
             void destroy() override;
             operator VkRenderPass();
