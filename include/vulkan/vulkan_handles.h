@@ -136,6 +136,8 @@ namespace vk
             void create() override;
             void destroy() override;
             operator VkImage();
+            constexpr VkImageView image_view();
+            constexpr VkExtent3D extent();
 
             struct ImageCreateInfo : public Dependency
             {
@@ -196,7 +198,6 @@ namespace vk
       {
             using CallbackFunction = std::function<uint32_t(void)>;
       public:
-            void initialize();
             void on_update() override;
 
             uint32_t subpass_count() const;
@@ -226,6 +227,11 @@ namespace vk
       class Framebuffer : public VulkanHandle
       {
       public:
+            void initialize(
+                  REF(Device) device,
+                  REF(RenderPass) renderPass,
+                  REF(Image) image
+            );
             void create() override;
             void destroy() override;
             operator VkFramebuffer();
@@ -237,18 +243,18 @@ namespace vk
       class CommandPool : public VulkanHandle
       {
       public:
+            void initialize(
+                  REF(Device) device,
+                  uint32_t transferQueueFamily
+            );
             void create() override;
             void destroy() override;
             operator VkCommandPool();
 
-            struct CommandPoolCreateInfo : public Dependency
-            {
-                  uint32_t queueFamilyIndex;
-            };
-
       private:
 
             VkCommandPool m_commandPool;
+            uint32_t m_transferQueueFamily;
       };
       class CommandBuffer : public VulkanHandle
       {

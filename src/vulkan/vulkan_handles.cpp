@@ -472,6 +472,16 @@ namespace vk
                   create_image_view();
             return m_image;
       }
+      VkImageView Image::image_view()
+      {
+            return m_imageView;
+      }
+
+      VkExtent3D Image::extent()
+      {
+            return m_extent;
+      }
+
       VkImageCreateInfo& Image::image_create_info()
       {
             m_recreateImage = true;
@@ -530,10 +540,6 @@ namespace vk
       // SUBPASS COUNT HANDLER
       // --------------------------------
 
-      void SubpassCountHandler::initialize()
-      {
-
-      }
       void SubpassCountHandler::on_update()
       {
 
@@ -668,6 +674,14 @@ namespace vk
       // FRAMEBUFFER
       // --------------------------------
 
+      void Framebuffer::initialize(REF(Device) device, REF(RenderPass) renderPass, REF(Image) image)
+      {
+            add_dependency(device);
+            add_dependency(renderPass);
+            add_dependency(image);
+
+            VulkanHandle::initialize();
+      }
       void Framebuffer::create()
       {
             auto renderPass = get_dependency<RenderPass>();
@@ -676,15 +690,15 @@ namespace vk
 
             std::vector<VkImageView> attachments(images.size());
             for (size_t i = 0; i < images.size(); i++)
-                  attachments[i] = images[i]->m_imageView;
+                  attachments[i] = images[i]->image_view();
 
             VkFramebufferCreateInfo framebufferCI;
             framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             framebufferCI.renderPass = *renderPass;
             framebufferCI.attachmentCount = static_cast<uint32_t>(attachments.size());
             framebufferCI.pAttachments = attachments.data();
-            framebufferCI.width = images[0]->m_extent.width;
-            framebufferCI.height = images[0]->m_extent.height;
+            framebufferCI.width = images[0]->extent().width;
+            framebufferCI.height = images[0]->extent().height;
             framebufferCI.layers = 1;
 
             auto res = vkCreateFramebuffer(*device, &framebufferCI, nullptr, &m_framebuffer);
@@ -695,21 +709,32 @@ namespace vk
             auto device = get_dependency<Device>();
             vkDestroyFramebuffer(*device, m_framebuffer, nullptr);
       }
+      Framebuffer::operator VkFramebuffer()
+      {
+            return m_framebuffer;
+      }
 
       // --------------------------------
       // COMMAND POOL
       // --------------------------------
 
+      void CommandPool::initialize(REF(Device) device, uint32_t transferQueueFamily)
+      {
+            add_dependency(device);
+
+            m_transferQueueFamily = transferQueueFamily;
+
+            VulkanHandle::initialize();
+      }
       void CommandPool::create()
       {
             auto device = get_dependency<Device>();
-            auto createInfos = get_dependency<CommandPoolCreateInfo>();
 
             VkCommandPoolCreateInfo createInfo = {};
             createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
             createInfo.flags = 0;
             createInfo.pNext = nullptr;
-            createInfo.queueFamilyIndex = createInfos->queueFamilyIndex;
+            createInfo.queueFamilyIndex = m_transferQueueFamily;
 
             auto res = vkCreateCommandPool(*device, &createInfo, nullptr, &m_commandPool);
             VK_CHECK_ERROR(res)
@@ -718,6 +743,10 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyCommandPool(*device, m_commandPool, nullptr);
+      }
+      CommandPool::operator VkCommandPool()
+      {
+            return m_commandPool;
       }
 
       // --------------------------------
