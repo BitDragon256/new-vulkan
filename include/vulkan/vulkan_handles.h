@@ -256,16 +256,24 @@ namespace vk
             VkCommandPool m_commandPool;
             uint32_t m_transferQueueFamily;
       };
-      class CommandBuffer : public VulkanHandle
+      class CommandBuffers : public VulkanHandle
       {
       public:
+            void initialize(
+                  REF(Device) device,
+                  REF(CommandPool) commandPool,
+                  uint32_t count,
+                  VkCommandBufferLevel level
+            );
             void create() override;
             void destroy() override;
-            operator VkCommandBuffer();
+            VkCommandBuffer get_command_buffer(uint32_t index);
+            const std::vector<VkCommandBuffer>& get_command_buffers();
 
       private:
 
-            VkCommandBuffer m_commandBuffer;
+            std::vector<VkCommandBuffer> m_commandBuffers;
+            VkCommandBufferLevel m_level;
       };
       class Semaphore : public VulkanHandle
       {

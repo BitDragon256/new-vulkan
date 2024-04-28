@@ -750,10 +750,20 @@ namespace vk
       }
 
       // --------------------------------
-      // COMMAND BUFFER
+      // COMMAND BUFFERS
       // --------------------------------
 
-      void CommandBuffer::create()
+      void CommandBuffers::initialize(REF(Device) device, REF(CommandPool) commandPool, uint32_t count, VkCommandBufferLevel level)
+      {
+            add_dependency(device);
+            add_dependency(commandPool);
+
+            m_commandBuffers.resize(count);
+            m_level = level;
+
+            VulkanHandle::initialize();
+      }
+      void CommandBuffers::create()
       {
             auto device = get_dependency<Device>();
             auto commandPool = get_dependency<CommandPool>();
@@ -762,9 +772,26 @@ namespace vk
             allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
             allocInfo.pNext = nullptr;
             allocInfo.commandPool = *commandPool;
+            allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
+            allocInfo.level = m_level;
 
-            auto res = vkAllocateCommandBuffers(*device, &allocInfo, nullptr);
+            auto res = vkAllocateCommandBuffers(*device, &allocInfo, m_commandBuffers.data());
             VK_CHECK_ERROR(res)
+      }
+      void CommandBuffers::destroy()
+      {
+            auto device = get_dependency<Device>();
+            auto commandPool = get_dependency<CommandPool>();
+
+            vkFreeCommandBuffers(*device, *commandPool, static_cast<uint32_t>(m_commandBuffers.size()), m_commandBuffers.data());
+      }
+      VkCommandBuffer CommandBuffers::get_command_buffer(uint32_t index)
+      {
+            return get_command_buffers()[index];
+      }
+      const std::vector<VkCommandBuffer>& CommandBuffers::get_command_buffers()
+      {
+            return m_commandBuffers;
       }
 
       // --------------------------------
