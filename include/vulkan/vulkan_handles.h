@@ -315,13 +315,24 @@ namespace vk
       class DescriptorPool : public VulkanHandle
       {
       public:
+            void initialize(
+                  REF(Device) device,
+                  std::unordered_map<VkDescriptorType, uint32_t> poolSizes = s_defaultPoolSizes,
+                  uint32_t maxSets = 1000
+            );
             void create() override;
             void destroy() override;
             operator VkDescriptorPool();
 
+            static const std::unordered_map<VkDescriptorType, uint32_t> s_defaultPoolSizes;
+
       private:
 
             VkDescriptorPool m_descriptorPool;
+            std::unordered_map<VkDescriptorType, uint32_t> m_poolSizes;
+            uint32_t m_maxSets;
+
+            static void create_vk_pool_sizes(VkDescriptorPoolSize* poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap);
       };
 
 }; // vk

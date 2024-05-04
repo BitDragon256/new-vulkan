@@ -881,42 +881,73 @@ namespace vk
       // DESCRIPTOR POOL
       // --------------------------------
 
+      const std::unordered_map<VkDescriptorType, uint32_t> DescriptorPool::s_defaultPoolSizes = 
+      {
+          { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+          { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+          { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+          { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+          { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+          { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+          { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+          { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+          { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+      };
+      void DescriptorPool::create_vk_pool_sizes(VkDescriptorPoolSize* poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap)
+      {
+            poolSizeCount = static_cast<uint32_t>(poolSizeMap.size());
+            poolSizes = new VkDescriptorPoolSize[poolSizeMap.size()];
+
+            size_t index = 0;
+            for (auto [descriptorType, descriptorCount] : poolSizeMap)
+            {
+                  poolSizes[index].type = descriptorType;
+                  poolSizes[index].descriptorCount = descriptorCount;
+                  index++;
+            }
+      }
+
+      void DescriptorPool::initialize(REF(Device) device, std::unordered_map<VkDescriptorType, uint32_t> poolSizes, uint32_t maxSets)
+      {
+            add_dependency(device);
+            m_poolSizes = poolSizes;
+            m_maxSets = maxSets;
+      }
       void DescriptorPool::create()
       {
             auto device = get_dependency<Device>();
-
-            // 11
-            VkDescriptorPoolSize poolSizes[] =
-            {
-                { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-                { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-                { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-            };
-            const uint32_t poolSizeCount = 11;
 
             VkDescriptorPoolCreateInfo createInfo = {};
             createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             createInfo.pNext = nullptr;
             createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-            createInfo.maxSets = 1000 * poolSizeCount;
+
+            VkDescriptorPoolSize* poolSizes;
+            uint32_t poolSizeCount;
+            if (m_poolSizes.empty())
+                  create_vk_pool_sizes(poolSizes, poolSizeCount, s_defaultPoolSizes);
+            else
+                  create_vk_pool_sizes(poolSizes, poolSizeCount, m_poolSizes);
+
+            createInfo.maxSets = m_maxSets * poolSizeCount;
             createInfo.poolSizeCount = poolSizeCount;
             createInfo.pPoolSizes = poolSizes;
 
             auto res = vkCreateDescriptorPool(*device, &createInfo, nullptr, &m_descriptorPool);
             VK_CHECK_ERROR(res)
+
+            delete[] poolSizes;
       }
       void DescriptorPool::destroy()
       {
             auto device = get_dependency<Device>();
             vkDestroyDescriptorPool(*device, m_descriptorPool, nullptr);
+      }
+      DescriptorPool::operator VkDescriptorPool()
+      {
+            return m_descriptorPool;
       }
 
 }; // namespace vk
