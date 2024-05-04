@@ -278,6 +278,15 @@ namespace vk
       class Semaphore : public VulkanHandle
       {
       public:
+            enum SemaphoreType {
+                  Binary = VK_SEMAPHORE_TYPE_BINARY,
+                  Timeline = VK_SEMAPHORE_TYPE_TIMELINE
+            };
+
+            void initialize(
+                  REF(Device) device,
+                  SemaphoreType type = SemaphoreType::Binary
+            );
             void create() override;
             void destroy() override;
             operator VkSemaphore();
@@ -285,10 +294,15 @@ namespace vk
       private:
 
             VkSemaphore m_semaphore;
+            SemaphoreType m_type;
       };
       class Fence : public VulkanHandle
       {
       public:
+            void initialize(
+                  REF(Device) device,
+                  bool createSignaled = false
+            );
             void create() override;
             void destroy() override;
             operator VkFence();
@@ -296,6 +310,7 @@ namespace vk
       private:
 
             VkFence m_fence;
+            bool m_createSignaled;
       };
       class DescriptorPool : public VulkanHandle
       {

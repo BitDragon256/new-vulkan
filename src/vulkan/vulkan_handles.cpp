@@ -798,6 +798,14 @@ namespace vk
       // SEMAPHORE
       // --------------------------------
 
+      void Semaphore::initialize(REF(Device) device, SemaphoreType type)
+      {
+            add_dependency(device);
+
+            m_type = type;
+
+            VulkanHandle::initialize();
+      }
       void Semaphore::create()
       {
             auto device = get_dependency<Device>();
@@ -806,6 +814,17 @@ namespace vk
             createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
             createInfo.pNext = nullptr;
             createInfo.flags = 0;
+            switch (m_type)
+            {
+            case vk::Semaphore::Binary:
+                  createInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
+                  break;
+            case vk::Semaphore::Timeline:
+                  createInfo.flags = VK_SEMAPHORE_TYPE_TIMELINE;
+                  break;
+            default:
+                  break;
+            }
 
             auto res = vkCreateSemaphore(*device, &createInfo, nullptr, &m_semaphore);
             VK_CHECK_ERROR(res)
@@ -815,11 +834,20 @@ namespace vk
             auto device = get_dependency<Device>();
             vkDestroySemaphore(*device, m_semaphore, nullptr);
       }
+      Semaphore::operator VkSemaphore()
+      {
+            return m_semaphore;
+      }
 
       // --------------------------------
       // FENCE
       // --------------------------------
 
+      void Fence::initialize(REF(Device) device, bool createSignaled)
+      {
+            add_dependency(device);
+            m_createSignaled = createSignaled;
+      }
       void Fence::create()
       {
             auto device = get_dependency<Device>();
@@ -829,6 +857,9 @@ namespace vk
             createInfo.pNext = nullptr;
             createInfo.flags = 0;
 
+            if (m_createSignaled)
+                  createInfo.flags |= VK_FENCE_CREATE_SIGNALED_BIT;
+
             auto res = vkCreateFence(*device, &createInfo, nullptr, &m_fence);
             VK_CHECK_ERROR(res)
       }
@@ -836,6 +867,10 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyFence(*device, m_fence, nullptr);
+      }
+      Fence::operator VkFence()
+      {
+            return m_fence;
       }
 
       // --------------------------------
