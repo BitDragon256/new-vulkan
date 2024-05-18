@@ -58,14 +58,17 @@ protected:
       std::unordered_map<typeName, std::vector<DependencyRef>> m_dependents;
 
       template<typename T>
-      inline Reference<T> get_dependency()
-      {
-            return dynamic_cast<T*>(get_dependencies().first().get());
-      }
-      template<typename T>
       inline std::vector<Reference<T>> get_dependencies()
       {
-            return m_dependencies[type_to_name<T>()];
+            std::vector<Reference<T>> deps;
+            for (DependencyRef& dep : m_dependencies[type_to_name<T>()])
+                  deps.push_back(Reference(dynamic_cast<T*>(dep.dependency.get())));
+            return deps;
+      }
+      template<typename T>
+      inline Reference<T> get_dependency()
+      {
+            return get_dependencies<T>().front();
       }
 
 private:

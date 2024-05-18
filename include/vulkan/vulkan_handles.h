@@ -136,8 +136,8 @@ namespace vk
             void create() override;
             void destroy() override;
             operator VkImage();
-            constexpr VkImageView image_view();
-            constexpr VkExtent3D extent();
+            VkImageView image_view();
+            VkExtent3D extent();
 
             struct ImageCreateInfo : public Dependency
             {
