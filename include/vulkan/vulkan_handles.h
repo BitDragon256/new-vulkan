@@ -79,6 +79,11 @@ namespace vk
       public:
             void initialize(REF(PhysicalDevice) physicalDevice, REF(Surface) surface);
             operator VkDevice();
+
+            uint32_t graphics_queue_family();
+            uint32_t presentation_queue_family();
+            uint32_t transfer_queue_family();
+            uint32_t compute_queue_family();
       protected:
             void create() override;
             void destroy() override;

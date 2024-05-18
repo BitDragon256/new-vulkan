@@ -16,6 +16,7 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
+#include "vulkan/vulkan_handles.h"
 #include "vulkan/buffer.h"
 #include "vulkan/pipeline.h"
 #include "ecs.h"
@@ -48,6 +49,9 @@ struct RenderConfig
 
 	bool autoECSUpdate;
 
+	std::string vulkanApplicationName;
+	uint32_t vulkanApplicationVersion;
+
 	RenderConfig() :
 		width{ 600 }, height{ 400 }, title{ "DEFAULT TITLE" },
 		dataMode{ TestTri }, cameraEnabled{ false },
@@ -77,6 +81,21 @@ public:
 
 private:
 	Renderer* renderer;
+};
+
+struct RendererVulkanHandles
+{
+	vk::Instance instance;
+	vk::PhysicalDevice physicalDevice;
+	vk::Device device;
+	vk::Surface surface;
+	vk::Window window;
+	vk::Swapchain swapchain;
+	vk::RenderPass renderPass;
+	vk::CommandPool commandPool;
+	vk::CommandBuffers mainCommandBuffer;
+	vk::CommandBuffers renderingCommandBuffers;
+	vk::SubpassCountHandler subpassCountHandler;
 };
 
 class Renderer
@@ -133,39 +152,41 @@ private:
 	RenderConfig m_config;
 
 	// vulkan objects
-	VkInstance m_instance;
-	VkPhysicalDevice m_physicalDevice;
-	VkDevice m_device;
-	VkSurfaceKHR m_surface;
+	RendererVulkanHandles m_vulkanHandles;
 
-	VkSwapchainKHR m_swapchain;
-	std::vector<VkImage> m_swapchainImages;
-	std::vector<VkImageView> m_swapchainImageViews;
-	VkFormat m_swapchainImageFormat;
-	VkExtent2D m_swapchainExtent;
-	bool m_acquireImageTimeout;
+	//VkInstance m_instance;
+	//VkPhysicalDevice m_physicalDevice;
+	//VkDevice m_device;
+	//VkSurfaceKHR m_surface;
 
-	std::vector<VImage> m_depthImages;
-	void create_depth_images();
+	//VkSwapchainKHR m_swapchain;
+	//std::vector<VkImage> m_swapchainImages;
+	//std::vector<VkImageView> m_swapchainImageViews;
+	//VkFormat m_swapchainImageFormat;
+	//VkExtent2D m_swapchainExtent;
+	//bool m_acquireImageTimeout;
 
-	VkQueue m_graphicsQueue;
-	VkQueue m_presentationQueue;
-	VkQueue m_transferQueue;
-	VkQueue m_computeQueue;
+	//std::vector<VImage> m_depthImages;
+	//void create_depth_images();
 
-	QueueFamilyIndices m_queueFamilyIndices;
+	//VkQueue m_graphicsQueue;
+	//VkQueue m_presentationQueue;
+	//VkQueue m_transferQueue;
+	//VkQueue m_computeQueue;
 
-	VkRenderPass m_renderPass;
+	//QueueFamilyIndices m_queueFamilyIndices;
 
-	uint32_t m_frame;
-	std::vector<VkFramebuffer> m_swapchainFramebuffers;
+	//VkRenderPass m_renderPass;
 
-	VkCommandPool m_commandPool;
-	std::vector<VkCommandBuffer> m_commandBuffers;
+	//uint32_t m_frame;
+	//std::vector<VkFramebuffer> m_swapchainFramebuffers;
 
-	std::vector<VkSemaphore> m_imageAvailableSemaphores;
-	std::vector<VkSemaphore> m_renderFinishedSemaphores;
-	std::vector<VkFence> m_inFlightFences;
+	//VkCommandPool m_commandPool;
+	//std::vector<VkCommandBuffer> m_commandBuffers;
+
+	//std::vector<VkSemaphore> m_imageAvailableSemaphores;
+	//std::vector<VkSemaphore> m_renderFinishedSemaphores;
+	//std::vector<VkFence> m_inFlightFences;
 
 	void await_last_frame_render();
 

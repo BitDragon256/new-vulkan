@@ -62,20 +62,57 @@ NVE_RESULT Renderer::init(RenderConfig config)
       // add_descriptors();
 
       glfwInit();
-      logger::log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
-      logger::log_cond(create_instance() == NVE_SUCCESS, "instance created");
-      // logger::log_cond(create_debug_messenger() == NVE_SUCCESS, "debug messenger created");
-      logger::log_cond(get_surface() == NVE_SUCCESS, "surface created");
-      logger::log_cond(get_physical_device() == NVE_SUCCESS, "found physical device");
-      logger::log_cond(create_device() == NVE_SUCCESS, "logical device created");
-      logger::log_cond(create_swapchain() == NVE_SUCCESS, "swapchain created");
-      logger::log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
-      create_depth_images();              logger::log("depth images created");
-      logger::log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
-      logger::log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
-      logger::log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
-      logger::log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
-      logger::log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
+
+      m_vulkanHandles.window.initialize(config.width, config.height, config.title);
+      m_vulkanHandles.instance.initialize(config.vulkanApplicationName, config.vulkanApplicationVersion, "New Vulkan Engine", config.enableValidationLayers);
+      m_vulkanHandles.surface.initialize(&m_vulkanHandles.instance, &m_vulkanHandles.window);
+      m_vulkanHandles.physicalDevice.initialize(&m_vulkanHandles.instance, &m_vulkanHandles.surface);
+      m_vulkanHandles.device.initialize(&m_vulkanHandles.physicalDevice, &m_vulkanHandles.surface);
+      m_vulkanHandles.swapchain.initialize(
+            &m_vulkanHandles.device,
+            &m_vulkanHandles.physicalDevice,
+            &m_vulkanHandles.window,
+            &m_vulkanHandles.surface,
+            m_vulkanHandles.device.graphics_queue_family(),
+            m_vulkanHandles.device.presentation_queue_family()
+      );
+      m_vulkanHandles.renderPass.initialize(
+            &m_vulkanHandles.device,
+            &m_vulkanHandles.physicalDevice,
+            &m_vulkanHandles.swapchain,
+            &m_vulkanHandles.subpassCountHandler
+      );
+      m_vulkanHandles.commandPool.initialize(
+            &m_vulkanHandles.device,
+            m_vulkanHandles.device.transfer_queue_family()
+      );
+      m_vulkanHandles.mainCommandBuffer.initialize(
+            &m_vulkanHandles.device,
+            &m_vulkanHandles.commandPool,
+            1,
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY
+      );
+      m_vulkanHandles.renderingCommandBuffers.initialize(
+            &m_vulkanHandles.device,
+            &m_vulkanHandles.commandPool,
+            0,
+            VK_COMMAND_BUFFER_LEVEL_SECONDARY
+      );
+
+      //logger::log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
+      //logger::log_cond(create_instance() == NVE_SUCCESS, "instance created");
+      //// logger::log_cond(create_debug_messenger() == NVE_SUCCESS, "debug messenger created");
+      //logger::log_cond(get_surface() == NVE_SUCCESS, "surface created");
+      //logger::log_cond(get_physical_device() == NVE_SUCCESS, "found physical device");
+      //logger::log_cond(create_device() == NVE_SUCCESS, "logical device created");
+      //logger::log_cond(create_swapchain() == NVE_SUCCESS, "swapchain created");
+      //logger::log_cond(create_swapchain_image_views() == NVE_SUCCESS, "swapchain image views created");
+      //create_depth_images();              logger::log("depth images created");
+      //logger::log_cond(create_render_pass() == NVE_SUCCESS, "render pass created");
+      //logger::log_cond(create_framebuffers() == NVE_SUCCESS, "framebuffers created");
+      //logger::log_cond(create_commandpool() == NVE_SUCCESS, "command pool created");
+      //logger::log_cond(create_commandbuffers() == NVE_SUCCESS, "command buffer created");
+      //logger::log_cond(create_sync_objects() == NVE_SUCCESS, "sync objects created");
 
       m_threadPool.initialize(m_threadCount);
 
