@@ -169,6 +169,27 @@ namespace vk
       }
 
       // --------------------------------
+      // QUEUE
+      // --------------------------------
+
+      void Queue::initialize(VkQueue queue)
+      {
+            m_queue = queue;
+            VulkanHandle::initialize();
+      }
+      void Queue::create() {}
+      void Queue::destroy() {}
+
+      void Queue::submit(std::vector<VkSubmitInfo> submits)
+      {
+            vkQueueSubmit(m_queue, static_cast<uint32_t>(submits.size()), submits.data(), VK_NULL_HANDLE);
+      }
+      void Queue::submit(std::vector<VkSubmitInfo> submits, Fence fence)
+      {
+            vkQueueSubmit(m_queue, static_cast<uint32_t>(submits.size()), submits.data(), fence);
+      }
+
+      // --------------------------------
       // DEVICE
       // --------------------------------
 
@@ -242,6 +263,11 @@ namespace vk
       {
             return m_device;
       }
+
+      uint32_t Device::graphics_queue_family() { return m_queueFamilyIndices.graphicsFamily.value(); }
+      uint32_t Device::presentation_queue_family() { return m_queueFamilyIndices.presentationFamily.value(); }
+      uint32_t Device::transfer_queue_family() { return m_queueFamilyIndices.transferFamily.value(); }
+      uint32_t Device::compute_queue_family() { return m_queueFamilyIndices.computeFamily.value(); }
 
       // --------------------------------
       // WINDOW

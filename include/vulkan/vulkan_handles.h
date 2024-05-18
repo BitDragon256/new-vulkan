@@ -74,6 +74,22 @@ namespace vk
 
             VkPhysicalDevice m_physicalDevice;
       };
+      class Queue : public VulkanHandle
+      {
+      public:
+            void initialize(VkQueue queue);
+
+            void submit(std::vector<VkSubmitInfo> submits);
+            void submit(std::vector<VkSubmitInfo> submits, Fence fence);
+
+      protected:
+            void create() override;
+            void destroy() override;
+
+      private:
+
+            VkQueue m_queue;
+      };
       class Device : public VulkanHandle
       {
       public:
@@ -88,14 +104,14 @@ namespace vk
             void create() override;
             void destroy() override;
 
+      private:
+
             QueueFamilyIndices m_queueFamilyIndices;
             
-            VkQueue m_graphicsQueue;
-            VkQueue m_presentationQueue;
-            VkQueue m_transferQueue;
-            VkQueue m_computeQueue;
-
-      private:
+            Queue m_graphicsQueue;
+            Queue m_presentationQueue;
+            Queue m_transferQueue;
+            Queue m_computeQueue;
 
             VkDevice m_device;
       };
