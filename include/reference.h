@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #define REF(T) Reference<T>
 
@@ -52,4 +53,13 @@ template<typename T>
 bool operator==(const Reference<T>& a, const Reference<T>& b)
 {
       return a.empty() == b.empty() && a.get() == b.get();
+}
+
+template<typename T>
+std::vector<Reference<T>> to_ref_vec(std::vector<T>& vec)
+{
+      std::vector<Reference<T>> refs;
+      for (T& t : vec)
+            refs.push_back(Reference(&t));
+      return refs;
 }
