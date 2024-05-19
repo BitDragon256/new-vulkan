@@ -180,13 +180,17 @@ namespace vk
       void Queue::create() {}
       void Queue::destroy() {}
 
+      void Queue::submit(VkSubmitInfo submit, REF(Fence) fence)
+      {
+            submit(std::vector<VkSubmitInfo>{ submit }, fence);
+      }
       void Queue::submit(std::vector<VkSubmitInfo> submits)
       {
             vkQueueSubmit(m_queue, static_cast<uint32_t>(submits.size()), submits.data(), VK_NULL_HANDLE);
       }
-      void Queue::submit(std::vector<VkSubmitInfo> submits, Fence fence)
+      void Queue::submit(std::vector<VkSubmitInfo> submits, REF(Fence) fence)
       {
-            vkQueueSubmit(m_queue, static_cast<uint32_t>(submits.size()), submits.data(), fence);
+            vkQueueSubmit(m_queue, static_cast<uint32_t>(submits.size()), submits.data(), *fence);
       }
 
       // --------------------------------

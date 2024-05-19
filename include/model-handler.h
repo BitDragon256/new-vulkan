@@ -14,6 +14,7 @@
 #include "logger.h"
 #include "profiler.h"
 
+#include "vulkan/vulkan_handles.h"
 #include "vulkan/buffer.h"
 #include "vulkan/pipeline.h"
 #include "ecs.h"
@@ -79,19 +80,19 @@ struct MeshGroup // group with individual shaders
 
 struct GeometryHandlerVulkanObjects
 {
-	VkDevice device;
-	VkCommandPool commandPool;
-	RenderPassRef renderPass; // renderPass can change
+	REF(vk::Device) device;
+	REF(vk::CommandPool) commandPool;
+	REF(vk::RenderPass) renderPass;
 	uint32_t firstSubpass;
 
-	std::vector<VkFramebuffer> framebuffers;
-	VkExtent2D swapchainExtent;
+	std::vector<REF(vk::Framebuffer)> framebuffers;
+	REF(VkExtent2D) swapchainExtent;
 
-	VkPhysicalDevice physicalDevice;
-	VkQueue transferQueue;
+	REF(vk::PhysicalDevice) physicalDevice;
+	REF(vk::Queue) transferQueue;
 	uint32_t queueFamilyIndex;
 	
-	VkDescriptorPool descriptorPool;
+	REF(vk::DescriptorPool) descriptorPool;
 
 	CameraPushConstant* pCameraPushConstant;
 };
@@ -107,7 +108,6 @@ public:
 
 	GeometryHandler();
 	virtual void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
-	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
 	void set_first_subpass(uint32_t subpass);
 
 	uint32_t subpass_count();

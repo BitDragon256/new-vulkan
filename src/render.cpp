@@ -73,8 +73,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
             &m_vulkanHandles.physicalDevice,
             &m_vulkanHandles.window,
             &m_vulkanHandles.surface,
-            m_vulkanHandles.device.graphics_queue_family(),
-            m_vulkanHandles.device.presentation_queue_family()
+            graphics_queue_family(),
+            presentation_queue_family()
       );
       m_vulkanHandles.renderPass.initialize(
             &m_vulkanHandles.device,
@@ -84,19 +84,13 @@ NVE_RESULT Renderer::init(RenderConfig config)
       );
       m_vulkanHandles.commandPool.initialize(
             &m_vulkanHandles.device,
-            m_vulkanHandles.device.transfer_queue_family()
+            transfer_queue_family()
       );
-      m_vulkanHandles.mainCommandBuffer.initialize(
+      m_vulkanHandles.mainCommandBuffers.initialize(
             &m_vulkanHandles.device,
             &m_vulkanHandles.commandPool,
             1,
             VK_COMMAND_BUFFER_LEVEL_PRIMARY
-      );
-      m_vulkanHandles.renderingCommandBuffers.initialize(
-            &m_vulkanHandles.device,
-            &m_vulkanHandles.commandPool,
-            0,
-            VK_COMMAND_BUFFER_LEVEL_SECONDARY
       );
 
       //logger::log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
@@ -117,7 +111,7 @@ NVE_RESULT Renderer::init(RenderConfig config)
       m_threadPool.initialize(m_threadCount);
 
       // TODO delete this
-      Shader::s_device = m_device;
+      Shader::s_device = m_vulkanHandles.device;
 
       create_descriptor_pool();           logger::log("descriptor pool created");
 
@@ -182,8 +176,8 @@ NVE_RESULT Renderer::set_active_camera(Camera* camera)
       if (!camera)
             return NVE_FAILURE;
       m_activeCamera = camera;
-      m_activeCamera->m_extent.x = m_swapchainExtent.width;
-      m_activeCamera->m_extent.y = m_swapchainExtent.height;
+      m_activeCamera->m_extent.x = m_vulkanHandles.swapchain.m_extent.width;
+      m_activeCamera->m_extent.y = m_vulkanHandles.swapchain.m_extent.height;
       return NVE_SUCCESS;
 }
 Camera& Renderer::active_camera()
@@ -208,8 +202,8 @@ Vector2 Renderer::get_mouse_pos()
 Vector2 Renderer::mouse_to_screen(Vector2 mouse)
 {
       return 2.f * Vector2 {
-            mouse.x / m_swapchainExtent.width / m_guiManager.m_cut.x,
-                  mouse.y / m_swapchainExtent.height / m_guiManager.m_cut.y
+            mouse.x / m_vulkanHandles.swapchain.m_extent.width / m_guiManager.m_cut.x,
+                  mouse.y / m_vulkanHandles.swapchain.m_extent.height / m_guiManager.m_cut.y
       } - Vector2(1.f);
 }
 
@@ -735,19 +729,19 @@ void Renderer::create_descriptor_pool()
 void Renderer::initialize_geometry_handlers()
 {
       GeometryHandlerVulkanObjects vulkanObjects;
-      vulkanObjects.device = m_device;
-      vulkanObjects.physicalDevice = m_physicalDevice;
-      vulkanObjects.commandPool = m_commandPool;
-      vulkanObjects.renderPass = &m_renderPass;
-      vulkanObjects.transferQueue = m_transferQueue;
-      vulkanObjects.queueFamilyIndex = m_queueFamilyIndices.transferFamily.value();
-      vulkanObjects.descriptorPool = m_descriptorPool;
+      vulkanObjects.device = &m_vulkanHandles.device;
+      vulkanObjects.physicalDevice = &m_vulkanHandles.physicalDevice;
+      vulkanObjects.commandPool = &m_vulkanHandles.commandPool;
+      vulkanObjects.renderPass = &m_vulkanHandles.renderPass;
+      vulkanObjects.transferQueue = &transfer_queue();
+      vulkanObjects.queueFamilyIndex = transfer_queue_family();
+      vulkanObjects.descriptorPool = &m_vulkanHandles.descriptorPool;
 
-      vulkanObjects.swapchainExtent = m_swapchainExtent;
+      vulkanObjects.swapchainExtent = &m_vulkanHandles.swapchain.m_extent;
       // vulkanObjects.framebuffers = std::vector<VkFramebuffer*>(m_swapchainFramebuffers.size());
       // for (size_t i = 0; i < vulkanObjects.framebuffers.size(); i++)
       //     vulkanObjects.framebuffers[i] = &m_swapchainFramebuffers[i];
-      vulkanObjects.framebuffers = m_swapchainFramebuffers;
+      vulkanObjects.framebuffers = to_ref_vec(m_vulkanHandles.swapchain.m_framebuffers);
       vulkanObjects.firstSubpass = 0;
 
       vulkanObjects.pCameraPushConstant = &m_cameraPushConstant;
@@ -773,12 +767,6 @@ void Renderer::set_geometry_handler_subpasses()
             subpass += handler->subpass_count();
       }
 }
-void Renderer::update_geometry_handler_framebuffers()
-{
-      auto handlers = all_geometry_handlers();
-      for (auto handler : handlers)
-            handler->update_framebuffers(m_swapchainFramebuffers, m_swapchainExtent);
-}
 void Renderer::create_geometry_pipelines()
 {
       auto handlers = all_geometry_handlers();
@@ -793,7 +781,7 @@ void Renderer::create_geometry_pipelines()
       }
       m_pipelineBatchCreator.create_all();
 }
-std::vector<GeometryHandler*> Renderer::all_geometry_handlers()
+std::vector<REF(GeometryHandler)> Renderer::all_geometry_handlers()
 {
       return {
           &m_staticGeometryHandler,
@@ -811,7 +799,7 @@ void Renderer::wait_for_geometry_handler_buffer_cpies()
             auto handlerFences = handler->buffer_cpy_fences();
             append_vector(fences, handlerFences);
       }
-      vkWaitForFences(m_device, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, UINT32_MAX);
+      vkWaitForFences(m_vulkanHandles.device, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, UINT32_MAX);
 }
 
 void Renderer::destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
@@ -826,11 +814,11 @@ void Renderer::record_main_command_buffer(uint32_t frame)
 {
       // -------------------------------------------
 
-      vkResetCommandBuffer(m_commandBuffers[frame], 0);
+      VkCommandBuffer mainCommandBuffer = m_vulkanHandles.mainCommandBuffers.get_command_buffer(frame);
 
       // -------------------------------------------
 
-      VkCommandBuffer commandBuffer = m_commandBuffers[frame];
+      vkResetCommandBuffer(mainCommandBuffer, 0);
 
       // -------------------------------------------
 
@@ -841,7 +829,7 @@ void Renderer::record_main_command_buffer(uint32_t frame)
       commandBufferBI.pInheritanceInfo = nullptr;
 
       {
-            auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
+            auto res = vkBeginCommandBuffer(mainCommandBuffer, &commandBufferBI);
             logger::log_cond_err(res == VK_SUCCESS, "failed to begin command buffer recording");
       }
 
@@ -849,10 +837,10 @@ void Renderer::record_main_command_buffer(uint32_t frame)
 
       VkRenderPassBeginInfo renderPassBI = {};
       renderPassBI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-      renderPassBI.renderPass = m_renderPass;
-      renderPassBI.framebuffer = m_swapchainFramebuffers[frame];
+      renderPassBI.renderPass = m_vulkanHandles.renderPass;
+      renderPassBI.framebuffer = m_vulkanHandles.swapchain.m_framebuffers[frame];
       renderPassBI.renderArea.offset = { 0, 0 };
-      renderPassBI.renderArea.extent = m_swapchainExtent;
+      renderPassBI.renderArea.extent = m_vulkanHandles.swapchain.m_extent;
 
       std::vector<VkClearValue> clearValues(2);
       clearValues[0].color = { m_config.clearColor.x / 255.f, m_config.clearColor.y / 255.f, m_config.clearColor.z / 255.f, 1.f };
@@ -860,7 +848,7 @@ void Renderer::record_main_command_buffer(uint32_t frame)
       renderPassBI.clearValueCount = static_cast<uint32_t>(clearValues.size());
       renderPassBI.pClearValues = clearValues.data();
 
-      vkCmdBeginRenderPass(commandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+      vkCmdBeginRenderPass(mainCommandBuffer, &renderPassBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
       // -------------------------------------------
 
@@ -876,17 +864,17 @@ void Renderer::record_main_command_buffer(uint32_t frame)
       for (uint32_t subpass = 0; subpass < subpassCount; subpass++)
       {
             if (subpass < secondaryCommandBuffers.size())
-                  vkCmdExecuteCommands(commandBuffer, 1, &secondaryCommandBuffers[subpass]);
+                  vkCmdExecuteCommands(mainCommandBuffer, 1, &secondaryCommandBuffers[subpass]);
             if (subpass != subpassCount - 1)
-                  vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+                  vkCmdNextSubpass(mainCommandBuffer, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
       }
 
       // -------------------------------------------
 
-      vkCmdEndRenderPass(commandBuffer);
+      vkCmdEndRenderPass(mainCommandBuffer);
 
       {
-            auto res = vkEndCommandBuffer(commandBuffer);
+            auto res = vkEndCommandBuffer(mainCommandBuffer);
             logger::log_cond_err(res == VK_SUCCESS, "failed to end command buffer recording: " + std::string(string_VkResult(res)));
       }
 
@@ -912,8 +900,7 @@ NVE_RESULT Renderer::submit_command_buffers(
       submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSems.size());
       submitInfo.pSignalSemaphores = signalSems.data();
 
-      auto res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_frame]);
-      logger::log_cond(res != VK_SUCCESS, "failed to submit command buffers to graphics queue: " + std::string(string_VkResult(res)));
+      graphics_queue().submit(submitInfo, &m_vulkanHandles.inFlightFences[m_frame]);
 
       return NVE_SUCCESS;
 }

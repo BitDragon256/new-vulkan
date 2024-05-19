@@ -93,9 +93,10 @@ struct RendererVulkanHandles
 	vk::Swapchain swapchain;
 	vk::RenderPass renderPass;
 	vk::CommandPool commandPool;
-	vk::CommandBuffers mainCommandBuffer;
-	vk::CommandBuffers renderingCommandBuffers;
+	vk::CommandBuffers mainCommandBuffers;
 	vk::SubpassCountHandler subpassCountHandler;
+	vk::DescriptorPool descriptorPool;
+	std::vector<vk::Fence> inFlightFences;
 };
 
 class Renderer
@@ -154,6 +155,18 @@ private:
 	// vulkan objects
 	RendererVulkanHandles m_vulkanHandles;
 
+	uint32_t m_frame;
+	bool m_acquireImageTimeout;
+
+	vk::Queue& graphics_queue();
+	uint32_t graphics_queue_family();
+	vk::Queue& presentation_queue();
+	uint32_t presentation_queue_family();
+	vk::Queue& transfer_queue();
+	uint32_t transfer_queue_family();
+	vk::Queue& compute_queue();
+	uint32_t compute_queue_family();
+
 	//VkInstance m_instance;
 	//VkPhysicalDevice m_physicalDevice;
 	//VkDevice m_device;
@@ -164,7 +177,6 @@ private:
 	//std::vector<VkImageView> m_swapchainImageViews;
 	//VkFormat m_swapchainImageFormat;
 	//VkExtent2D m_swapchainExtent;
-	//bool m_acquireImageTimeout;
 
 	//std::vector<VImage> m_depthImages;
 	//void create_depth_images();
@@ -178,7 +190,6 @@ private:
 
 	//VkRenderPass m_renderPass;
 
-	//uint32_t m_frame;
 	//std::vector<VkFramebuffer> m_swapchainFramebuffers;
 
 	//VkCommandPool m_commandPool;
@@ -199,12 +210,11 @@ private:
 
 	PipelineBatchCreator m_pipelineBatchCreator;
 
-	std::vector<GeometryHandler*> all_geometry_handlers();
+	std::vector<REF(GeometryHandler)> all_geometry_handlers();
 
 	void create_geometry_pipelines();
 	void initialize_geometry_handlers();
 	void set_geometry_handler_subpasses();
-	void update_geometry_handler_framebuffers();
 
 // TODO staged buffer copy synchronization
 	void wait_for_geometry_handler_buffer_cpies();

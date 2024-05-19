@@ -118,11 +118,6 @@ void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUI
 
 	m_guiManager = guiManager;
 }
-void GeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent)
-{
-	m_vulkanObjects.framebuffers = framebuffers;
-	m_vulkanObjects.swapchainExtent = swapchainExtent;
-}
 void GeometryHandler::set_first_subpass(uint32_t subpass)
 {
 	m_vulkanObjects.firstSubpass = subpass;

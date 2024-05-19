@@ -79,8 +79,9 @@ namespace vk
       public:
             void initialize(VkQueue queue);
 
+            void submit(VkSubmitInfo submit, REF(Fence) fence);
             void submit(std::vector<VkSubmitInfo> submits);
-            void submit(std::vector<VkSubmitInfo> submits, Fence fence);
+            void submit(std::vector<VkSubmitInfo> submits, REF(Fence) fence);
 
       protected:
             void create() override;
@@ -205,6 +206,7 @@ namespace vk
             VkExtent2D m_extent;
 
             std::vector<Image> m_images;
+            std::vector<Framebuffer> m_framebuffers;
 
       private:
 
