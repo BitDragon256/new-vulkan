@@ -158,6 +158,7 @@ private:
 
 	// uint32_t m_frame;
 	uint32_t frame_object_index();
+	uint32_t last_frame_object_index();
 	uint32_t swapchain_image_index();
 	bool m_acquireImageTimeout;
 

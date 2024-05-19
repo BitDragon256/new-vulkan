@@ -179,6 +179,10 @@ namespace vk
       }
       void Queue::create() {}
       void Queue::destroy() {}
+      Queue::operator VkQueue()
+      {
+            return m_queue;
+      }
 
       void Queue::submit(const VkSubmitInfo& submit, REF(Fence) fence)
       {
@@ -371,6 +375,9 @@ namespace vk
             m_graphicsQueueFamily = graphicsQueueFamily;
             m_presentationQueueFamily = presentationQueueFamily;
 
+            m_frameObectIndex = 0;
+            m_lastFrameObjectIndex = 0;
+
             VulkanHandle::initialize();
       }
       void Swapchain::create()
@@ -448,6 +455,11 @@ namespace vk
             return m_swapchain;
       }
 
+      uint32_t Swapchain::size()
+      {
+            return m_images.size();
+      }
+
       VkResult Swapchain::next_image()
       {
             auto device = get_dependency<Device>();
@@ -463,7 +475,9 @@ namespace vk
       }
       void Swapchain::next_frame()
       {
-            m_frameObectIndex = (m_frameObectIndex + 1) % m_images.size();
+            m_lastFrameObjectIndex = m_frameObectIndex;
+
+            m_frameObectIndex = (m_frameObectIndex + 1) % size();
       }
       void Swapchain::present_current_image(std::vector<REF(Semaphore)>& semaphores)
       {

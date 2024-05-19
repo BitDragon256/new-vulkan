@@ -80,6 +80,8 @@ namespace vk
       public:
             void initialize(VkQueue queue);
 
+            operator VkQueue();
+
             void submit(const VkSubmitInfo& submit, REF(Fence) fence);
             void submit(const std::vector<VkSubmitInfo>& submits);
             void submit(const std::vector<VkSubmitInfo>& submits, REF(Fence) fence);
@@ -217,8 +219,11 @@ namespace vk
             std::vector<Image> m_images;
             std::vector<Framebuffer> m_framebuffers;
 
+            uint32_t size();
+
             uint32_t m_currentImageIndex;
             uint32_t m_frameObectIndex;
+            uint32_t m_lastFrameObjectIndex;
 
             VkResult next_image();
             void next_frame();

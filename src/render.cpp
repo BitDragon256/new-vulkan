@@ -1123,11 +1123,11 @@ void Renderer::init_default_camera()
 
 void Renderer::genCmdBuf(GeometryHandler* geometryHandler)
 {
-      geometryHandler->record_command_buffers(m_frame);
+      geometryHandler->record_command_buffers(frame_object_index());
 };
 void Renderer::await_last_frame_render()
 {
-      vkWaitForFences(m_device, 1, &m_inFlightFences[(m_frame + m_inFlightFences.size() - 1) % m_inFlightFences.size()], VK_TRUE, UINT64_MAX);
+      m_vulkanHandles.inFlightFences[last_frame_object_index()].wait();
 }
 
 
@@ -1156,16 +1156,16 @@ NVE_RESULT Renderer::imgui_init()
 
       ImGui_ImplGlfw_InitForVulkan(m_window, true);
       ImGui_ImplVulkan_InitInfo initInfo = {};
-      initInfo.Instance = m_instance;
-      initInfo.PhysicalDevice = m_physicalDevice;
-      initInfo.Device = m_device;
+      initInfo.Instance = m_vulkanHandles.instance;
+      initInfo.PhysicalDevice = m_vulkanHandles.physicalDevice;
+      initInfo.Device = m_vulkanHandles.device;
       initInfo.QueueFamily = 42; // is it working?
-      initInfo.Queue = m_graphicsQueue;
+      initInfo.Queue = graphics_queue();
       initInfo.PipelineCache = VK_NULL_HANDLE;
       initInfo.DescriptorPool = m_imgui_descriptorPool;
       initInfo.Subpass = 0;
 
-      uint32_t imageCount = static_cast<uint32_t>(m_swapchainImages.size());
+      uint32_t imageCount = m_vulkanHandles.swapchain.size();
 
       initInfo.MinImageCount = imageCount;
       initInfo.ImageCount = imageCount;
