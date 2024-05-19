@@ -97,6 +97,7 @@ struct RendererVulkanHandles
 	vk::SubpassCountHandler subpassCountHandler;
 	vk::DescriptorPool descriptorPool;
 	std::vector<vk::Fence> inFlightFences;
+	std::vector<vk::Semaphore> renderFinishedSemaphores;
 };
 
 class Renderer
@@ -155,7 +156,9 @@ private:
 	// vulkan objects
 	RendererVulkanHandles m_vulkanHandles;
 
-	uint32_t m_frame;
+	// uint32_t m_frame;
+	uint32_t frame_object_index();
+	uint32_t swapchain_image_index();
 	bool m_acquireImageTimeout;
 
 	vk::Queue& graphics_queue();
@@ -166,6 +169,9 @@ private:
 	uint32_t transfer_queue_family();
 	vk::Queue& compute_queue();
 	uint32_t compute_queue_family();
+
+	VkCommandBuffer current_main_command_buffer();
+	VkCommandBuffer current_imgui_command_buffer();
 
 	//VkInstance m_instance;
 	//VkPhysicalDevice m_physicalDevice;

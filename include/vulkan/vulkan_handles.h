@@ -35,6 +35,7 @@ namespace vk
 
       // forward declarations
       class Surface;
+      class Semaphore;
 
       class Instance : public VulkanHandle
       {
@@ -79,9 +80,17 @@ namespace vk
       public:
             void initialize(VkQueue queue);
 
-            void submit(VkSubmitInfo submit, REF(Fence) fence);
-            void submit(std::vector<VkSubmitInfo> submits);
-            void submit(std::vector<VkSubmitInfo> submits, REF(Fence) fence);
+            void submit(const VkSubmitInfo& submit, REF(Fence) fence);
+            void submit(const std::vector<VkSubmitInfo>& submits);
+            void submit(const std::vector<VkSubmitInfo>& submits, REF(Fence) fence);
+
+            void present(const VkPresentInfoKHR& presentInfo);
+            void submit_command_buffers(
+                  std::vector<VkCommandBuffer>& commandBuffers,
+                  std::vector<REF(Semaphore)>& waitSemaphores,
+                  std::vector<VkPipelineStageFlags>& waitStages,
+                  std::vector<REF(Semaphore)>& signalSemaphores
+            );
 
       protected:
             void create() override;
@@ -197,7 +206,7 @@ namespace vk
       class Swapchain : public VulkanHandle
       {
       public:
-            void initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily);
+            void initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily, REF(Queue) presentationQueue);
             void create() override;
             void destroy() override;
             operator VkSwapchainKHR();
@@ -208,6 +217,15 @@ namespace vk
             std::vector<Image> m_images;
             std::vector<Framebuffer> m_framebuffers;
 
+            uint32_t m_currentImageIndex;
+            uint32_t m_frameObectIndex;
+
+            VkResult next_image();
+            void next_frame();
+            void present_current_image(std::vector<REF(Semaphore)>& semaphores);
+
+            REF(Semaphore) current_image_available_semaphore();
+
       private:
 
             VkImageViewCreateInfo swapchain_image_view_create_info(VkImage image);
@@ -215,6 +233,8 @@ namespace vk
             VkSwapchainKHR m_swapchain;
             uint32_t m_graphicsQueueFamily;
             uint32_t m_presentationQueueFamily;
+
+            std::vector<Semaphore> m_imageAvailableSemaphores;
       };
 
       class SubpassCountHandler : public Dependency
@@ -329,6 +349,8 @@ namespace vk
             void create() override;
             void destroy() override;
             operator VkFence();
+
+            void wait();
 
       private:
 

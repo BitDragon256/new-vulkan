@@ -904,21 +904,6 @@ NVE_RESULT Renderer::submit_command_buffers(
 
       return NVE_SUCCESS;
 }
-void Renderer::present_swapchain_image(VkSwapchainKHR swapchain, uint32_t imageIndex, std::vector<VkSemaphore> signalSems)
-{
-      VkPresentInfoKHR presentInfo{};
-      presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-      presentInfo.waitSemaphoreCount = static_cast<uint32_t>(signalSems.size());
-      presentInfo.pWaitSemaphores = signalSems.data();
-
-      VkSwapchainKHR swapChains[] = { swapchain };
-      presentInfo.swapchainCount = 1;
-      presentInfo.pSwapchains = swapChains;
-      presentInfo.pImageIndices = &imageIndex;
-
-      vkQueuePresentKHR(m_presentationQueue, &presentInfo);
-}
 
 NVE_RESULT Renderer::draw_frame()
 {
@@ -931,10 +916,8 @@ NVE_RESULT Renderer::draw_frame()
       PROFILE_START("await fences");
       // Wait for the previous frame to finish
       if (!m_acquireImageTimeout)
-      {
-            vkWaitForFences(m_device, 1, &m_inFlightFences[m_frame], VK_TRUE, UINT64_MAX);
-            vkResetFences(m_device, 1, &m_inFlightFences[m_frame]);
-      }
+            m_vulkanHandles.inFlightFences[frame_object_index()].wait();
+
       renderTime += PROFILE_END("await fences");
 
       PROFILE_START("render pass recreation");
@@ -944,9 +927,9 @@ NVE_RESULT Renderer::draw_frame()
 
       PROFILE_START("acquire image");
       // Acquire an image from the swap chain
-      uint32_t imageIndex;
       {
-            auto res = vkAcquireNextImageKHR(m_device, m_swapchain, 1, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
+            // auto res = vkAcquireNextImageKHR(m_device, m_swapchain, 1, m_imageAvailableSemaphores[m_frame], VK_NULL_HANDLE, &imageIndex);
+            auto res = m_vulkanHandles.swapchain.next_image();
             if (res == VK_TIMEOUT)
             {
                   m_acquireImageTimeout = true;
@@ -965,7 +948,7 @@ NVE_RESULT Renderer::draw_frame()
 
       // collect semaphores
       // this has to be done before the model handler update because the geometry handlers otherwise doesn't update its buffers
-      std::vector<VkSemaphore> waitSemaphores = { m_imageAvailableSemaphores[m_frame] };
+      std::vector<REF(vk::Semaphore)> waitSemaphores = { m_vulkanHandles.swapchain.current_image_available_semaphore() };
 
       // record command buffers
       PROFILE_START("record cmd buffers");
@@ -984,17 +967,17 @@ NVE_RESULT Renderer::draw_frame()
       renderTime += PROFILE_END("record cmd buffers");
 
       PROFILE_START("record main cmd buf");
-      record_main_command_buffer(m_frame);
+      record_main_command_buffer(frame_object_index());
       renderTime += PROFILE_END("record main cmd buf");
       PROFILE_START("gui draw");
       if (!m_imguiDraw)
             gui_begin();
 
-      imgui_draw(imageIndex);
+      imgui_draw(m_vulkanHandles.swapchain.m_currentImageIndex);
       m_imguiDraw = false;
       renderTime += PROFILE_END("gui draw");
 
-      std::vector<VkSemaphore> signalSemaphores = { m_renderFinishedSemaphores[m_frame] };
+      std::vector<REF(vk::Semaphore)> signalSemaphores = { &m_vulkanHandles.renderFinishedSemaphores[frame_object_index()]};
       std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
       // TODO staged buffer copy synchronization
@@ -1005,20 +988,22 @@ NVE_RESULT Renderer::draw_frame()
 
       PROFILE_START("submit cmd buf");
       // Submit the recorded command buffers
-      std::vector<VkCommandBuffer> commandBuffers = { m_commandBuffers[m_frame], m_imgui_commandBuffers[m_frame] };
-      submit_command_buffers(commandBuffers, waitSemaphores, waitStages, signalSemaphores);
+      std::vector<VkCommandBuffer> commandBuffers = { current_main_command_buffer(), current_imgui_command_buffer() };
+
+      graphics_queue().submit_command_buffers(commandBuffers, waitSemaphores, waitStages, signalSemaphores);
+      
       renderTime += PROFILE_END("submit cmd buf");
 
       PROFILE_START("present image");
       // Present the swap chain image
-      present_swapchain_image(m_swapchain, imageIndex, signalSemaphores);
+      m_vulkanHandles.swapchain.present_current_image(signalSemaphores);
       renderTime += PROFILE_END("present image");
 #ifdef RENDER_PROFILER
       m_profiler.out_buf() << "total render time: " << renderTime << " seconds\n";
 #endif
       m_profiler.end_label();
 
-      m_frame = (m_frame + 1) % m_swapchainFramebuffers.size();
+      m_vulkanHandles.swapchain.next_frame();
 
       //auto renderEnd = std::chrono::high_resolution_clock::now();
       //std::cout << "total render time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(renderEnd - renderStart).count() / NANOSECONDS_PER_SECOND;

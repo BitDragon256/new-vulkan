@@ -180,17 +180,22 @@ namespace vk
       void Queue::create() {}
       void Queue::destroy() {}
 
-      void Queue::submit(VkSubmitInfo submit, REF(Fence) fence)
+      void Queue::submit(const VkSubmitInfo& submit, REF(Fence) fence)
       {
             submit(std::vector<VkSubmitInfo>{ submit }, fence);
       }
-      void Queue::submit(std::vector<VkSubmitInfo> submits)
+      void Queue::submit(const std::vector<VkSubmitInfo>& submits)
       {
             vkQueueSubmit(m_queue, static_cast<uint32_t>(submits.size()), submits.data(), VK_NULL_HANDLE);
       }
-      void Queue::submit(std::vector<VkSubmitInfo> submits, REF(Fence) fence)
+      void Queue::submit(const std::vector<VkSubmitInfo>& submits, REF(Fence) fence)
       {
             vkQueueSubmit(m_queue, static_cast<uint32_t>(submits.size()), submits.data(), *fence);
+      }
+
+      void Queue::present(const VkPresentInfoKHR& presentInfo)
+      {
+            vkQueuePresentKHR(m_queue, &presentInfo);
       }
 
       // --------------------------------
@@ -355,12 +360,13 @@ namespace vk
             return imageViewCI;
       }
 
-      void Swapchain::initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily)
+      void Swapchain::initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily, REF(Queue) presentationQueue)
       {
             add_dependency(device);
             add_dependency(physicalDevice);
             add_dependency(window);
             add_dependency(surface);
+            add_dependency(presentationQueue);
 
             m_graphicsQueueFamily = graphicsQueueFamily;
             m_presentationQueueFamily = presentationQueueFamily;
@@ -440,6 +446,50 @@ namespace vk
       Swapchain::operator VkSwapchainKHR()
       {
             return m_swapchain;
+      }
+
+      VkResult Swapchain::next_image()
+      {
+            auto device = get_dependency<Device>();
+
+            return vkAcquireNextImageKHR(
+                  *device,
+                  m_swapchain,
+                  1,
+                  m_imageAvailableSemaphores[m_frameObectIndex],
+                  VK_NULL_HANDLE,
+                  &m_currentImageIndex
+            );
+      }
+      void Swapchain::next_frame()
+      {
+            m_frameObectIndex = (m_frameObectIndex + 1) % m_images.size();
+      }
+      void Swapchain::present_current_image(std::vector<REF(Semaphore)>& semaphores)
+      {
+            auto presentationQueue = get_dependency<Queue>();
+
+            VkPresentInfoKHR presentInfo{};
+            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+            presentInfo.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
+
+            std::vector<VkSemaphore> vkSems(semaphores.size());
+            for (size_t i = 0; i < semaphores.size(); i++)
+                  vkSems[i] = *(semaphores[i]);
+            presentInfo.pWaitSemaphores = vkSems.data();
+
+            VkSwapchainKHR swapChains[] = { m_swapchain };
+            presentInfo.swapchainCount = 1;
+            presentInfo.pSwapchains = swapChains;
+            presentInfo.pImageIndices = &m_currentImageIndex;
+
+            presentationQueue->present(presentInfo);
+      }
+
+      REF(Semaphore) Swapchain::current_image_available_semaphore()
+      {
+            return &m_imageAvailableSemaphores[m_frameObectIndex];
       }
 
       // --------------------------------
@@ -901,6 +951,14 @@ namespace vk
       Fence::operator VkFence()
       {
             return m_fence;
+      }
+
+      void Fence::wait()
+      {
+            auto device = get_dependency<Device>();
+
+            vkWaitForFences(*device, 1, &m_fence, VK_TRUE, UINT64_MAX);
+            vkResetFences(*device, 1, &m_fence);
       }
 
       // --------------------------------
