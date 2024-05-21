@@ -36,6 +36,7 @@ public:
 
       Dependency();
       bool try_update();
+      void unresolve();
       bool resolved() const;
 
       template<typename T>
@@ -53,6 +54,7 @@ public:
 protected:
 
       virtual void on_update() = 0;
+      virtual void on_unresolve() = 0;
 
       std::unordered_map<typeName, std::vector<DependencyRef>> m_dependencies;
       std::unordered_map<typeName, std::vector<DependencyRef>> m_dependents;

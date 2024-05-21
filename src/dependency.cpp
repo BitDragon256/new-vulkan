@@ -20,6 +20,15 @@ bool Dependency::try_update()
 
       return true;
 }
+void Dependency::unresolve()
+{
+      for (auto [type, deps] : m_dependents)
+            for (auto dep : deps)
+                  dep.dependency->unresolve();
+
+      on_unresolve();
+      m_resolved = false;
+}
 bool Dependency::resolved() const
 {
       return m_resolved;
