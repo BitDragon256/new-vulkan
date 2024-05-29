@@ -10,126 +10,132 @@
 
 #include "nve_types.h"
 #include "material.h"
+#include "vulkan/vulkan_handles.h"
 
-class PipelineLayout
+namespace vk
 {
-public:
 
-      void create(std::vector<VkDescriptorSetLayout> descriptorSetLayouts, std::vector<VkPushConstantRange> pushConstants, VkDevice device);
-	void destroy();
+	class PipelineLayout
+	{
+	public:
 
-	operator VkPipelineLayout() const;
+		void create(std::vector<VkDescriptorSetLayout> descriptorSetLayouts, std::vector<VkPushConstantRange> pushConstants, VkDevice device);
+		void destroy();
 
-      VkPipelineLayout m_layout;
+		operator VkPipelineLayout() const;
 
-private:
+		VkPipelineLayout m_layout;
 
-	VkDevice m_device;
+	private:
 
-};
+		VkDevice m_device;
 
-typedef Reference<PipelineLayout> PipelineLayoutRef;
+	};
 
-enum PipelineType { GraphicsPipeline_E = 0, RayTracingPipeline_E = 1, ComputePipeline_E = 2 };
+	typedef Reference<PipelineLayout> PipelineLayoutRef;
 
-class Pipeline
-{
-public:
+	enum PipelineType { GraphicsPipeline_E = 0, RayTracingPipeline_E = 1, ComputePipeline_E = 2 };
 
-	Pipeline(PipelineType type);
-	virtual void create_create_info() = 0;
-	virtual void create() = 0;
-	void destroy();
-	void set_created();
+	class Pipeline
+	{
+	public:
 
-	const PipelineType m_type;
+		Pipeline(PipelineType type);
+		virtual void create_create_info() = 0;
+		virtual void create() = 0;
+		void destroy();
+		void set_created();
 
-	VkDevice m_device;
+		const PipelineType m_type;
 
-      VkPipeline m_pipeline;
-      PipelineLayoutRef m_layout;
+		VkDevice m_device;
 
-	operator VkPipeline() const;
+		VkPipeline m_pipeline;
+		PipelineLayoutRef m_layout;
 
-protected:
+		operator VkPipeline() const;
 
-	void initialize(VkDevice device, PipelineLayoutRef layout);
+	protected:
 
-	bool m_created;
-};
+		void initialize(VkDevice device, PipelineLayoutRef layout);
 
-typedef Reference<Pipeline> PipelineRef;
+		bool m_created;
+	};
 
-typedef struct GraphicsPipelineCreationData_T
-{
-	std::vector<VkPipelineShaderStageCreateInfo>	stages;
+	typedef Reference<Pipeline> PipelineRef;
 
-	VkPipelineVertexInputStateCreateInfo	      vertexInputState;
-	std::array<
-		VkVertexInputAttributeDescription,
-		VERTEX_ATTRIBUTE_COUNT
-	>						      	vertexAttributeDescriptions;
-	VkVertexInputBindingDescription	      	vertexBindingDescription;
+	typedef struct GraphicsPipelineCreationData_T
+	{
+		std::vector<VkPipelineShaderStageCreateInfo>	stages;
 
-	VkPipelineInputAssemblyStateCreateInfo		inputAssemblyState;
-	VkPipelineTessellationStateCreateInfo		tessellationState;
-	VkPipelineViewportStateCreateInfo			viewportState;
-	VkPipelineRasterizationStateCreateInfo		rasterizationState;
-	VkPipelineMultisampleStateCreateInfo		multisampleState;
-	VkPipelineDepthStencilStateCreateInfo		depthStencilState;
+		VkPipelineVertexInputStateCreateInfo	      vertexInputState;
+		std::array<
+			VkVertexInputAttributeDescription,
+			VERTEX_ATTRIBUTE_COUNT
+		>						      	vertexAttributeDescriptions;
+		VkVertexInputBindingDescription	      	vertexBindingDescription;
 
-	VkPipelineColorBlendStateCreateInfo			colorBlendState;
-	VkPipelineColorBlendAttachmentState			colorBlendAttachment;
+		VkPipelineInputAssemblyStateCreateInfo		inputAssemblyState;
+		VkPipelineTessellationStateCreateInfo		tessellationState;
+		VkPipelineViewportStateCreateInfo			viewportState;
+		VkPipelineRasterizationStateCreateInfo		rasterizationState;
+		VkPipelineMultisampleStateCreateInfo		multisampleState;
+		VkPipelineDepthStencilStateCreateInfo		depthStencilState;
 
-	VkPipelineDynamicStateCreateInfo			dynamicState;
-	std::vector<VkDynamicState>				dynamicStates;
-} GraphicsPipelineCreationData;
+		VkPipelineColorBlendStateCreateInfo			colorBlendState;
+		VkPipelineColorBlendAttachmentState			colorBlendAttachment;
 
-class GraphicsPipeline : public Pipeline
-{
-public:
+		VkPipelineDynamicStateCreateInfo			dynamicState;
+		std::vector<VkDynamicState>				dynamicStates;
+	} GraphicsPipelineCreationData;
 
-	GraphicsPipeline();
-	void create_create_info() override;
-	void create() override;
+	class GraphicsPipeline : public Pipeline
+	{
+	public:
 
-	void initialize(VkDevice device, PipelineLayoutRef layout, RenderPassRef renderPass, uint32_t subpass, GraphicsShaderRef shader);
+		GraphicsPipeline();
+		void create_create_info() override;
+		void create() override;
 
-	VkGraphicsPipelineCreateInfo m_createInfo;
+		void initialize(VkDevice device, PipelineLayoutRef layout, REF(RenderPass) renderPass, uint32_t subpass, GraphicsShaderRef shader);
 
-private:
+		VkGraphicsPipelineCreateInfo m_createInfo;
 
-	GraphicsPipelineCreationData m_creationData;
-	void set_default_create_info();
-	void set_shader_stages();
+	private:
 
-	uint32_t m_subpass;
-	RenderPassRef m_renderPass;
-	GraphicsShaderRef m_shader;
+		GraphicsPipelineCreationData m_creationData;
+		void set_default_create_info();
+		void set_shader_stages();
 
-};
+		uint32_t m_subpass;
+		REF(RenderPass) m_renderPass;
+		GraphicsShaderRef m_shader;
 
-class PipelineBatchCreator
-{
-public:
+	};
 
-	PipelineBatchCreator();
+	class PipelineBatchCreator
+	{
+	public:
 
-	void schedule_creation(PipelineRef pipeline);
-	void create_all();
-	void destroy();
+		PipelineBatchCreator();
 
-private:
+		void schedule_creation(PipelineRef pipeline);
+		void create_all();
+		void destroy();
 
-	void create_cache();
-	void create_graphics_pipelines();
-	void create_raytracing_pipelines();
-	void create_compute_pipelines();
+	private:
 
-	std::vector<PipelineRef> m_pipelines;
+		void create_cache();
+		void create_graphics_pipelines();
+		void create_raytracing_pipelines();
+		void create_compute_pipelines();
 
-	VkPipelineCache m_cache;
-	VkDevice m_device;
-	bool m_cacheCreated;
+		std::vector<PipelineRef> m_pipelines;
 
-};
+		VkPipelineCache m_cache;
+		VkDevice m_device;
+		bool m_cacheCreated;
+
+	};
+
+} // namespace vk

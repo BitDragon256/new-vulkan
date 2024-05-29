@@ -26,6 +26,7 @@ namespace vk
             virtual void destroy() = 0;
 
             void on_update() override;
+            void on_unresolve() override;
             void initialize();
 
       private:
@@ -36,6 +37,8 @@ namespace vk
       // forward declarations
       class Surface;
       class Semaphore;
+      class Fence;
+      class Framebuffer;
 
       class Instance : public VulkanHandle
       {
@@ -80,9 +83,10 @@ namespace vk
       public:
             void initialize(VkQueue queue);
 
+            VkQueue& get();
             operator VkQueue();
 
-            void submit(const VkSubmitInfo& submit, REF(Fence) fence);
+            void submit(const VkSubmitInfo& submitInfo, REF(Fence) fence);
             void submit(const std::vector<VkSubmitInfo>& submits);
             void submit(const std::vector<VkSubmitInfo>& submits, REF(Fence) fence);
 
@@ -91,7 +95,8 @@ namespace vk
                   std::vector<VkCommandBuffer>& commandBuffers,
                   std::vector<REF(Semaphore)>& waitSemaphores,
                   std::vector<VkPipelineStageFlags>& waitStages,
-                  std::vector<REF(Semaphore)>& signalSemaphores
+                  std::vector<REF(Semaphore)>& signalSemaphores,
+                  REF(Fence) fence
             );
 
       protected:
@@ -112,6 +117,11 @@ namespace vk
             uint32_t presentation_queue_family();
             uint32_t transfer_queue_family();
             uint32_t compute_queue_family();
+
+            Queue m_graphicsQueue;
+            Queue m_presentationQueue;
+            Queue m_transferQueue;
+            Queue m_computeQueue;
       protected:
             void create() override;
             void destroy() override;
@@ -120,11 +130,6 @@ namespace vk
 
             QueueFamilyIndices m_queueFamilyIndices;
             
-            Queue m_graphicsQueue;
-            Queue m_presentationQueue;
-            Queue m_transferQueue;
-            Queue m_computeQueue;
-
             VkDevice m_device;
       };
       class Window : public VulkanHandle
@@ -247,6 +252,7 @@ namespace vk
             using CallbackFunction = std::function<uint32_t(void)>;
       public:
             void on_update() override;
+            void on_unresolve() override;
 
             uint32_t subpass_count() const;
             void add_subpass_count_callback(CallbackFunction callback);

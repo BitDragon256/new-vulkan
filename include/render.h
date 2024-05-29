@@ -31,6 +31,8 @@
 #define NVE_MODEL_INFO_BUFFER_BINDING 0
 #define NVE_MAX_MODEL_INFO_COUNT 1
 
+#define NVE_NO_GUI
+
 struct RenderConfig
 {
 	int width;
@@ -107,8 +109,8 @@ public:
 	~Renderer();
 
 	NVE_RESULT render();
-	NVE_RESULT init(RenderConfig config);
-	NVE_RESULT set_active_camera(Camera* camera);
+	void init(RenderConfig config);
+	void set_active_camera(Camera* camera);
 	Camera& active_camera();
 
 	ECSManager m_ecs;
@@ -172,7 +174,10 @@ private:
 	uint32_t compute_queue_family();
 
 	VkCommandBuffer current_main_command_buffer();
+
+#ifndef NVE_NO_GUI
 	VkCommandBuffer current_imgui_command_buffer();
+#endif
 
 	//VkInstance m_instance;
 	//VkPhysicalDevice m_physicalDevice;
@@ -215,7 +220,7 @@ private:
 	DynamicGeometryHandler m_dynamicGeometryHandler;
 	GizmosHandler m_gizmosHandler;
 
-	PipelineBatchCreator m_pipelineBatchCreator;
+	vk::PipelineBatchCreator m_pipelineBatchCreator;
 
 	std::vector<REF(GeometryHandler)> all_geometry_handlers();
 
@@ -247,6 +252,7 @@ private:
 	void init_default_camera();
 	CameraPushConstant m_cameraPushConstant;
 
+#ifndef NVE_NO_GUI
 	// imgui vulkan objects
 	VkDescriptorPool m_imgui_descriptorPool;
 	VkRenderPass m_imgui_renderPass;
@@ -270,24 +276,13 @@ private:
 	bool m_imguiDraw;
 	void imgui_draw(uint32_t imageIndex);
 
+#endif
+
 	// GLFW objects
 	GLFWwindow* m_window;
 	
 	// vulkan object creation
-	NVE_RESULT create_instance();
-	NVE_RESULT create_debug_messenger();
-	NVE_RESULT get_physical_device();
-	NVE_RESULT create_device();
-	NVE_RESULT create_window(int width, int height, std::string title);
-	NVE_RESULT get_surface();
-	NVE_RESULT create_swapchain();
-	NVE_RESULT create_swapchain_image_views();
-	NVE_RESULT create_render_pass();
 	void recreate_render_pass();
-	NVE_RESULT create_framebuffers();
-	NVE_RESULT create_commandpool();
-	NVE_RESULT create_commandbuffers();
-	NVE_RESULT create_sync_objects();
 	
 	// vulkan destruction
 	void destroy_debug_messenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);

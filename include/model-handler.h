@@ -73,7 +73,7 @@ struct MeshGroup // group with individual shaders
 	
 	bool reloadMeshBuffers;
 
-	GraphicsPipeline pipeline;
+	vk::GraphicsPipeline pipeline;
 	std::vector<VkCommandBuffer> commandBuffers; // the different command buffers for the different frames
 	VkCommandPool commandPool;
 };
@@ -104,7 +104,7 @@ public:
 	std::vector<VkCommandBuffer> get_command_buffers(uint32_t frame);
 
 	void create_pipeline_create_infos();
-	void get_pipelines(std::vector<PipelineRef>& pipelines);
+	void get_pipelines(std::vector<vk::PipelineRef>& pipelines);
 
 	GeometryHandler();
 	virtual void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
@@ -127,7 +127,7 @@ protected:
 
 	GeometryHandlerVulkanObjects m_vulkanObjects;
 	VkDescriptorSet m_descriptorSet;
-	PipelineLayout m_pipelineLayout;
+	vk::PipelineLayout m_pipelineLayout;
 
 	BufferConfig default_buffer_config();
 

@@ -19,8 +19,6 @@
 typedef uint32_t Index;
 #define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
 
-typedef Reference<VkRenderPass> RenderPassRef;
-
 #define VERTEX_ATTRIBUTE_COUNT 5
 
 typedef struct Vertex

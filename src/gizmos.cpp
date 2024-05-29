@@ -80,7 +80,7 @@ void GizmosHandler::record_command_buffer(uint32_t subpass, size_t frame, const 
 	// ---------------------------------------
 
 	VkCommandBufferInheritanceInfo inheritanceInfo;
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, *m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
@@ -95,11 +95,11 @@ void GizmosHandler::record_command_buffer(uint32_t subpass, size_t frame, const 
 
 	set_dynamic_state(
 		commandBuffer,
-		m_vulkanObjects.swapchainExtent,
+		*m_vulkanObjects.swapchainExtent,
 		m_guiManager->viewport({
 			0, 0,
-			static_cast<float>(m_vulkanObjects.swapchainExtent.width),
-			static_cast<float>(m_vulkanObjects.swapchainExtent.height)
+			static_cast<float>(m_vulkanObjects.swapchainExtent->width),
+			static_cast<float>(m_vulkanObjects.swapchainExtent->height)
 		}));
 
 	// ---------------------------------------

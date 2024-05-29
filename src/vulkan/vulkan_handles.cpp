@@ -39,6 +39,13 @@ namespace vk
             create();
             m_created = true;
       }
+      void VulkanHandle::on_unresolve()
+      {
+            if (m_created)
+                  destroy();
+
+            m_created = false;
+      }
       void VulkanHandle::initialize()
       {
             m_initialized = true;
@@ -179,14 +186,18 @@ namespace vk
       }
       void Queue::create() {}
       void Queue::destroy() {}
+      VkQueue& Queue::get()
+      {
+            return m_queue;
+      }
       Queue::operator VkQueue()
       {
             return m_queue;
       }
 
-      void Queue::submit(const VkSubmitInfo& submit, REF(Fence) fence)
+      void Queue::submit(const VkSubmitInfo& submitInfo, REF(Fence) fence)
       {
-            submit(std::vector<VkSubmitInfo>{ submit }, fence);
+            submit(std::vector<VkSubmitInfo>{ submitInfo }, fence);
       }
       void Queue::submit(const std::vector<VkSubmitInfo>& submits)
       {
@@ -200,6 +211,36 @@ namespace vk
       void Queue::present(const VkPresentInfoKHR& presentInfo)
       {
             vkQueuePresentKHR(m_queue, &presentInfo);
+      }
+
+      void Queue::submit_command_buffers(
+            std::vector<VkCommandBuffer>& commandBuffers,
+            std::vector<REF(Semaphore)>& waitSemaphores,
+            std::vector<VkPipelineStageFlags>& waitStages,
+            std::vector<REF(Semaphore)>& signalSemaphores,
+            REF(Fence) fence
+      )
+      {
+            std::vector<VkSemaphore> waitVkSemaphores(waitSemaphores.size());
+            for (size_t i = 0; i < waitSemaphores.size(); i++) waitVkSemaphores[i] = *waitSemaphores[i];
+
+            std::vector<VkSemaphore> signalVkSemaphores(signalSemaphores.size());
+            for (size_t i = 0; i < signalSemaphores.size(); i++) signalVkSemaphores[i] = *signalSemaphores[i];
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+            submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitVkSemaphores.size());
+            submitInfo.pWaitSemaphores = waitVkSemaphores.data();
+            submitInfo.pWaitDstStageMask = waitStages.data();
+
+            submitInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
+            submitInfo.pCommandBuffers = commandBuffers.data();
+
+            submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalVkSemaphores.size());
+            submitInfo.pSignalSemaphores = signalVkSemaphores.data();
+
+            submit(submitInfo, fence);
       }
 
       // --------------------------------
@@ -263,10 +304,10 @@ namespace vk
 
             VK_CHECK_ERROR(vkCreateDevice(*physicalDevice, &deviceCI, nullptr, &m_device));
 
-            vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
-            vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentationFamily.value(), 0, &m_presentationQueue);
-            vkGetDeviceQueue(m_device, m_queueFamilyIndices.transferFamily.value(), 0, &m_transferQueue);
-            vkGetDeviceQueue(m_device, m_queueFamilyIndices.computeFamily.value(), 0, &m_computeQueue);
+            vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue.get());
+            vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentationFamily.value(), 0, &m_presentationQueue.get());
+            vkGetDeviceQueue(m_device, m_queueFamilyIndices.transferFamily.value(), 0, &m_transferQueue.get());
+            vkGetDeviceQueue(m_device, m_queueFamilyIndices.computeFamily.value(), 0, &m_computeQueue.get());
       }
       void Device::destroy()
       {
@@ -638,13 +679,17 @@ namespace vk
       {
 
       }
+      void SubpassCountHandler::on_unresolve()
+      {
+
+      }
       void SubpassCountHandler::add_subpass_count_callback(CallbackFunction callback)
       {
             m_callbacks.push_back(callback);
       }
       uint32_t SubpassCountHandler::subpass_count() const
       {
-            uint32_t subpassCount;
+            uint32_t subpassCount{ 0 };
             for (auto callback : m_callbacks)
                   subpassCount += callback();
             return subpassCount;
@@ -1026,8 +1071,8 @@ namespace vk
             createInfo.pNext = nullptr;
             createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-            VkDescriptorPoolSize* poolSizes;
-            uint32_t poolSizeCount;
+            VkDescriptorPoolSize* poolSizes{ nullptr };
+            uint32_t poolSizeCount{ 0 };
             if (m_poolSizes.empty())
                   create_vk_pool_sizes(poolSizes, poolSizeCount, s_defaultPoolSizes);
             else

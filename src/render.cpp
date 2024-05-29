@@ -53,7 +53,7 @@ Renderer::~Renderer()
 {
       clean_up();
 }
-NVE_RESULT Renderer::init(RenderConfig config)
+void Renderer::init(RenderConfig config)
 {
       m_config = config;
       m_firstFrame = true;
@@ -74,7 +74,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
             &m_vulkanHandles.window,
             &m_vulkanHandles.surface,
             graphics_queue_family(),
-            presentation_queue_family()
+            presentation_queue_family(),
+            &presentation_queue()
       );
       m_vulkanHandles.renderPass.initialize(
             &m_vulkanHandles.device,
@@ -92,6 +93,8 @@ NVE_RESULT Renderer::init(RenderConfig config)
             1,
             VK_COMMAND_BUFFER_LEVEL_PRIMARY
       );
+
+      m_vulkanHandles.instance.try_update();
 
       //logger::log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
       //logger::log_cond(create_instance() == NVE_SUCCESS, "instance created");
@@ -113,14 +116,16 @@ NVE_RESULT Renderer::init(RenderConfig config)
       // TODO delete this
       Shader::s_device = m_vulkanHandles.device;
 
-      create_descriptor_pool();           logger::log("descriptor pool created");
+      // create_descriptor_pool();           logger::log("descriptor pool created");
 
       initialize_geometry_handlers();     logger::log("geometry handlers initialized");
+
+#ifndef NVE_NO_GUI
 
       // imgui
       imgui_init();
 
-      m_frame = 0;
+#endif
 
       m_deltaTime = 0;
       m_lastFrameTime = std::chrono::high_resolution_clock::now();
@@ -132,8 +137,6 @@ NVE_RESULT Renderer::init(RenderConfig config)
       m_guiManager.initialize(&m_ecs);
 
       init_default_camera();
-
-      return NVE_SUCCESS;
 }
 NVE_RESULT Renderer::render()
 {
@@ -171,14 +174,14 @@ NVE_RESULT Renderer::render()
 
       return NVE_SUCCESS;
 }
-NVE_RESULT Renderer::set_active_camera(Camera* camera)
+void Renderer::set_active_camera(Camera* camera)
 {
       if (!camera)
-            return NVE_FAILURE;
+            logger::log_err("camera is not valid");
+
       m_activeCamera = camera;
       m_activeCamera->m_extent.x = m_vulkanHandles.swapchain.m_extent.width;
       m_activeCamera->m_extent.y = m_vulkanHandles.swapchain.m_extent.height;
-      return NVE_SUCCESS;
 }
 Camera& Renderer::active_camera()
 {
@@ -244,441 +247,25 @@ void Renderer::reload_pipelines()
 
 // PRIVATE METHODS
 
-NVE_RESULT Renderer::create_instance()
-{
-      VkApplicationInfo appInfo = {};
-      appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-      appInfo.pApplicationName = "New Vulkan Engine Dev App";
-      appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-      appInfo.pEngineName = "New Vulkan Engine";
-      appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-      appInfo.apiVersion = VK_API_VERSION_1_3;
-      appInfo.pNext = nullptr;
-
-      VkInstanceCreateInfo instanceCI = {};
-      instanceCI.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-      instanceCI.pApplicationInfo = &appInfo;
-
-      if (m_config.enableValidationLayers)
-            m_config.enabledInstanceLayers.push_back("VK_LAYER_KHRONOS_validation");
-
-      instanceCI.enabledLayerCount = static_cast<uint32_t>(m_config.enabledInstanceLayers.size());
-      instanceCI.ppEnabledLayerNames = m_config.enabledInstanceLayers.data();
-
-      //VkDebugUtilsMessengerCreateInfoEXT debugMessengerCI = {};
-      //populate_debug_messenger_create_info(debugMessengerCI);
-      instanceCI.pNext = nullptr;//&debugMessengerCI;
-
-      uint32_t glfwExtensionCount = 0;
-      const char** glfwExtensions;
-
-      logger::log("acquiring GLFW extensions...");
-      glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-      logger::log("acquired GLFW extensions");
-
-      std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-      //std::vector<const char*> extensions{ "VK_KHR_surface" };
-
-      if (m_config.enableValidationLayers)
-            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-      instanceCI.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-      instanceCI.ppEnabledExtensionNames = extensions.data();
-      instanceCI.flags = 0;
-
-      logger::log("creating instance...");
-      VkResult res = vkCreateInstance(&instanceCI, nullptr, &m_instance);
-      if (res != VK_SUCCESS)
-      {
-            logger::log("instance creation failed: " + std::string(string_VkResult(res)));
-            return NVE_FAILURE;
-      }
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::get_physical_device()
-{
-      // get all available physical devices
-      uint32_t deviceCount;
-      vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
-      logger::log_cond_err(deviceCount != 0, "no valid physical devices found");
-      std::vector<VkPhysicalDevice> availableDevices(deviceCount);
-      vkEnumeratePhysicalDevices(m_instance, &deviceCount, availableDevices.data());
-
-#ifdef RATE_PHYSICAL_DEVICES
-
-      std::multimap<uint32_t, VkPhysicalDevice> ratedDevices;
-      for (const auto& device : availableDevices)
-      {
-            uint32_t score = rate_device_suitability(device, m_surface);
-            ratedDevices.insert(std::make_pair(score, device));
-      }
-
-      logger::log_cond_err(ratedDevices.rbegin()->first > 0, "no acceptable physical device found");
-
-      m_physicalDevice = ratedDevices.rbegin()->second;
-
-#else
-
-      m_physicalDevice = VK_NULL_HANDLE;
-      for (const auto& device : availableDevices)
-      {
-            if (is_device_suitable(device, m_surface))
-            {
-                  m_physicalDevice = device;
-                  break;
-            }
-      }
-      logger::log_cond_err(m_physicalDevice != VK_NULL_HANDLE, "no acceptable physical device found");
-
-#endif
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_debug_messenger()
-{
-      if (!m_config.enableValidationLayers)
-            return NVE_SUCCESS;
-
-      VkDebugUtilsMessengerCreateInfoEXT debugMessengerCI = {};
-      populate_debug_messenger_create_info(debugMessengerCI);
-
-      auto res = vkCreateDebugUtilsMessengerEXT(m_instance, &debugMessengerCI, nullptr, &m_debugMessenger);
-      logger::log_cond_err(res == VK_SUCCESS, "failed to create debug messenger");
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_device()
-{
-      m_queueFamilyIndices = find_queue_families(m_physicalDevice, m_surface);
-
-      // specify queues
-      std::vector<VkDeviceQueueCreateInfo> deviceQueueCIs = {};
-      std::set<uint32_t> uniqueQueueFamilyIndices = { m_queueFamilyIndices.graphicsFamily.value(), m_queueFamilyIndices.presentationFamily.value() };
-
-      float queuePriority = 1.0f;
-      for (uint32_t queueFamilyIndex : uniqueQueueFamilyIndices)
-      {
-            VkDeviceQueueCreateInfo deviceQueueCI = {};
-
-            deviceQueueCI.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            deviceQueueCI.queueFamilyIndex = queueFamilyIndex;
-            deviceQueueCI.queueCount = 1;
-            deviceQueueCI.pQueuePriorities = &queuePriority;
-            deviceQueueCIs.push_back(deviceQueueCI);
-      }
-
-      // physical device stuff
-      VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
-      physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
-
-      // m_device creation
-      VkDeviceCreateInfo deviceCI = {};
-      deviceCI.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-      deviceCI.queueCreateInfoCount = static_cast<uint32_t>(deviceQueueCIs.size());
-      deviceCI.pQueueCreateInfos = deviceQueueCIs.data();
-      deviceCI.pEnabledFeatures = &physicalDeviceFeatures;
-      deviceCI.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-      deviceCI.ppEnabledExtensionNames = deviceExtensions.data();
-
-      VkPhysicalDeviceShaderDrawParametersFeatures shaderDrawParametersFeatures = {};
-      shaderDrawParametersFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
-      shaderDrawParametersFeatures.pNext = nullptr;
-      shaderDrawParametersFeatures.shaderDrawParameters = VK_TRUE;
-
-      deviceCI.pNext = &shaderDrawParametersFeatures;
-
-      auto res = vkCreateDevice(m_physicalDevice, &deviceCI, nullptr, &m_device);
-      logger::log_cond_err(res == VK_SUCCESS, "physical device creation failed");
-
-      vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
-      vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentationFamily.value(), 0, &m_presentationQueue);
-      vkGetDeviceQueue(m_device, m_queueFamilyIndices.transferFamily.value(), 0, &m_transferQueue);
-      vkGetDeviceQueue(m_device, m_queueFamilyIndices.computeFamily.value(), 0, &m_computeQueue);
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_window(int width, int height, std::string title)
-{
-      glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-      glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-      m_window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::get_surface()
-{
-      auto res = glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface);
-      logger::log_cond_err(res == VK_SUCCESS, "creation of window surface failed");
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_swapchain()
-{
-      SwapChainSupportDetails swapChainSupport = query_swap_chain_support(m_physicalDevice, m_surface);
-
-      VkSurfaceFormatKHR surfaceFormat = choose_swap_surface_format(swapChainSupport.formats);
-      VkPresentModeKHR presentMode = choose_swap_present_mode(swapChainSupport.presentModes);
-      VkExtent2D extent = choose_swap_extent(swapChainSupport.capabilities, m_window);
-
-      uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-      if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
-            imageCount = swapChainSupport.capabilities.maxImageCount;
-      }
-      VkSwapchainCreateInfoKHR swapchainCI = {};
-      swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-      swapchainCI.surface = m_surface;
-      swapchainCI.minImageCount = imageCount;
-      swapchainCI.imageFormat = surfaceFormat.format;
-      swapchainCI.imageColorSpace = surfaceFormat.colorSpace;
-      swapchainCI.imageExtent = extent;
-      swapchainCI.imageArrayLayers = 1;
-      swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-      uint32_t queueFamilyIndices[] = { m_queueFamilyIndices.graphicsFamily.value(), m_queueFamilyIndices.presentationFamily.value() };
-
-      if (m_queueFamilyIndices.graphicsFamily != m_queueFamilyIndices.presentationFamily) {
-            swapchainCI.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-            swapchainCI.queueFamilyIndexCount = 2;
-            swapchainCI.pQueueFamilyIndices = queueFamilyIndices;
-      }
-      else {
-            swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            swapchainCI.queueFamilyIndexCount = 0; // Optional
-            swapchainCI.pQueueFamilyIndices = nullptr; // Optional
-      }
-
-      swapchainCI.preTransform = swapChainSupport.capabilities.currentTransform;
-      swapchainCI.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-      swapchainCI.presentMode = presentMode;
-      swapchainCI.clipped = VK_TRUE;
-      swapchainCI.oldSwapchain = VK_NULL_HANDLE;
-
-      auto res = vkCreateSwapchainKHR(m_device, &swapchainCI, nullptr, &m_swapchain);
-
-      logger::log_cond_err(res == VK_SUCCESS, "creation of swapchain failed");
-
-      vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, nullptr);
-      m_swapchainImages.resize(imageCount);
-      vkGetSwapchainImagesKHR(m_device, m_swapchain, &imageCount, m_swapchainImages.data());
-
-      m_swapchainImageFormat = surfaceFormat.format;
-      m_swapchainExtent = extent;
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_swapchain_image_views()
-{
-      m_swapchainImageViews.resize(m_swapchainImages.size());
-
-      for (size_t i = 0; i < m_swapchainImages.size(); i++)
-      {
-            VkImageViewCreateInfo imageViewCI = {};
-            imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            imageViewCI.image = m_swapchainImages[i];
-            imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            imageViewCI.format = m_swapchainImageFormat;
-            imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            imageViewCI.subresourceRange.baseMipLevel = 0;
-            imageViewCI.subresourceRange.levelCount = 1;
-            imageViewCI.subresourceRange.baseArrayLayer = 0;
-            imageViewCI.subresourceRange.layerCount = 1;
-
-            auto res = vkCreateImageView(m_device, &imageViewCI, nullptr, &m_swapchainImageViews[i]);
-            logger::log_cond_err(res == VK_SUCCESS, "failed to create image view no " + i);
-      }
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_render_pass()
-{
-      // color attachment
-
-      VkAttachmentDescription colorAttachment = {};
-      colorAttachment.format = m_swapchainImageFormat;
-      colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-      colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-      colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-      colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-      colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-      colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-      colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-      VkAttachmentReference colorAttachmentRef = {};
-      colorAttachmentRef.attachment = 0;
-      colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-      // depth attachment
-
-      VkAttachmentDescription depthAttachment = {};
-      depthAttachment.flags = 0;
-      depthAttachment.format = find_depth_format(m_physicalDevice);
-      depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-      depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-      depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-      depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-      depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-      depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-      depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-      VkAttachmentReference depthAttachmentRef = {};
-      depthAttachmentRef.attachment = 1;
-      depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-      uint32_t subpassCount = geometry_handler_subpass_count();
-      m_lastGeometryHandlerSubpassCount = subpassCount;
-      std::vector<VkSubpassDescription> subpasses(subpassCount);
-
-      for (VkSubpassDescription& subpass : subpasses)
-      {
-            subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass.colorAttachmentCount = 1;
-            subpass.pColorAttachments = &colorAttachmentRef;
-            subpass.pDepthStencilAttachment = &depthAttachmentRef;
-      }
-
-      std::vector<VkSubpassDependency> dependencies;
-      if (subpassCount > 1)
-      {
-            dependencies.resize(subpassCount - 1);
-            uint32_t subpassIndex = 0;
-            for (VkSubpassDependency& dependency : dependencies)
-            {
-                  dependency.srcSubpass = subpassIndex;
-                  dependency.dstSubpass = subpassIndex + 1;
-                  dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                  dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-                  dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-                  dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-                  subpassIndex++;
-            }
-      }
-
-      // dependencies.insert(dependencies.begin(), firstDependency);
-
-      VkRenderPassCreateInfo renderPassInfo{};
-      renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-      std::vector<VkAttachmentDescription> attachments = {
-          colorAttachment,
-          depthAttachment
-      };
-      renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-      renderPassInfo.pAttachments = attachments.data();
-      renderPassInfo.subpassCount = subpassCount;
-      renderPassInfo.pSubpasses = subpasses.data();
-
-      renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
-      renderPassInfo.pDependencies = dependencies.data();
-
-      auto res = vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
-      logger::log_cond_err(res == VK_SUCCESS, "failed to create render pass");
-
-      return NVE_SUCCESS;
-}
 void Renderer::recreate_render_pass()
 {
       if (m_lastGeometryHandlerSubpassCount < geometry_handler_subpass_count())
       {
-            vkDestroyRenderPass(m_device, m_renderPass, nullptr);
-            create_render_pass();
-            create_framebuffers();
-            set_geometry_handler_subpasses();
-            create_geometry_pipelines();
-            update_geometry_handler_framebuffers();
+            m_vulkanHandles.renderPass.unresolve();
+            m_vulkanHandles.renderPass.try_update();
+
+            // vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+            // create_render_pass();
+            // create_framebuffers();
+            // set_geometry_handler_subpasses();
+            // create_geometry_pipelines();
+            // update_geometry_handler_framebuffers();
+
             m_lastGeometryHandlerSubpassCount = geometry_handler_subpass_count();
       }
 }
-NVE_RESULT Renderer::create_framebuffers()
-{
-      for (auto& framebuffer : m_swapchainFramebuffers)
-            vkDestroyFramebuffer(m_device, framebuffer, nullptr);
-      m_swapchainFramebuffers.resize(m_swapchainImageViews.size());
 
-      for (size_t i = 0; i < m_swapchainImageViews.size(); i++) {
-            std::vector<VkImageView> attachments = {
-                m_swapchainImageViews[i],
-                m_depthImages[i].m_imageView
-            };
-
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = m_renderPass;
-            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebufferInfo.pAttachments = attachments.data();
-            framebufferInfo.width = m_swapchainExtent.width;
-            framebufferInfo.height = m_swapchainExtent.height;
-            framebufferInfo.layers = 1;
-
-            auto res = vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapchainFramebuffers[i]);
-            logger::log_cond_err(res == VK_SUCCESS, "failed to create framebuffer no " + i);
-      }
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_commandpool()
-{
-      VkCommandPoolCreateInfo poolInfo{};
-      poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-      poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-      poolInfo.queueFamilyIndex = m_queueFamilyIndices.graphicsFamily.value();
-
-      auto res = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
-
-      logger::log_cond_err(res == VK_SUCCESS, "failed to create command pool");
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_commandbuffers()
-{
-      m_commandBuffers.resize(m_swapchainFramebuffers.size());
-
-      VkCommandBufferAllocateInfo allocInfo{};
-      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-      allocInfo.pNext = nullptr;
-      allocInfo.commandPool = m_commandPool;
-      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-      allocInfo.commandBufferCount = m_swapchainFramebuffers.size();
-
-      auto res = vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data());
-      logger::log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer");
-
-      return NVE_SUCCESS;
-}
-NVE_RESULT Renderer::create_sync_objects()
-{
-      m_imageAvailableSemaphores.resize(m_swapchainFramebuffers.size());
-      m_renderFinishedSemaphores.resize(m_swapchainFramebuffers.size());
-      m_inFlightFences.resize(m_swapchainFramebuffers.size());
-
-      VkSemaphoreCreateInfo semCI = {};
-      semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-      VkFenceCreateInfo fenceCI = {};
-      fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-      fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-
-      for (size_t frame = 0; frame < m_swapchainFramebuffers.size(); frame++)
-      {
-            auto res = VK_SUCCESS;
-
-            res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_imageAvailableSemaphores[frame]);
-            logger::log_cond_err(res == VK_SUCCESS, "failed to create imageAvailable semaphore");
-
-            res = vkCreateSemaphore(m_device, &semCI, nullptr, &m_renderFinishedSemaphores[frame]);
-            logger::log_cond_err(res == VK_SUCCESS, "failed to create renderFinished semaphore");
-
-            res = vkCreateFence(m_device, &fenceCI, nullptr, &m_inFlightFences[frame]);
-            logger::log_cond_err(res == VK_SUCCESS, "failed to create inFlight fence");
-      }
-
-      return NVE_SUCCESS;
-}
+/*
 void Renderer::create_depth_images()
 {
       m_depthImages.resize(m_swapchainImages.size());
@@ -697,34 +284,7 @@ void Renderer::create_depth_images()
             );
       }
 }
-
-void Renderer::create_descriptor_pool()
-{
-      VkDescriptorPoolSize poolSizes[] =
-      {
-          { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-          { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-          { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-          { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-          { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-          { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-          { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-          { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-          { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-          { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-      };
-
-      VkDescriptorPoolCreateInfo descPoolCI = {};
-      descPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-      descPoolCI.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-      descPoolCI.maxSets = 1000 * IM_ARRAYSIZE(poolSizes);
-      descPoolCI.poolSizeCount = static_cast<uint32_t>(IM_ARRAYSIZE(poolSizes));
-      descPoolCI.pPoolSizes = poolSizes;
-
-      auto res = vkCreateDescriptorPool(m_device, &descPoolCI, nullptr, &m_descriptorPool);
-      logger::log_cond_err(res == VK_SUCCESS, "failed to create descriptor pool");
-}
+*/
 
 void Renderer::initialize_geometry_handlers()
 {
@@ -771,9 +331,9 @@ void Renderer::create_geometry_pipelines()
 {
       auto handlers = all_geometry_handlers();
 
-      for (GeometryHandler* geometryHandler : handlers)
+      for (auto geometryHandler : handlers)
       {
-            std::vector<PipelineRef> pipelines;
+            std::vector<vk::PipelineRef> pipelines;
             geometryHandler->get_pipelines(pipelines);
 
             for (auto pipeline : pipelines)
@@ -900,7 +460,7 @@ NVE_RESULT Renderer::submit_command_buffers(
       submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSems.size());
       submitInfo.pSignalSemaphores = signalSems.data();
 
-      graphics_queue().submit(submitInfo, &m_vulkanHandles.inFlightFences[m_frame]);
+      graphics_queue().submit(submitInfo, &m_vulkanHandles.inFlightFences[frame_object_index()]);
 
       return NVE_SUCCESS;
 }
@@ -961,7 +521,7 @@ NVE_RESULT Renderer::draw_frame()
             //    if (sem != VK_NULL_HANDLE)
             //        waitSemaphores.push_back(sem);
 
-            m_threadPool.doJob(std::bind(&Renderer::genCmdBuf, this, geometryHandler));
+            m_threadPool.doJob(std::bind(&Renderer::genCmdBuf, this, geometryHandler.get()));
       }
       m_threadPool.wait_for_finish();
       renderTime += PROFILE_END("record cmd buffers");
@@ -969,6 +529,9 @@ NVE_RESULT Renderer::draw_frame()
       PROFILE_START("record main cmd buf");
       record_main_command_buffer(frame_object_index());
       renderTime += PROFILE_END("record main cmd buf");
+
+#ifndef NVE_NO_GUI
+
       PROFILE_START("gui draw");
       if (!m_imguiDraw)
             gui_begin();
@@ -976,6 +539,8 @@ NVE_RESULT Renderer::draw_frame()
       imgui_draw(m_vulkanHandles.swapchain.m_currentImageIndex);
       m_imguiDraw = false;
       renderTime += PROFILE_END("gui draw");
+
+#endif
 
       std::vector<REF(vk::Semaphore)> signalSemaphores = { &m_vulkanHandles.renderFinishedSemaphores[frame_object_index()]};
       std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -988,9 +553,21 @@ NVE_RESULT Renderer::draw_frame()
 
       PROFILE_START("submit cmd buf");
       // Submit the recorded command buffers
-      std::vector<VkCommandBuffer> commandBuffers = { current_main_command_buffer(), current_imgui_command_buffer() };
+      std::vector<VkCommandBuffer> commandBuffers = {
+            current_main_command_buffer()
+      };
+#ifndef NVE_NO_GUI
+      commandBuffers.push_back(curent_imgui_command_buffer());
+#endif // !NVE_NO_GUI
 
-      graphics_queue().submit_command_buffers(commandBuffers, waitSemaphores, waitStages, signalSemaphores);
+
+      graphics_queue().submit_command_buffers(
+            commandBuffers,
+            waitSemaphores,
+            waitStages,
+            signalSemaphores,
+            &m_vulkanHandles.inFlightFences[frame_object_index()]
+      );
       
       renderTime += PROFILE_END("submit cmd buf");
 
@@ -1024,47 +601,18 @@ void Renderer::clean_up()
             return;
       m_initialized = false;
 
-      vkDeviceWaitIdle(m_device);
+      vkDeviceWaitIdle(m_vulkanHandles.device);
 
+#ifndef NVE_NO_GUI
       imgui_cleanup();
+#endif
 
       geometry_handler_cleanup();
       m_pipelineBatchCreator.destroy();
 
-      vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+      m_vulkanHandles.instance.unresolve();
+      m_vulkanHandles.window.unresolve();
 
-      for (uint32_t frame = 0; frame < m_swapchainFramebuffers.size(); frame++)
-      {
-            vkDestroySemaphore(m_device, m_imageAvailableSemaphores[static_cast<size_t>(frame)], nullptr);
-            vkDestroySemaphore(m_device, m_renderFinishedSemaphores[static_cast<size_t>(frame)], nullptr);
-            vkDestroyFence(m_device, m_inFlightFences[static_cast<size_t>(frame)], nullptr);
-      }
-
-      vkDestroyCommandPool(m_device, m_commandPool, nullptr);
-
-      for (auto framebuffer : m_swapchainFramebuffers) {
-            vkDestroyFramebuffer(m_device, framebuffer, nullptr);
-      }
-
-      vkDestroyRenderPass(m_device, m_renderPass, nullptr);
-
-      for (auto& image : m_depthImages)
-            image.destroy();
-      for (auto imageView : m_swapchainImageViews)
-            vkDestroyImageView(m_device, imageView, nullptr);
-
-      destroy_all_corresponding_buffers(m_device);
-
-      vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-      vkDestroyDevice(m_device, nullptr);
-      vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-
-      // if (m_config.enableValidationLayers)
-      //     destroy_debug_messenger(m_instance, m_debugMessenger, nullptr);
-
-      vkDestroyInstance(m_instance, nullptr);
-
-      glfwDestroyWindow(m_window);
       glfwTerminate();
 }
 void Renderer::geometry_handler_cleanup()
@@ -1130,6 +678,58 @@ void Renderer::await_last_frame_render()
       m_vulkanHandles.inFlightFences[last_frame_object_index()].wait();
 }
 
+uint32_t Renderer::frame_object_index()
+{
+      return m_vulkanHandles.swapchain.m_frameObectIndex;
+}
+uint32_t Renderer::last_frame_object_index()
+{
+      return m_vulkanHandles.swapchain.m_lastFrameObjectIndex;
+}
+uint32_t Renderer::swapchain_image_index()
+{
+      return m_vulkanHandles.swapchain.m_currentImageIndex;
+}
+
+vk::Queue& Renderer::graphics_queue()
+{
+      return m_vulkanHandles.device.m_graphicsQueue;
+}
+uint32_t Renderer::graphics_queue_family()
+{
+      return m_vulkanHandles.device.graphics_queue_family();
+}
+vk::Queue& Renderer::presentation_queue()
+{
+      return m_vulkanHandles.device.m_presentationQueue;
+}
+uint32_t Renderer::presentation_queue_family()
+{
+      return m_vulkanHandles.device.presentation_queue_family();
+}
+vk::Queue& Renderer::transfer_queue()
+{
+      return m_vulkanHandles.device.m_transferQueue;
+}
+uint32_t Renderer::transfer_queue_family()
+{
+      return m_vulkanHandles.device.transfer_queue_family();
+}
+vk::Queue& Renderer::compute_queue()
+{
+      return m_vulkanHandles.device.m_computeQueue;
+}
+uint32_t Renderer::compute_queue_family()
+{
+      return m_vulkanHandles.device.compute_queue_family();
+}
+
+VkCommandBuffer Renderer::current_main_command_buffer()
+{
+      return m_vulkanHandles.mainCommandBuffers.get_command_buffer(frame_object_index());
+}
+
+#ifndef NVE_NO_GUI
 
 // ---------------------------------------
 // GUI
@@ -1389,6 +989,8 @@ void Renderer::imgui_cleanup()
       ImGui::DestroyContext();
       vkDestroyDescriptorPool(m_device, m_imgui_descriptorPool, nullptr);
 }
+
+#endif
 
 // ---------------------------------------
 // VERTEX
