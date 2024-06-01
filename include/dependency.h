@@ -40,9 +40,9 @@ public:
       bool resolved() const;
 
       template<typename T>
-      void add_dependency(REF(T) dependency) { add_dependency_ref(make_dependency_ref(dependency)); }
+      void add_dependency(REF(T) dependency) { add_dependency_ref(make_dependency_ref<T>(dependency)); }
       template<typename T>
-      void add_dependent(REF(T) dependent) { add_dependent_ref(make_dependency_ref(dependent)); }
+      void add_dependent(REF(T) dependent) { add_dependent_ref(make_dependency_ref<T>(dependent)); }
       template<typename T>
       void add_dependencies(std::initializer_list<REF(T)> dependencies)
       {

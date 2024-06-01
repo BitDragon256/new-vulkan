@@ -7,6 +7,8 @@
 #include "vulkan/vulkan_helpers.h"
 #include "logger.h"
 
+#define VKH_LOG(M) logger::log(M);
+
 #define VK_CHECK_ERROR(res) { vk_check_error(res, __FILE__, __LINE__); }
 inline void vk_check_error(VkResult result, const char* file, int line)
 {
@@ -106,6 +108,8 @@ namespace vk
 
             auto res = vkCreateInstance(&instanceCI, nullptr, &m_instance);
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Instance created")
       }
       void Instance::destroy()
       {
@@ -165,6 +169,8 @@ namespace vk
             logger::log_cond_err(m_physicalDevice != VK_NULL_HANDLE, "no acceptable physical device found");
 
 #endif
+
+            VKH_LOG("Physical Device created")
       }
       void PhysicalDevice::destroy()
       {
@@ -308,6 +314,8 @@ namespace vk
             vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentationFamily.value(), 0, &m_presentationQueue.get());
             vkGetDeviceQueue(m_device, m_queueFamilyIndices.transferFamily.value(), 0, &m_transferQueue.get());
             vkGetDeviceQueue(m_device, m_queueFamilyIndices.computeFamily.value(), 0, &m_computeQueue.get());
+
+            VKH_LOG("Device created")
       }
       void Device::destroy()
       {
@@ -340,6 +348,8 @@ namespace vk
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
             m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), NULL, NULL);
+
+            VKH_LOG("Window created")
       }
       void Window::destroy()
       {
@@ -368,6 +378,8 @@ namespace vk
             
             auto res = glfwCreateWindowSurface(*instance, *window, nullptr, &m_surface);
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Surface created")
       }
       void Surface::destroy()
       {
@@ -405,16 +417,17 @@ namespace vk
             return imageViewCI;
       }
 
-      void Swapchain::initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily, REF(Queue) presentationQueue)
+      void Swapchain::initialize(
+            REF(Device) device,
+            REF(PhysicalDevice) physicalDevice,
+            REF(Window) window,
+            REF(Surface) surface
+      )
       {
             add_dependency(device);
             add_dependency(physicalDevice);
             add_dependency(window);
             add_dependency(surface);
-            add_dependency(presentationQueue);
-
-            m_graphicsQueueFamily = graphicsQueueFamily;
-            m_presentationQueueFamily = presentationQueueFamily;
 
             m_frameObectIndex = 0;
             m_lastFrameObjectIndex = 0;
@@ -448,9 +461,11 @@ namespace vk
             swapchainCI.imageArrayLayers = 1;
             swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-            uint32_t queueFamilyIndices[] = { m_graphicsQueueFamily, m_presentationQueueFamily };
+            uint32_t graphicsQueueFamily = device->graphics_queue_family();
+            uint32_t presentationQueueFamily = device->presentation_queue_family();
+            uint32_t queueFamilyIndices[] = { graphicsQueueFamily, presentationQueueFamily };
 
-            if (m_graphicsQueueFamily != m_presentationQueueFamily) {
+            if (graphicsQueueFamily != presentationQueueFamily) {
                   swapchainCI.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
                   swapchainCI.queueFamilyIndexCount = 2;
                   swapchainCI.pQueueFamilyIndices = queueFamilyIndices;
@@ -482,6 +497,8 @@ namespace vk
                   m_images[i].initialize(device, images[i], swapchain_image_view_create_info(images[i]));
                   m_images[i].create();
             }
+
+            VKH_LOG("Swapchain created")
       }
       void Swapchain::destroy()
       {
@@ -522,7 +539,8 @@ namespace vk
       }
       void Swapchain::present_current_image(std::vector<REF(Semaphore)>& semaphores)
       {
-            auto presentationQueue = get_dependency<Queue>();
+            auto device = get_dependency<Device>();
+            REF(Queue) presentationQueue = &device->m_presentationQueue;
 
             VkPresentInfoKHR presentInfo{};
             presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -583,6 +601,8 @@ namespace vk
             if (!m_onlyCreateImageView)
                   create_image();
             create_image_view();
+
+            VKH_LOG("Image created")
       }
       void Image::destroy()
       {
@@ -798,6 +818,8 @@ namespace vk
 
             auto res = vkCreateRenderPass(*device, &renderPassInfo, nullptr, &m_renderPass);
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Render Pass created")
       }
       void RenderPass::destroy()
       {
@@ -842,6 +864,8 @@ namespace vk
 
             auto res = vkCreateFramebuffer(*device, &framebufferCI, nullptr, &m_framebuffer);
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Framebuffer created")
       }
       void Framebuffer::destroy()
       {
@@ -857,11 +881,9 @@ namespace vk
       // COMMAND POOL
       // --------------------------------
 
-      void CommandPool::initialize(REF(Device) device, uint32_t transferQueueFamily)
+      void CommandPool::initialize(REF(Device) device)
       {
             add_dependency(device);
-
-            m_transferQueueFamily = transferQueueFamily;
 
             VulkanHandle::initialize();
       }
@@ -873,10 +895,12 @@ namespace vk
             createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
             createInfo.flags = 0;
             createInfo.pNext = nullptr;
-            createInfo.queueFamilyIndex = m_transferQueueFamily;
+            createInfo.queueFamilyIndex = device->transfer_queue_family();
 
             auto res = vkCreateCommandPool(*device, &createInfo, nullptr, &m_commandPool);
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Command Pool created")
       }
       void CommandPool::destroy()
       {
@@ -916,6 +940,8 @@ namespace vk
 
             auto res = vkAllocateCommandBuffers(*device, &allocInfo, m_commandBuffers.data());
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Command Buffers created")
       }
       void CommandBuffers::destroy()
       {
@@ -967,6 +993,8 @@ namespace vk
 
             auto res = vkCreateSemaphore(*device, &createInfo, nullptr, &m_semaphore);
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Semaphore created")
       }
       void Semaphore::destroy()
       {
@@ -1001,6 +1029,8 @@ namespace vk
 
             auto res = vkCreateFence(*device, &createInfo, nullptr, &m_fence);
             VK_CHECK_ERROR(res)
+
+            VKH_LOG("Fence created")
       }
       void Fence::destroy()
       {
@@ -1086,6 +1116,8 @@ namespace vk
             VK_CHECK_ERROR(res)
 
             delete[] poolSizes;
+
+            VKH_LOG("Descriptor Pool created")
       }
       void DescriptorPool::destroy()
       {

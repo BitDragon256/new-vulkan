@@ -213,7 +213,12 @@ namespace vk
       class Swapchain : public VulkanHandle
       {
       public:
-            void initialize(REF(Device) device, REF(PhysicalDevice) physicalDevice, REF(Window) window, REF(Surface) surface, uint32_t graphicsQueueFamily, uint32_t presentationQueueFamily, REF(Queue) presentationQueue);
+            void initialize(
+                  REF(Device) device,
+                  REF(PhysicalDevice) physicalDevice,
+                  REF(Window) window,
+                  REF(Surface) surface
+            );
             void create() override;
             void destroy() override;
             operator VkSwapchainKHR();
@@ -241,8 +246,6 @@ namespace vk
             VkImageViewCreateInfo swapchain_image_view_create_info(VkImage image);
 
             VkSwapchainKHR m_swapchain;
-            uint32_t m_graphicsQueueFamily;
-            uint32_t m_presentationQueueFamily;
 
             std::vector<Semaphore> m_imageAvailableSemaphores;
       };
@@ -298,8 +301,7 @@ namespace vk
       {
       public:
             void initialize(
-                  REF(Device) device,
-                  uint32_t transferQueueFamily
+                  REF(Device) device
             );
             void create() override;
             void destroy() override;
@@ -308,7 +310,6 @@ namespace vk
       private:
 
             VkCommandPool m_commandPool;
-            uint32_t m_transferQueueFamily;
       };
       class CommandBuffers : public VulkanHandle
       {

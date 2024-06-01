@@ -72,10 +72,7 @@ void Renderer::init(RenderConfig config)
             &m_vulkanHandles.device,
             &m_vulkanHandles.physicalDevice,
             &m_vulkanHandles.window,
-            &m_vulkanHandles.surface,
-            graphics_queue_family(),
-            presentation_queue_family(),
-            &presentation_queue()
+            &m_vulkanHandles.surface
       );
       m_vulkanHandles.renderPass.initialize(
             &m_vulkanHandles.device,
@@ -84,8 +81,7 @@ void Renderer::init(RenderConfig config)
             &m_vulkanHandles.subpassCountHandler
       );
       m_vulkanHandles.commandPool.initialize(
-            &m_vulkanHandles.device,
-            transfer_queue_family()
+            &m_vulkanHandles.device
       );
       m_vulkanHandles.mainCommandBuffers.initialize(
             &m_vulkanHandles.device,
@@ -94,7 +90,9 @@ void Renderer::init(RenderConfig config)
             VK_COMMAND_BUFFER_LEVEL_PRIMARY
       );
 
+      m_vulkanHandles.window.try_update();
       m_vulkanHandles.instance.try_update();
+      m_vulkanHandles.subpassCountHandler.try_update();
 
       //logger::log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
       //logger::log_cond(create_instance() == NVE_SUCCESS, "instance created");
