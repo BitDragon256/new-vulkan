@@ -9,6 +9,13 @@ class Dependency;
 
 typedef std::string DependencyId;
 
+template<typename T>
+inline DependencyId type_to_id()
+{
+      T t;
+      return t.dependency_id();
+}
+
 // typedef Reference<Dependency> DependencyRef;
 typedef struct DependencyRef_T
 {
@@ -66,7 +73,7 @@ protected:
       inline std::vector<Reference<T>> get_dependencies()
       {
             std::vector<Reference<T>> deps;
-            for (DependencyRef& dep : m_dependencies[type_to_name<T>()])
+            for (DependencyRef& dep : m_dependencies[type_to_id<T>()])
                   deps.push_back(Reference(dynamic_cast<T*>(dep.dependency.get())));
             return deps;
       }
