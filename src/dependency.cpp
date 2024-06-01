@@ -39,7 +39,7 @@ void Dependency::resolve()
 }
 void Dependency::add_dependency_ref(DependencyRef dependency)
 {
-      if (!m_dependencies.contains(dependency.type))
+      if (!m_dependencies.contains(dependency.id))
       {
             push_to_map(m_dependencies, dependency);
             dependency.dependency->add_dependent(Reference(this));
@@ -47,19 +47,19 @@ void Dependency::add_dependency_ref(DependencyRef dependency)
 }
 void Dependency::add_dependent_ref(DependencyRef dependent)
 {
-      if (!m_dependents.contains(dependent.type))
+      if (!m_dependents.contains(dependent.id))
       {
             push_to_map(m_dependents, dependent);
             dependent.dependency->add_dependency(Reference(this));
       }
 }
-void Dependency::push_to_map(std::unordered_map<typeName, std::vector<DependencyRef>>& map, DependencyRef dependency)
+void Dependency::push_to_map(std::unordered_map<DependencyId, std::vector<DependencyRef>>& map, DependencyRef dependency)
 {
-      if (map.contains(dependency.type))
-            map[dependency.type].push_back(dependency);
+      if (map.contains(dependency.id))
+            map[dependency.id].push_back(dependency);
       else
       {
-            auto& dependencyList = map[dependency.type];
+            auto& dependencyList = map[dependency.id];
             dependencyList.clear();
             dependencyList.push_back(dependency);
       }

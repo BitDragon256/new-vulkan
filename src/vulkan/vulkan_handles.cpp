@@ -1129,4 +1129,24 @@ namespace vk
             return m_descriptorPool;
       }
 
+      // ------------------------------
+      // DEPENDENCY IDS
+      // ------------------------------
+      DependencyId Instance::dependency_id() { return "Instance"; }
+      DependencyId Window::dependency_id() { return "Window"; }
+      DependencyId Surface::dependency_id() { return "Surface"; }
+      DependencyId Swapchain::dependency_id() { return "Swapchain"; }
+      DependencyId Device::dependency_id() { return "Device"; }
+      DependencyId PhysicalDevice::dependency_id() { return "PhysicalDevice"; }
+      DependencyId Image::dependency_id() { return "Image"; }
+      DependencyId RenderPass::dependency_id() { return "RenderPass"; }
+      DependencyId Framebuffer::dependency_id() { return "Framebuffer"; }
+      DependencyId SubpassCountHandler::dependency_id() { return "SubpassCountHandler"; }
+      DependencyId CommandPool::dependency_id() { return "CommandPool"; }
+      DependencyId CommandBuffers::dependency_id() { return "CommandBuffers"; }
+      DependencyId DescriptorPool::dependency_id() { return "DescriptorPool"; }
+      DependencyId Semaphore::dependency_id() { return "Semaphore"; }
+      DependencyId Fence::dependency_id() { return "Fence"; }
+      DependencyId Queue::dependency_id() { return "Queue"; }
+
 }; // namespace vk

@@ -57,6 +57,8 @@ namespace vk
 
             std::vector<const char*> m_instanceLayers;
 
+            DependencyId dependency_id() override;
+
       protected:
             void create() override;
             void destroy() override;
@@ -70,6 +72,8 @@ namespace vk
       public:
             void initialize(REF(Instance) instance, REF(Surface) surface);
             operator VkPhysicalDevice();
+
+            DependencyId dependency_id() override;
       protected:
             void create() override;
             void destroy() override;
@@ -99,6 +103,8 @@ namespace vk
                   REF(Fence) fence
             );
 
+            DependencyId dependency_id() override;
+
       protected:
             void create() override;
             void destroy() override;
@@ -122,6 +128,8 @@ namespace vk
             Queue m_presentationQueue;
             Queue m_transferQueue;
             Queue m_computeQueue;
+
+            DependencyId dependency_id() override;
       protected:
             void create() override;
             void destroy() override;
@@ -138,6 +146,8 @@ namespace vk
             void initialize(int width, int height, std::string title);
             operator GLFWwindow* ();
 
+            DependencyId dependency_id() override;
+
       protected:
             void create() override;
             void destroy() override;
@@ -153,6 +163,8 @@ namespace vk
       public:
             void initialize(REF(Instance) instance, REF(Window) window);
             operator VkSurfaceKHR();
+
+            DependencyId dependency_id() override;
 
       protected:
             void create() override;
@@ -188,6 +200,8 @@ namespace vk
 
             VkImageCreateInfo default_image_create_info();
             VkImageViewCreateInfo default_image_view_create_info();
+
+            DependencyId dependency_id() override;
 
       private:
 
@@ -241,6 +255,8 @@ namespace vk
 
             REF(Semaphore) current_image_available_semaphore();
 
+            DependencyId dependency_id() override;
+
       private:
 
             VkImageViewCreateInfo swapchain_image_view_create_info(VkImage image);
@@ -260,6 +276,8 @@ namespace vk
             uint32_t subpass_count() const;
             void add_subpass_count_callback(CallbackFunction callback);
 
+            DependencyId dependency_id() override;
+
       private:
             std::vector<CallbackFunction> m_callbacks;
       };
@@ -277,6 +295,8 @@ namespace vk
             void destroy() override;
             operator VkRenderPass();
 
+            DependencyId dependency_id() override;
+
       private:
 
             VkRenderPass m_renderPass;
@@ -293,6 +313,8 @@ namespace vk
             void destroy() override;
             operator VkFramebuffer();
 
+            DependencyId dependency_id() override;
+
       private:
 
             VkFramebuffer m_framebuffer;
@@ -306,6 +328,8 @@ namespace vk
             void create() override;
             void destroy() override;
             operator VkCommandPool();
+
+            DependencyId dependency_id() override;
 
       private:
 
@@ -324,6 +348,8 @@ namespace vk
             void destroy() override;
             VkCommandBuffer get_command_buffer(uint32_t index);
             const std::vector<VkCommandBuffer>& get_command_buffers();
+
+            DependencyId dependency_id() override;
 
       private:
 
@@ -346,6 +372,8 @@ namespace vk
             void destroy() override;
             operator VkSemaphore();
 
+            DependencyId dependency_id() override;
+
       private:
 
             VkSemaphore m_semaphore;
@@ -361,6 +389,8 @@ namespace vk
             void create() override;
             void destroy() override;
             operator VkFence();
+
+            DependencyId dependency_id() override;
 
             void wait();
 
@@ -382,6 +412,8 @@ namespace vk
             operator VkDescriptorPool();
 
             static const std::unordered_map<VkDescriptorType, uint32_t> s_defaultPoolSizes;
+
+            DependencyId dependency_id() override;
 
       private:
 

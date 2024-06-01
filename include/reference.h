@@ -25,6 +25,12 @@ public:
       {
             return m_pointer;
       }
+
+      void operator= (const Reference<T>& other)
+      {
+            m_empty = other.m_empty;
+            m_pointer = other.m_pointer;
+      }
       
       T* get() const
       {

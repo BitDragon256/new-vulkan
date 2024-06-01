@@ -7,25 +7,20 @@
 
 class Dependency;
 
+typedef std::string DependencyId;
+
 // typedef Reference<Dependency> DependencyRef;
-typedef std::string typeName;
 typedef struct DependencyRef_T
 {
       Reference<Dependency> dependency;
-      typeName type;
+      DependencyId id;
 } DependencyRef;
-
-template<typename T>
-inline typeName type_to_name()
-{
-      return typeid(T).name();
-}
 
 template<typename T>
 inline DependencyRef make_dependency_ref(Reference<T> object)
 {
       DependencyRef ref = {};
-      ref.type = type_to_name<T>();
+      ref.id = object->dependency_id();
       ref.dependency = Reference<Dependency>(object.get());
       return ref;
 }
@@ -40,9 +35,15 @@ public:
       bool resolved() const;
 
       template<typename T>
-      void add_dependency(REF(T) dependency) { add_dependency_ref(make_dependency_ref<T>(dependency)); }
+      void add_dependency(REF(T) dependency)
+      {
+            add_dependency_ref(make_dependency_ref<T>(dependency));
+      }
       template<typename T>
-      void add_dependent(REF(T) dependent) { add_dependent_ref(make_dependency_ref<T>(dependent)); }
+      void add_dependent(REF(T) dependent)
+      {
+            add_dependent_ref(make_dependency_ref<T>(dependent));
+      }
       template<typename T>
       void add_dependencies(std::initializer_list<REF(T)> dependencies)
       {
@@ -51,13 +52,15 @@ public:
                   add_dependency_ref(make_dependency_ref(dep));
       }
 
+      virtual DependencyId dependency_id() = 0;
+
 protected:
 
       virtual void on_update() = 0;
       virtual void on_unresolve() = 0;
 
-      std::unordered_map<typeName, std::vector<DependencyRef>> m_dependencies;
-      std::unordered_map<typeName, std::vector<DependencyRef>> m_dependents;
+      std::unordered_map<DependencyId, std::vector<DependencyRef>> m_dependencies;
+      std::unordered_map<DependencyId, std::vector<DependencyRef>> m_dependents;
 
       template<typename T>
       inline std::vector<Reference<T>> get_dependencies()
@@ -78,7 +81,7 @@ private:
       void resolve();
       bool m_resolved;
 
-      void push_to_map(std::unordered_map<typeName, std::vector<DependencyRef>>& map, DependencyRef dependency);
+      void push_to_map(std::unordered_map<DependencyId, std::vector<DependencyRef>>& map, DependencyRef dependency);
 
       void add_dependency_ref(DependencyRef dependency);
       void add_dependent_ref(DependencyRef dependent);
