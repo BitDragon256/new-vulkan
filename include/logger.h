@@ -8,6 +8,7 @@
 namespace logger
 {
 
+	void log_nnl(std::string str);
 	void log(std::string str);
 	void log(int i);
 	void log(uint32_t i);

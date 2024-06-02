@@ -37,7 +37,7 @@ namespace vk
                   print_not_initialized_error();
 
             if (m_created)
-                  destroy();
+                  unresolve();
             create();
             m_created = true;
       }
@@ -174,7 +174,7 @@ namespace vk
       }
       void PhysicalDevice::destroy()
       {
-
+            VKH_LOG("Physical Device destroyed")
       }
       PhysicalDevice::operator VkPhysicalDevice()
       {
@@ -320,6 +320,8 @@ namespace vk
       void Device::destroy()
       {
             vkDestroyDevice(m_device, nullptr);
+
+            VKH_LOG("Device destroyed")
       }
       Device::operator VkDevice()
       {
@@ -354,6 +356,8 @@ namespace vk
       void Window::destroy()
       {
             glfwDestroyWindow(m_window);
+
+            VKH_LOG("Window destroyed")
       }
       Window::operator GLFWwindow* ()
       {
@@ -386,6 +390,8 @@ namespace vk
             auto instance = get_dependency<Instance>();
 
             vkDestroySurfaceKHR(*instance, m_surface, nullptr);
+
+            VKH_LOG("Surface destroyed")
       }
       Surface::operator VkSurfaceKHR()
       {
@@ -506,6 +512,8 @@ namespace vk
             for (auto& image : m_images)
                   image.destroy();
             vkDestroySwapchainKHR(*device, m_swapchain, nullptr);
+
+            VKH_LOG("Swapchain destroyed")
       }
 
       Swapchain::operator VkSwapchainKHR()
@@ -573,6 +581,7 @@ namespace vk
       {
             add_dependency(device);
             m_onlyCreateImageView = false;
+            m_externallyCreated = false;
 
             m_imageCI = default_image_create_info();
             m_imageViewCI = default_image_view_create_info();
@@ -586,6 +595,7 @@ namespace vk
             m_imageViewCI = imageViewCI;
             m_image = image;
             m_onlyCreateImageView = true;
+            m_externallyCreated = true;
       }
       void Image::initialize(REF(Device) device, const VkImageCreateInfo& imageCI, const VkImageViewCreateInfo& imageViewCI)
       {
@@ -602,12 +612,19 @@ namespace vk
                   create_image();
             create_image_view();
 
+            m_created = true;
+
             VKH_LOG("Image created")
       }
       void Image::destroy()
       {
             vkDestroyImageView(*m_device, m_imageView, nullptr);
-            vkDestroyImage(*m_device, m_image, nullptr);
+            if (!m_externallyCreated)
+                  vkDestroyImage(*m_device, m_image, nullptr);
+
+            m_created = false;
+
+            VKH_LOG("Image destroyed")
       }
       void Image::create_image()
       {
@@ -825,6 +842,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyRenderPass(*device, m_renderPass, nullptr);
+
+            VKH_LOG("RenderPass destroyed")
       }
       RenderPass::operator VkRenderPass()
       {
@@ -871,6 +890,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyFramebuffer(*device, m_framebuffer, nullptr);
+
+            VKH_LOG("Framebuffer destroyed")
       }
       Framebuffer::operator VkFramebuffer()
       {
@@ -906,6 +927,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyCommandPool(*device, m_commandPool, nullptr);
+
+            VKH_LOG("Command Pool destroyed")
       }
       CommandPool::operator VkCommandPool()
       {
@@ -949,6 +972,8 @@ namespace vk
             auto commandPool = get_dependency<CommandPool>();
 
             vkFreeCommandBuffers(*device, *commandPool, static_cast<uint32_t>(m_commandBuffers.size()), m_commandBuffers.data());
+
+            VKH_LOG("Command Buffers destroyed")
       }
       VkCommandBuffer CommandBuffers::get_command_buffer(uint32_t index)
       {
@@ -1000,6 +1025,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroySemaphore(*device, m_semaphore, nullptr);
+
+            VKH_LOG("Semaphore destroyed")
       }
       Semaphore::operator VkSemaphore()
       {
@@ -1036,6 +1063,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyFence(*device, m_fence, nullptr);
+
+            VKH_LOG("Fence destroyed")
       }
       Fence::operator VkFence()
       {
@@ -1123,6 +1152,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             vkDestroyDescriptorPool(*device, m_descriptorPool, nullptr);
+
+            VKH_LOG("Descriptor Pool destroyed")
       }
       DescriptorPool::operator VkDescriptorPool()
       {

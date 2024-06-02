@@ -1,5 +1,7 @@
 #include "dependency.h"
 
+#include "logger.h"
+
 Dependency::Dependency() :
       m_dependencies{ }, m_dependents{ }, m_resolved{ false }
 {}
@@ -15,8 +17,16 @@ bool Dependency::try_update()
       resolve();
 
       for (auto& [type, deps] : m_dependents)
+      {
+            logger::log(dependency_id() + " -> " + type);
+            bool failed = true;
+
             for (auto dep : deps)
-                  dep.dependency->try_update();
+                  failed &= !dep.dependency->try_update();
+
+            if (failed)
+                  logger::log("\033[F\r" + dependency_id() + " -> " + type + " (failure)");
+      }
 
       return true;
 }

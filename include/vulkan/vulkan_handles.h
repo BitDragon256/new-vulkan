@@ -29,8 +29,9 @@ namespace vk
             void on_unresolve() override;
             void initialize();
 
-      private:
             bool m_created;
+
+      private:
             bool m_initialized;
       };
 
@@ -219,6 +220,8 @@ namespace vk
 
             bool m_recreateImage;
             bool m_recreateView;
+
+            bool m_externallyCreated;
 
             Reference<Device> m_device;
 
