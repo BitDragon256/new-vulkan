@@ -90,6 +90,14 @@ void Renderer::init(RenderConfig config)
             VK_COMMAND_BUFFER_LEVEL_PRIMARY
       );
 
+      for (auto geomHandler : all_geometry_handlers())
+      {
+            m_vulkanHandles.subpassCountHandler.add_subpass_count_callback([geomHandler]()
+            {
+                  return geomHandler.get()->subpass_count();
+            });
+      }
+
       m_vulkanHandles.window.try_update();
       m_vulkanHandles.instance.try_update();
       m_vulkanHandles.subpassCountHandler.try_update();
