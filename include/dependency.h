@@ -23,6 +23,8 @@ typedef struct DependencyRef_T
       DependencyId id;
 } DependencyRef;
 
+bool operator== (const DependencyRef& a, const DependencyRef& b);
+
 template<typename T>
 inline DependencyRef make_dependency_ref(Reference<T> object)
 {
@@ -54,7 +56,12 @@ public:
       template<typename T>
       void add_dependencies(std::initializer_list<REF(T)> dependencies)
       {
-            std::vector<DependencyRef> deps;
+            for (auto dep : dependencies)
+                  add_dependency_ref(make_dependency_ref(dep));
+      }
+      template<typename T>
+      void add_dependencies(std::vector<REF(T)> dependencies)
+      {
             for (auto dep : dependencies)
                   add_dependency_ref(make_dependency_ref(dep));
       }
@@ -87,6 +94,8 @@ private:
 
       void resolve();
       bool m_resolved;
+
+      bool m_isLoopDependency;
 
       void push_to_map(std::unordered_map<DependencyId, std::vector<DependencyRef>>& map, DependencyRef dependency);
 

@@ -282,7 +282,6 @@ void GeometryHandler::create_pipeline_layout()
 	std::vector<VkPushConstantRange> pushConstants = { cameraPushConstantRange };
 
 	m_pipelineLayout.create(descriptorSetLayouts, pushConstants, *m_vulkanObjects.device);
-
 }
 
 void GeometryHandler::add_material(Model& model, Transform& transform, bool newMat)

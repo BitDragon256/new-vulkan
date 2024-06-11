@@ -72,7 +72,8 @@ void Renderer::init(RenderConfig config)
             &m_vulkanHandles.device,
             &m_vulkanHandles.physicalDevice,
             &m_vulkanHandles.window,
-            &m_vulkanHandles.surface
+            &m_vulkanHandles.surface,
+            &m_vulkanHandles.renderPass
       );
       m_vulkanHandles.renderPass.initialize(
             &m_vulkanHandles.device,
@@ -88,6 +89,9 @@ void Renderer::init(RenderConfig config)
             &m_vulkanHandles.commandPool,
             1,
             VK_COMMAND_BUFFER_LEVEL_PRIMARY
+      );
+      m_vulkanHandles.descriptorPool.initialize(
+            &m_vulkanHandles.device
       );
 
       for (auto geomHandler : all_geometry_handlers())

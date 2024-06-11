@@ -40,6 +40,7 @@ namespace vk
       class Semaphore;
       class Fence;
       class Framebuffer;
+      class RenderPass;
 
       class Instance : public VulkanHandle
       {
@@ -181,9 +182,28 @@ namespace vk
       class Image : public VulkanHandle
       {
       public:
-            void initialize(REF(Device) device);
-            void initialize(REF(Device) device, VkImage image, const VkImageViewCreateInfo& imageViewCI);
-            void initialize(REF(Device) device, const VkImageCreateInfo& imageCI, const VkImageViewCreateInfo& imageViewCI);
+            void initialize(
+                  REF(Device) device,
+                  VkImage image,
+                  VkExtent3D extent,
+                  VkFormat format,
+                  VkImageAspectFlags aspect
+            );
+            void initialize(
+                  REF(Device) device,
+                  REF(PhysicalDevice) physicalDevice,
+                  const VkImageCreateInfo& imageCI,
+                  const VkImageViewCreateInfo& imageViewCI
+            );
+            void initialize(
+                  REF(Device) device,
+                  REF(PhysicalDevice) physicalDevice,
+                  uint32_t width, uint32_t height,
+                  VkFormat format,
+                  VkImageAspectFlags aspectFlags,
+                  VkImageUsageFlags usageFlags,
+                  VkImageLayout initialLayout
+            );
             void create() override;
             void destroy() override;
             operator VkImage();
@@ -199,24 +219,27 @@ namespace vk
             VkImageCreateInfo& image_create_info();
             VkImageViewCreateInfo& image_view_create_info();
 
-            VkImageCreateInfo default_image_create_info();
-            VkImageViewCreateInfo default_image_view_create_info();
-
             DependencyId dependency_id() override;
 
       private:
 
+            void base_initialize(REF(Device) device);
+
             void create_image();
             void create_image_view();
+            void allocate_memory();
+            void free_memory();
+
+            bool m_memoryAllocated;
 
             VkImageCreateInfo m_imageCI;
             VkImageViewCreateInfo m_imageViewCI;
-            bool m_onlyCreateImageView;
 
             VkExtent3D m_extent;
 
             VkImage m_image;
             VkImageView m_imageView;
+            VkDeviceMemory m_memory;
 
             bool m_recreateImage;
             bool m_recreateView;
@@ -234,7 +257,8 @@ namespace vk
                   REF(Device) device,
                   REF(PhysicalDevice) physicalDevice,
                   REF(Window) window,
-                  REF(Surface) surface
+                  REF(Surface) surface,
+                  REF(RenderPass) renderPass
             );
             void create() override;
             void destroy() override;
@@ -244,6 +268,7 @@ namespace vk
             VkExtent2D m_extent;
 
             std::vector<Image> m_images;
+            std::vector<Image> m_depthImages;
             std::vector<Framebuffer> m_framebuffers;
 
             uint32_t size();
@@ -262,11 +287,11 @@ namespace vk
 
       private:
 
-            VkImageViewCreateInfo swapchain_image_view_create_info(VkImage image);
-
             VkSwapchainKHR m_swapchain;
 
             std::vector<Semaphore> m_imageAvailableSemaphores;
+
+            REF(RenderPass) m_renderPass;
       };
 
       class SubpassCountHandler : public Dependency
@@ -310,7 +335,7 @@ namespace vk
             void initialize(
                   REF(Device) device,
                   REF(RenderPass) renderPass,
-                  REF(Image) image
+                  std::vector<REF(Image)> images
             );
             void create() override;
             void destroy() override;
@@ -424,7 +449,7 @@ namespace vk
             std::unordered_map<VkDescriptorType, uint32_t> m_poolSizes;
             uint32_t m_maxSets;
 
-            static void create_vk_pool_sizes(VkDescriptorPoolSize* poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap);
+            static void create_vk_pool_sizes(VkDescriptorPoolSize*& poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap);
       };
 
 }; // vk

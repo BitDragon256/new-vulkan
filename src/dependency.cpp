@@ -3,7 +3,7 @@
 #include "logger.h"
 
 Dependency::Dependency() :
-      m_dependencies{ }, m_dependents{ }, m_resolved{ false }
+      m_dependencies{ }, m_dependents{ }, m_resolved{ false }, m_isLoopDependency{ false }
 {}
 
 bool Dependency::try_update()
@@ -49,28 +49,51 @@ void Dependency::resolve()
 }
 void Dependency::add_dependency_ref(DependencyRef dependency)
 {
-      if (!m_dependencies.contains(dependency.id))
+      push_to_map(m_dependencies, dependency);
+      if (!m_isLoopDependency)
       {
-            push_to_map(m_dependencies, dependency);
+            m_isLoopDependency = true;
             dependency.dependency->add_dependent(Reference(this));
+            m_isLoopDependency = false;
       }
 }
 void Dependency::add_dependent_ref(DependencyRef dependent)
 {
-      if (!m_dependents.contains(dependent.id))
+      push_to_map(m_dependents, dependent);
+      if (!m_isLoopDependency)
       {
-            push_to_map(m_dependents, dependent);
+            m_isLoopDependency = true;
             dependent.dependency->add_dependency(Reference(this));
+            m_isLoopDependency = false;
       }
 }
 void Dependency::push_to_map(std::unordered_map<DependencyId, std::vector<DependencyRef>>& map, DependencyRef dependency)
 {
-      if (map.contains(dependency.id))
-            map[dependency.id].push_back(dependency);
+      if (
+            map.contains(dependency.id)
+      )
+      {
+            auto& dependencyList = map[dependency.id];
+            if (std::find(
+                  map[dependency.id].begin(),
+                  map[dependency.id].end(),
+                  dependency
+            ) == map[dependency.id].end())
+                  dependencyList.push_back(dependency);
+      }
       else
       {
             auto& dependencyList = map[dependency.id];
             dependencyList.clear();
             dependencyList.push_back(dependency);
       }
+}
+
+// -----------------------
+// DEPENDENCY REF
+// -----------------------
+
+bool operator== (const DependencyRef& a, const DependencyRef& b)
+{
+      return a.id == b.id && a.dependency == b.dependency;
 }

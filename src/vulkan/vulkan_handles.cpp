@@ -25,6 +25,91 @@ namespace vk
 {
 
       // --------------------------------
+      // HELPER FUNCTIONS
+      // --------------------------------
+
+      VkImageCreateInfo fill_image_create_info(
+            uint32_t width, uint32_t height, uint32_t depth,
+            VkFormat format,
+            VkImageUsageFlags usageFlags,
+            VkImageLayout initialLayout,
+            VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL,
+            uint32_t mipLevels = 1,
+            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT,
+            VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            VkImageType imageType = VK_IMAGE_TYPE_2D,
+            uint32_t arrayLayers = 1
+      )
+      {
+            VkImageCreateInfo imageCI = {};
+            imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            imageCI.pNext = nullptr;
+            imageCI.flags = 0;
+
+            imageCI.extent.width = width;
+            imageCI.extent.height = height;
+            imageCI.extent.depth = depth;
+
+            imageCI.format = format;
+            imageCI.tiling = tiling;
+            imageCI.usage = usageFlags;
+            imageCI.initialLayout = initialLayout;
+
+            imageCI.imageType = imageType;
+            imageCI.mipLevels = mipLevels;
+            imageCI.arrayLayers = arrayLayers;
+            imageCI.samples = sampleCount;
+            imageCI.sharingMode = sharingMode;
+
+            return imageCI;
+      }
+
+      VkImageViewCreateInfo fill_image_view_create_info(
+            VkImage image,
+            VkFormat format,
+            VkImageAspectFlags aspectMask,
+            uint32_t baseMipLevel = 0, uint32_t mipLevelCount = 1,
+            uint32_t baseArrayLayer = 0, uint32_t arrayLayerCount = 1,
+            VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D,
+            VkComponentMapping componentMapping = {
+                  VK_COMPONENT_SWIZZLE_IDENTITY,
+                  VK_COMPONENT_SWIZZLE_IDENTITY,
+                  VK_COMPONENT_SWIZZLE_IDENTITY
+            }
+      )
+      {
+            VkImageViewCreateInfo imageViewCI = {};
+            imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            imageViewCI.pNext = nullptr;
+            imageViewCI.flags = 0;
+            
+            imageViewCI.image = image;
+            imageViewCI.viewType = viewType;
+            imageViewCI.format = format;
+            imageViewCI.components = componentMapping;
+            imageViewCI.subresourceRange = {
+                  aspectMask,
+                  baseMipLevel, mipLevelCount,
+                  baseArrayLayer, arrayLayerCount
+            };
+
+            return imageViewCI;
+      }
+      VkMemoryAllocateInfo fill_memory_allocation_info(
+            uint32_t size,
+            uint32_t memoryType
+      )
+      {
+            VkMemoryAllocateInfo memoryAI = {};
+            memoryAI.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            memoryAI.pNext = nullptr;
+            memoryAI.allocationSize = size;
+            memoryAI.memoryTypeIndex = memoryType;
+
+            return memoryAI;
+      }
+
+      // --------------------------------
       // VULKAN HANDLE
       // --------------------------------
 
@@ -50,6 +135,8 @@ namespace vk
       }
       void VulkanHandle::initialize()
       {
+            NVE_ASSERT(m_created == false)
+
             m_initialized = true;
       }
 
@@ -402,32 +489,12 @@ namespace vk
       // SWAPCHAIN
       // --------------------------------
 
-      VkImageViewCreateInfo Swapchain::swapchain_image_view_create_info(VkImage image)
-      {
-            VkImageViewCreateInfo imageViewCI = {};
-
-            imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            imageViewCI.image = image;
-            imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            imageViewCI.format = m_imageFormat;
-            imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            imageViewCI.subresourceRange.baseMipLevel = 0;
-            imageViewCI.subresourceRange.levelCount = 1;
-            imageViewCI.subresourceRange.baseArrayLayer = 0;
-            imageViewCI.subresourceRange.layerCount = 1;
-
-            return imageViewCI;
-      }
-
       void Swapchain::initialize(
             REF(Device) device,
             REF(PhysicalDevice) physicalDevice,
             REF(Window) window,
-            REF(Surface) surface
+            REF(Surface) surface,
+            REF(RenderPass) renderPass
       )
       {
             add_dependency(device);
@@ -437,6 +504,8 @@ namespace vk
 
             m_frameObectIndex = 0;
             m_lastFrameObjectIndex = 0;
+
+            m_renderPass = renderPass;
 
             VulkanHandle::initialize();
       }
@@ -454,7 +523,8 @@ namespace vk
             VkExtent2D extent = choose_swap_extent(swapChainSupport.capabilities, *window);
 
             uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-            if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+            if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
+            {
                   imageCount = swapChainSupport.capabilities.maxImageCount;
             }
             VkSwapchainCreateInfoKHR swapchainCI = {};
@@ -471,12 +541,14 @@ namespace vk
             uint32_t presentationQueueFamily = device->presentation_queue_family();
             uint32_t queueFamilyIndices[] = { graphicsQueueFamily, presentationQueueFamily };
 
-            if (graphicsQueueFamily != presentationQueueFamily) {
+            if (graphicsQueueFamily != presentationQueueFamily)
+            {
                   swapchainCI.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
                   swapchainCI.queueFamilyIndexCount = 2;
                   swapchainCI.pQueueFamilyIndices = queueFamilyIndices;
             }
-            else {
+            else
+            {
                   swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
                   swapchainCI.queueFamilyIndexCount = 0; // Optional
                   swapchainCI.pQueueFamilyIndices = nullptr; // Optional
@@ -497,11 +569,38 @@ namespace vk
             m_imageFormat = surfaceFormat.format;
             m_extent = extent;
 
-            m_images.resize(imageCount);
+            m_images.resize(imageCount); m_depthImages.resize(imageCount);
             for (size_t i = 0; i < images.size(); i++)
             {
-                  m_images[i].initialize(device, images[i], swapchain_image_view_create_info(images[i]));
+                  m_images[i].initialize(
+                        device,
+                        images[i],
+                        { m_extent.width, m_extent.height, 1 },
+                        m_imageFormat,
+                        VK_IMAGE_ASPECT_COLOR_BIT
+                  );
                   m_images[i].create();
+
+                  m_depthImages[i].initialize(
+                        device,
+                        physicalDevice,
+                        m_extent.width, m_extent.height,
+                        find_depth_format(*physicalDevice),
+                        VK_IMAGE_ASPECT_DEPTH_BIT,
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                        VK_IMAGE_LAYOUT_UNDEFINED
+                  );
+                  m_depthImages[i].add_dependency<Swapchain>(this);
+            }
+
+            m_framebuffers.resize(imageCount);
+            for (size_t i = 0; i < m_framebuffers.size(); i++)
+            {
+                  m_framebuffers[i].initialize(
+                        device,
+                        m_renderPass,
+                        { &m_images[i], &m_depthImages[i] }
+                  );
             }
 
             VKH_LOG("Swapchain created")
@@ -577,39 +676,83 @@ namespace vk
       // IMAGE
       // --------------------------------
 
-      void Image::initialize(REF(Device) device)
+      void Image::base_initialize(REF(Device) device)
       {
             add_dependency(device);
-            m_onlyCreateImageView = false;
             m_externallyCreated = false;
-
-            m_imageCI = default_image_create_info();
-            m_imageViewCI = default_image_view_create_info();
+            m_memoryAllocated = false;
 
             VulkanHandle::initialize();
       }
-      void Image::initialize(REF(Device) device, VkImage image, const VkImageViewCreateInfo& imageViewCI)
+      void Image::initialize(
+            REF(Device) device,
+            VkImage image,
+            VkExtent3D extent,
+            VkFormat format,
+            VkImageAspectFlags aspect
+      )
       {
-            initialize(device);
+            base_initialize(device);
 
-            m_imageViewCI = imageViewCI;
+            m_imageViewCI = fill_image_view_create_info(
+                  image,
+                  format,
+                  aspect
+            );
             m_image = image;
-            m_onlyCreateImageView = true;
+            m_extent = extent;
             m_externallyCreated = true;
       }
-      void Image::initialize(REF(Device) device, const VkImageCreateInfo& imageCI, const VkImageViewCreateInfo& imageViewCI)
+      void Image::initialize(
+            REF(Device) device,
+            REF(PhysicalDevice) physicalDevice,
+            const VkImageCreateInfo& imageCI,
+            const VkImageViewCreateInfo& imageViewCI
+      )
       {
-            initialize(device);
+            base_initialize(device);
+            add_dependency<PhysicalDevice>(physicalDevice);
 
             m_imageCI = imageCI;
             m_imageViewCI = imageViewCI;
+
+            m_extent = imageCI.extent;
+      }
+      void Image::initialize(
+            REF(Device) device,
+            REF(PhysicalDevice) physicalDevice,
+            uint32_t width, uint32_t height,
+            VkFormat format,
+            VkImageAspectFlags aspect,
+            VkImageUsageFlags usageFlags,
+            VkImageLayout initialLayout
+      )
+      {
+            base_initialize(device);
+            add_dependency<PhysicalDevice>(physicalDevice);
+
+            m_imageCI = fill_image_create_info(
+                  width, height, 1,
+                  format,
+                  usageFlags,
+                  initialLayout
+            );
+
+            m_imageViewCI = fill_image_view_create_info(
+                  m_image,
+                  format,
+                  aspect
+            );
       }
       void Image::create()
       {
             m_device = get_dependency<Device>();
 
-            if (!m_onlyCreateImageView)
+            if (!m_externallyCreated)
+            {
                   create_image();
+                  allocate_memory();
+            }
             create_image_view();
 
             m_created = true;
@@ -618,7 +761,11 @@ namespace vk
       }
       void Image::destroy()
       {
+            NVE_ASSERT(m_created == true)
+
             vkDestroyImageView(*m_device, m_imageView, nullptr);
+            if (m_memoryAllocated)
+                  free_memory();
             if (!m_externallyCreated)
                   vkDestroyImage(*m_device, m_image, nullptr);
 
@@ -628,13 +775,57 @@ namespace vk
       }
       void Image::create_image()
       {
+            NVE_ASSERT(m_created == false)
+
             auto res = vkCreateImage(*m_device, &m_imageCI, nullptr, &m_image);
             VK_CHECK_ERROR(res)
       }
       void Image::create_image_view()
       {
+            NVE_ASSERT(m_created == false)
+
+            m_imageViewCI.image = m_image;
             auto res = vkCreateImageView(*m_device, &m_imageViewCI, nullptr, &m_imageView);
             VK_CHECK_ERROR(res)
+      }
+      void Image::allocate_memory()
+      {
+            if (m_memoryAllocated)
+                  free_memory();
+
+            auto device = get_dependency<Device>();
+            auto physicalDevice = get_dependency<PhysicalDevice>();
+
+            VkMemoryRequirements memoryRequirements;
+            vkGetImageMemoryRequirements(*device, m_image, &memoryRequirements);
+
+            auto memoryAI = fill_memory_allocation_info(
+                  memoryRequirements.size,
+                  find_memory_type(
+                        *physicalDevice,
+                        memoryRequirements.memoryTypeBits,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                  )
+            );
+            auto res = vkAllocateMemory(
+                  *device,
+                  &memoryAI,
+                  nullptr,
+                  &m_memory
+            );
+            VK_CHECK_ERROR(res)
+
+            vkBindImageMemory(*device, m_image, m_memory, 0);
+
+            m_memoryAllocated = true;
+      }
+      void Image::free_memory()
+      {
+            NVE_ASSERT(m_memoryAllocated == true)
+
+            auto device = get_dependency<Device>();
+            vkFreeMemory(*device, m_memory, nullptr);
+            m_memoryAllocated = false;
       }
       Image::operator VkImage()
       {
@@ -663,49 +854,6 @@ namespace vk
       {
             m_recreateView = true;
             return m_imageViewCI;
-      }
-
-      VkImageCreateInfo Image::default_image_create_info()
-      {
-            VkImageCreateInfo createInfo = {};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            createInfo.pNext = nullptr;
-
-            createInfo.arrayLayers;
-            createInfo.extent;
-            createInfo.flags;
-            createInfo.format;
-            createInfo.imageType;
-            createInfo.initialLayout;
-            createInfo.mipLevels;
-            createInfo.pQueueFamilyIndices;
-            createInfo.queueFamilyIndexCount;
-            createInfo.samples;
-            createInfo.sharingMode;
-            createInfo.tiling;
-            createInfo.usage;
-
-            return createInfo;
-      }
-      VkImageViewCreateInfo Image::default_image_view_create_info()
-      {
-            VkImageViewCreateInfo imageViewCI = {};
-            imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            imageViewCI.pNext = nullptr;
-
-            imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            imageViewCI.format = m_format;
-            imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            imageViewCI.subresourceRange.baseMipLevel = 0;
-            imageViewCI.subresourceRange.levelCount = 1;
-            imageViewCI.subresourceRange.baseArrayLayer = 0;
-            imageViewCI.subresourceRange.layerCount = 1;
-
-            return imageViewCI;
       }
 
       // --------------------------------
@@ -854,11 +1002,11 @@ namespace vk
       // FRAMEBUFFER
       // --------------------------------
 
-      void Framebuffer::initialize(REF(Device) device, REF(RenderPass) renderPass, REF(Image) image)
+      void Framebuffer::initialize(REF(Device) device, REF(RenderPass) renderPass, std::vector<REF(Image)> images)
       {
             add_dependency(device);
             add_dependency(renderPass);
-            add_dependency(image);
+            add_dependencies(images);
 
             VulkanHandle::initialize();
       }
@@ -874,11 +1022,13 @@ namespace vk
 
             VkFramebufferCreateInfo framebufferCI;
             framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferCI.flags = 0;
+            framebufferCI.pNext = nullptr;
             framebufferCI.renderPass = *renderPass;
             framebufferCI.attachmentCount = static_cast<uint32_t>(attachments.size());
             framebufferCI.pAttachments = attachments.data();
-            framebufferCI.width = images[0]->extent().width;
-            framebufferCI.height = images[0]->extent().height;
+            framebufferCI.width = images.front()->extent().width;
+            framebufferCI.height = images.front()->extent().height;
             framebufferCI.layers = 1;
 
             auto res = vkCreateFramebuffer(*device, &framebufferCI, nullptr, &m_framebuffer);
@@ -914,7 +1064,7 @@ namespace vk
 
             VkCommandPoolCreateInfo createInfo = {};
             createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-            createInfo.flags = 0;
+            createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             createInfo.pNext = nullptr;
             createInfo.queueFamilyIndex = device->transfer_queue_family();
 
@@ -1101,7 +1251,7 @@ namespace vk
           { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
           { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
       };
-      void DescriptorPool::create_vk_pool_sizes(VkDescriptorPoolSize* poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap)
+      void DescriptorPool::create_vk_pool_sizes(VkDescriptorPoolSize*& poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap)
       {
             poolSizeCount = static_cast<uint32_t>(poolSizeMap.size());
             poolSizes = new VkDescriptorPoolSize[poolSizeMap.size()];
@@ -1120,6 +1270,8 @@ namespace vk
             add_dependency(device);
             m_poolSizes = poolSizes;
             m_maxSets = maxSets;
+
+            VulkanHandle::initialize();
       }
       void DescriptorPool::create()
       {

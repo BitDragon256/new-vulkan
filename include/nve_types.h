@@ -21,6 +21,9 @@ typedef uint32_t Index;
 
 #define VERTEX_ATTRIBUTE_COUNT 5
 
+// assert
+#define NVE_ASSERT(X) assert(X);
+
 typedef struct Vertex
 {
 	Vector3 pos;
