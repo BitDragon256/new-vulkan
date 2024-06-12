@@ -93,6 +93,7 @@ void Renderer::init(RenderConfig config)
       m_vulkanHandles.descriptorPool.initialize(
             &m_vulkanHandles.device
       );
+      m_vulkanHandles.subpassCountHandler.initialize();
 
       for (auto geomHandler : all_geometry_handlers())
       {
@@ -152,7 +153,7 @@ NVE_RESULT Renderer::render()
 {
       PROFILE_START("total render time");
       PROFILE_START("glfw window should close poll");
-      if (glfwWindowShouldClose(m_window))
+      if (glfwWindowShouldClose(m_vulkanHandles.window))
       {
             return NVE_RENDER_EXIT_SUCCESS;
       }
@@ -200,16 +201,16 @@ Camera& Renderer::active_camera()
 
 int Renderer::get_key(int key)
 {
-      return glfwGetKey(m_window, key);
+      return glfwGetKey(m_vulkanHandles.window, key);
 }
 int Renderer::get_mouse_button(int btn)
 {
-      return glfwGetMouseButton(m_window, btn);
+      return glfwGetMouseButton(m_vulkanHandles.window, btn);
 }
 Vector2 Renderer::get_mouse_pos()
 {
       double xPos, yPos;
-      glfwGetCursorPos(m_window, &xPos, &yPos);
+      glfwGetCursorPos(m_vulkanHandles.window, &xPos, &yPos);
       return { xPos, yPos };
 }
 Vector2 Renderer::mouse_to_screen(Vector2 mouse)
@@ -340,6 +341,7 @@ void Renderer::set_geometry_handler_subpasses()
 void Renderer::create_geometry_pipelines()
 {
       auto handlers = all_geometry_handlers();
+      m_vulkanHandles.subpassCountHandler.check_subpasses();
 
       for (auto geometryHandler : handlers)
       {
@@ -490,10 +492,12 @@ NVE_RESULT Renderer::draw_frame()
 
       renderTime += PROFILE_END("await fences");
 
-      PROFILE_START("render pass recreation");
-      // recreate render pass if needed
-      recreate_render_pass();
-      renderTime += PROFILE_END("render pass recreation");
+      m_vulkanHandles.subpassCountHandler.check_subpasses();
+
+      // PROFILE_START("render pass recreation");
+      // // recreate render pass if needed
+      // recreate_render_pass();
+      // renderTime += PROFILE_END("render pass recreation");
 
       PROFILE_START("acquire image");
       // Acquire an image from the swap chain

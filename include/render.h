@@ -279,7 +279,7 @@ private:
 #endif
 
 	// GLFW objects
-	GLFWwindow* m_window;
+	// GLFWwindow* m_window;
 	
 	// vulkan object creation
 	void recreate_render_pass();

@@ -860,6 +860,10 @@ namespace vk
       // SUBPASS COUNT HANDLER
       // --------------------------------
 
+      void SubpassCountHandler::initialize()
+      {
+            m_lastSubpasses = 0;
+      }
       void SubpassCountHandler::on_update()
       {
 
@@ -867,6 +871,20 @@ namespace vk
       void SubpassCountHandler::on_unresolve()
       {
 
+      }
+      bool SubpassCountHandler::check_subpasses()
+      {
+            uint32_t subpasses = subpass_count();
+            if (subpasses != m_lastSubpasses)
+            {
+                  m_lastSubpasses = subpasses;
+
+                  unresolve();
+                  try_update();
+
+                  return true;
+            }
+            return false;
       }
       void SubpassCountHandler::add_subpass_count_callback(CallbackFunction callback)
       {
@@ -897,6 +915,8 @@ namespace vk
             add_dependency(subpassCountHandler);
 
             VulkanHandle::initialize();
+
+            m_doSubpassUpdate = true;
       }
       void RenderPass::create()
       {

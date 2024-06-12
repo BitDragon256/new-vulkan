@@ -298,8 +298,12 @@ namespace vk
       {
             using CallbackFunction = std::function<uint32_t(void)>;
       public:
+            void initialize();
+
             void on_update() override;
             void on_unresolve() override;
+
+            bool check_subpasses();
 
             uint32_t subpass_count() const;
             void add_subpass_count_callback(CallbackFunction callback);
@@ -308,6 +312,8 @@ namespace vk
 
       private:
             std::vector<CallbackFunction> m_callbacks;
+
+            uint32_t m_lastSubpasses;
       };
 
       class RenderPass : public VulkanHandle
@@ -328,6 +334,9 @@ namespace vk
       private:
 
             VkRenderPass m_renderPass;
+
+            bool m_doSubpassUpdate;
+
       };
       class Framebuffer : public VulkanHandle
       {
