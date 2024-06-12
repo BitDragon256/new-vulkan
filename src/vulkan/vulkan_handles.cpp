@@ -1211,6 +1211,8 @@ namespace vk
       {
             add_dependency(device);
             m_createSignaled = createSignaled;
+
+            VulkanHandle::initialize();
       }
       void Fence::create()
       {
@@ -1243,6 +1245,8 @@ namespace vk
 
       void Fence::wait()
       {
+            NVE_ASSERT(m_created == true)
+
             auto device = get_dependency<Device>();
 
             vkWaitForFences(*device, 1, &m_fence, VK_TRUE, UINT64_MAX);

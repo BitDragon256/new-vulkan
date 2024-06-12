@@ -175,6 +175,8 @@ private:
 
 	VkCommandBuffer current_main_command_buffer();
 
+	void initialize_sync_objects();
+
 #ifndef NVE_NO_GUI
 	VkCommandBuffer current_imgui_command_buffer();
 #endif

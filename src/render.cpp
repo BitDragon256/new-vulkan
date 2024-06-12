@@ -107,6 +107,8 @@ void Renderer::init(RenderConfig config)
       m_vulkanHandles.instance.try_update();
       m_vulkanHandles.subpassCountHandler.try_update();
 
+      initialize_sync_objects();
+
       //logger::log_cond(create_window(config.width, config.height, config.title) == NVE_SUCCESS, "window created");
       //logger::log_cond(create_instance() == NVE_SUCCESS, "instance created");
       //// logger::log_cond(create_debug_messenger() == NVE_SUCCESS, "debug messenger created");
@@ -741,6 +743,23 @@ uint32_t Renderer::compute_queue_family()
 VkCommandBuffer Renderer::current_main_command_buffer()
 {
       return m_vulkanHandles.mainCommandBuffers.get_command_buffer(frame_object_index());
+}
+
+void Renderer::initialize_sync_objects()
+{
+      m_vulkanHandles.inFlightFences.resize(m_vulkanHandles.swapchain.size());
+      m_vulkanHandles.renderFinishedSemaphores.resize(m_vulkanHandles.swapchain.size());
+
+      for (auto& fence : m_vulkanHandles.inFlightFences)
+      {
+            fence.initialize(&m_vulkanHandles.device, true);
+            fence.try_update();
+      }
+      for (auto& semaphore : m_vulkanHandles.renderFinishedSemaphores)
+      {
+            semaphore.initialize(&m_vulkanHandles.device);
+            semaphore.try_update();
+      }
 }
 
 #ifndef NVE_NO_GUI
