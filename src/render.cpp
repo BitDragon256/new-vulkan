@@ -87,9 +87,10 @@ void Renderer::init(RenderConfig config)
       m_vulkanHandles.mainCommandBuffers.initialize(
             &m_vulkanHandles.device,
             &m_vulkanHandles.commandPool,
-            1,
+            [this]() { return m_vulkanHandles.swapchain.size(); },
             VK_COMMAND_BUFFER_LEVEL_PRIMARY
       );
+      m_vulkanHandles.mainCommandBuffers.add_dependency<vk::Swapchain>(&m_vulkanHandles.swapchain);
       m_vulkanHandles.descriptorPool.initialize(
             &m_vulkanHandles.device
       );

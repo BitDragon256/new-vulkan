@@ -381,6 +381,12 @@ namespace vk
                   uint32_t count,
                   VkCommandBufferLevel level
             );
+            void initialize(
+                  REF(Device) device,
+                  REF(CommandPool) commandPool,
+                  std::function<uint32_t(void)> countCallback,
+                  VkCommandBufferLevel level
+            );
             void create() override;
             void destroy() override;
             VkCommandBuffer get_command_buffer(uint32_t index);
@@ -391,6 +397,7 @@ namespace vk
       private:
 
             std::vector<VkCommandBuffer> m_commandBuffers;
+            std::function<uint32_t(void)> m_countCallback;
             VkCommandBufferLevel m_level;
       };
       class Semaphore : public VulkanHandle

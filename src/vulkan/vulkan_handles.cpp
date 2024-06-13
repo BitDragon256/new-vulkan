@@ -603,6 +603,14 @@ namespace vk
                   );
             }
 
+            m_imageAvailableSemaphores.resize(imageCount);
+            for (auto& semaphore : m_imageAvailableSemaphores)
+            {
+                  semaphore.initialize(device);
+                  semaphore.add_dependency<Swapchain>(this);
+                  semaphore.try_update();
+            }
+
             VKH_LOG("Swapchain created")
       }
       void Swapchain::destroy()
@@ -935,7 +943,7 @@ namespace vk
             colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
             VkAttachmentReference colorAttachmentRef = {};
             colorAttachmentRef.attachment = 0;
@@ -1111,10 +1119,24 @@ namespace vk
 
       void CommandBuffers::initialize(REF(Device) device, REF(CommandPool) commandPool, uint32_t count, VkCommandBufferLevel level)
       {
+            initialize(
+                  device,
+                  commandPool,
+                  [count]() { return count; },
+                  level
+            );
+      }
+      void CommandBuffers::initialize(
+            REF(Device) device,
+            REF(CommandPool) commandPool,
+            std::function<uint32_t(void)> countCallback,
+            VkCommandBufferLevel level
+      )
+      {
             add_dependency(device);
             add_dependency(commandPool);
 
-            m_commandBuffers.resize(count);
+            m_countCallback = countCallback;
             m_level = level;
 
             VulkanHandle::initialize();
@@ -1123,6 +1145,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
             auto commandPool = get_dependency<CommandPool>();
+
+            m_commandBuffers.resize(m_countCallback());
 
             VkCommandBufferAllocateInfo allocInfo = {};
             allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
