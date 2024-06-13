@@ -2,19 +2,10 @@
 
 #include <set>
 
-#include <vulkan/vk_enum_string_helper.h>
-
 #include "vulkan/vulkan_helpers.h"
 #include "logger.h"
 
 #define VKH_LOG(M) logger::log(M);
-
-#define VK_CHECK_ERROR(res) { vk_check_error(res, __FILE__, __LINE__); }
-inline void vk_check_error(VkResult result, const char* file, int line)
-{
-      if (result != VK_SUCCESS)
-            fprintf(stderr, "vulkan error in file %s, line %d: %s\n", file, line, string_VkResult(result));
-}
 
 inline void print_not_initialized_error()
 {

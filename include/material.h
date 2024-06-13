@@ -8,6 +8,7 @@
 
 #include "nve_types.h"
 #include "image.h"
+#include "reference.h"
 
 #define TEXTURE_POOL_MAX_TEXTURES 128
 
@@ -80,6 +81,18 @@ struct GraphicsShader_T
 typedef std::shared_ptr<GraphicsShader_T> GraphicsShader;
 typedef std::weak_ptr<GraphicsShader_T> GraphicsShaderRef;
 GraphicsShader make_default_shader();
+
+struct RayTracingShader_T
+{
+	Shader raygen;
+	Shader miss;
+	Shader hit;
+
+	bool operator==(const RayTracingShader_T& other) const;
+};
+typedef REF(RayTracingShader_T) RayTracingShader;
+RayTracingShader make_default_raytracing_shader();
+
 
 class Material
 {

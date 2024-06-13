@@ -5,7 +5,17 @@
 #include <vector>
 
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
+
 #include <GLFW/glfw3.h>
+
+#define VK_CHECK_ERROR(res) { vk_check_error(res, __FILE__, __LINE__); }
+inline void vk_check_error(VkResult result, const char* file, int line)
+{
+      if (result != VK_SUCCESS)
+            fprintf(stderr, "vulkan error in file %s, line %d: %s\n", file, line, string_VkResult(result));
+}
+
 
 // physical device
 bool is_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface);

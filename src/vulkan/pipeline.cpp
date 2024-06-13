@@ -264,6 +264,164 @@ namespace vk
 	}
 
 	// --------------------------------------
+	// RAY TRACING PIPELINE
+	// --------------------------------------
+
+	RayTracingPipeline::RayTracingPipeline() :
+		Pipeline::Pipeline{ RayTracingPipeline_E }
+	{}
+
+	void RayTracingPipeline::initialize(
+		VkDevice device,
+		PipelineLayoutRef layout,
+		RayTracingShader shader
+	)
+	{
+		Pipeline::initialize(device, layout);
+
+		m_shader = shader;
+	}
+	void RayTracingPipeline::create_create_info()
+	{
+		if (m_created)
+			destroy();
+
+		set_default_create_info();
+		set_shader_stages();
+
+		m_createInfo.layout = m_layout->m_layout;
+	}
+	void RayTracingPipeline::create()
+	{
+		auto res = vkCreateRayTracingPipelinesKHR(
+			m_device,
+			VK_NULL_HANDLE,
+			VK_NULL_HANDLE,
+			1,
+			&m_createInfo,
+			nullptr,
+			&m_pipeline
+		);
+
+		VK_CHECK_ERROR(res)
+	}
+
+	void RayTracingPipeline::set_default_create_info()
+	{
+		m_createInfo = {};
+
+		m_createInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+		m_createInfo.flags = 0;
+		m_createInfo.pNext = nullptr;
+
+		// ---------------------------------------
+
+		m_createInfo.basePipelineHandle = VK_NULL_HANDLE;
+		m_createInfo.basePipelineIndex = -1;
+
+		m_createInfo.layout = *m_layout;
+
+		// ---------------------------------------
+
+		m_creationData.dynamicStates = {
+		   VK_DYNAMIC_STATE_VIEWPORT,
+		   VK_DYNAMIC_STATE_SCISSOR
+		};
+		m_creationData.dynamicState = {};
+		m_creationData.dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		m_creationData.dynamicState.dynamicStateCount = static_cast<uint32_t>(m_creationData.dynamicStates.size());
+		m_creationData.dynamicState.pDynamicStates = m_creationData.dynamicStates.data();
+
+		m_createInfo.pDynamicState = &m_creationData.dynamicState;
+
+		// ---------------------------------------
+
+		m_createInfo.pLibraryInfo = nullptr;
+		m_createInfo.pLibraryInterface = nullptr;
+
+		// ---------------------------------------
+
+		m_createInfo.maxPipelineRayRecursionDepth = 1;
+	}
+	void RayTracingPipeline::set_shader_stages()
+	{
+		// ray generation
+		{
+			VkPipelineShaderStageCreateInfo shaderStageCI = {};
+			shaderStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			shaderStageCI.flags = 0;
+			shaderStageCI.pNext = nullptr;
+			shaderStageCI.module = m_shader->raygen.m_module;
+			shaderStageCI.pName = "main";
+			shaderStageCI.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+
+			VkRayTracingShaderGroupCreateInfoKHR groupCI = {};
+			groupCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+			groupCI.pNext = nullptr;
+			groupCI.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+			groupCI.generalShader = static_cast<uint32_t>(m_creationData.groupCIs.size()) - 1;
+			groupCI.closestHitShader = VK_SHADER_UNUSED_KHR;
+			groupCI.anyHitShader = VK_SHADER_UNUSED_KHR;
+			groupCI.intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			m_creationData.stageCIs.push_back(shaderStageCI);
+			m_creationData.groupCIs.push_back(groupCI);
+		}
+
+		// miss
+		{
+			VkPipelineShaderStageCreateInfo shaderStageCI = {};
+			shaderStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			shaderStageCI.flags = 0;
+			shaderStageCI.pNext = nullptr;
+			shaderStageCI.module = m_shader->miss.m_module;
+			shaderStageCI.pName = "main";
+			shaderStageCI.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+
+			VkRayTracingShaderGroupCreateInfoKHR groupCI = {};
+			groupCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+			groupCI.pNext = nullptr;
+			groupCI.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+			groupCI.generalShader = static_cast<uint32_t>(m_creationData.groupCIs.size()) - 1;
+			groupCI.closestHitShader = VK_SHADER_UNUSED_KHR;
+			groupCI.anyHitShader = VK_SHADER_UNUSED_KHR;
+			groupCI.intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			m_creationData.stageCIs.push_back(shaderStageCI);
+			m_creationData.groupCIs.push_back(groupCI);
+		}
+
+		// hit
+		{
+			VkPipelineShaderStageCreateInfo shaderStageCI = {};
+			shaderStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			shaderStageCI.flags = 0;
+			shaderStageCI.pNext = nullptr;
+			shaderStageCI.module = m_shader->hit.m_module;
+			shaderStageCI.pName = "main";
+			shaderStageCI.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+			VkRayTracingShaderGroupCreateInfoKHR groupCI = {};
+			groupCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+			groupCI.pNext = nullptr;
+			groupCI.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+			groupCI.generalShader = VK_SHADER_UNUSED_KHR;
+			groupCI.closestHitShader = static_cast<uint32_t>(m_creationData.groupCIs.size()) - 1;
+			groupCI.anyHitShader = VK_SHADER_UNUSED_KHR;
+			groupCI.intersectionShader = VK_SHADER_UNUSED_KHR;
+
+			m_creationData.stageCIs.push_back(shaderStageCI);
+			m_creationData.groupCIs.push_back(groupCI);
+		}
+
+		m_createInfo.pStages = m_creationData.stageCIs.data();
+		m_createInfo.stageCount = static_cast<uint32_t>(m_creationData.stageCIs.size());
+
+		m_createInfo.pGroups = m_creationData.groupCIs.data();
+		m_createInfo.groupCount = static_cast<uint32_t>(m_creationData.groupCIs.size());
+	}
+
+	// --------------------------------------
 	// PIPELINE BATCH CREATOR
 	// --------------------------------------
 

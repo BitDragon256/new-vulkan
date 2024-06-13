@@ -97,7 +97,13 @@ namespace vk
 		void create_create_info() override;
 		void create() override;
 
-		void initialize(VkDevice device, PipelineLayoutRef layout, REF(RenderPass) renderPass, uint32_t subpass, GraphicsShaderRef shader);
+		void initialize(
+			VkDevice device,
+			PipelineLayoutRef layout,
+			REF(RenderPass) renderPass,
+			uint32_t subpass,
+			GraphicsShaderRef shader
+		);
 
 		VkGraphicsPipelineCreateInfo m_createInfo;
 
@@ -110,6 +116,42 @@ namespace vk
 		uint32_t m_subpass;
 		REF(RenderPass) m_renderPass;
 		GraphicsShaderRef m_shader;
+
+	};
+
+	typedef struct RayTracingPipelineCreationData_T
+	{
+		VkPipelineDynamicStateCreateInfo dynamicState;
+		std::vector<VkDynamicState> dynamicStates;
+
+		std::vector<VkPipelineShaderStageCreateInfo> stageCIs;
+		std::vector<VkRayTracingShaderGroupCreateInfoKHR> groupCIs;
+	} RayTracingPipelineCreationData;
+
+	class RayTracingPipeline : public Pipeline
+	{
+	public:
+
+		RayTracingPipeline();
+		void create_create_info() override;
+		void create() override;
+
+		void initialize(
+			VkDevice device,
+			PipelineLayoutRef layout,
+			RayTracingShader shader
+		);
+
+		VkRayTracingPipelineCreateInfoKHR m_createInfo;
+
+	private:
+
+		RayTracingPipelineCreationData m_creationData;
+
+		void set_default_create_info();
+		void set_shader_stages();
+
+		RayTracingShader m_shader;
 
 	};
 
