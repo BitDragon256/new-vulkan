@@ -293,7 +293,19 @@ namespace vk
 	}
 	void RayTracingPipeline::create()
 	{
-		auto res = vkCreateRayTracingPipelinesKHR(
+		PFN_vkVoidFunction createRTPipelines = vkGetDeviceProcAddr(
+			m_device,
+			"vkCreateRayTracingPipelinesKHR"
+		);
+		auto res = ((VkResult (*)(
+			VkDevice,
+			VkDeferredOperationKHR,
+			VkPipelineCache,
+			uint32_t,
+			const VkRayTracingPipelineCreateInfoKHR*,
+			const VkAllocationCallbacks*,
+			VkPipeline*
+		))(createRTPipelines))(
 			m_device,
 			VK_NULL_HANDLE,
 			VK_NULL_HANDLE,

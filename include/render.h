@@ -115,6 +115,8 @@ public:
 
 	ECSManager m_ecs;
 
+	float delta_time();
+
 	// input
 	int get_key(int key);
 	int get_mouse_button(int btn);
