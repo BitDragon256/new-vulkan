@@ -337,7 +337,7 @@ bool Shader::operator==(const Shader& other) const
 
 VkDevice Shader::s_device;
 
-GraphicsShader make_default_shader()
+GraphicsShader make_default_graphics_shader()
 {
 	auto shader = std::make_shared<GraphicsShader_T>();
 	shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");

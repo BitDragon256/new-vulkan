@@ -943,6 +943,21 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 }
 
 // ------------------------------------------
+// RAY TRACING GEOMETRY HANDLER
+// ------------------------------------------
+
+void create_acceleration_structure_buffer(
+	AccelerationStructure& accelerationStructure,
+	VkAccelerationStructureBuildSizesInfoKHR
+)
+{
+	BufferConfig bufferConfig = {};
+	bufferConfig.singleUseStagedBuffer = false;
+	bufferConfig.useStagedBuffer = true;
+	bufferConfig.memoryFlags = 
+}
+
+// ------------------------------------------
 // TINY OBJ LOADER HELPER
 // ------------------------------------------
 
