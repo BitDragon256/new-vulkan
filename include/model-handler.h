@@ -245,6 +245,34 @@ private:
 	uint32_t m_modelCount;
 };
 
+// ----------------------------------
+// RAY TRACING GEOMETRY HANDLER
+// ----------------------------------
+
+struct AccelerationStructure
+{
+	VkAccelerationStructureKHR handle;
+	uint64_t deviceAddress = 0;
+	VkDeviceMemory memory;
+	Buffer<int> buffer;
+};
+
+struct RayTracingModel : Model
+{
+
+};
+
+class RayTracingGeometryHandler : public GeometryHandler, System<RayTracingModel, Transform>
+{
+public:
+
+private:
+
+	AccelerationStructure m_bottomLevelAS;
+	AccelerationStructure m_topLevelAS;
+
+};
+
 // ---------------------------------
 // HELPER FUNCTIONS
 // ---------------------------------

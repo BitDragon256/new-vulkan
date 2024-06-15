@@ -293,6 +293,7 @@ namespace vk
 	}
 	void RayTracingPipeline::create()
 	{
+		/*
 		auto res = vkCreateRayTracingPipelinesKHR(
 			m_device,
 			VK_NULL_HANDLE,
@@ -304,6 +305,7 @@ namespace vk
 		);
 
 		VK_CHECK_ERROR(res)
+		*/
 	}
 
 	void RayTracingPipeline::set_default_create_info()

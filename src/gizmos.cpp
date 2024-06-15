@@ -57,7 +57,7 @@ GizmosHandler::GizmosHandler()
 void GizmosHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* gui)
 {
 	GeometryHandler::initialize(vulkanObjects, gui);
-	m_shader = make_default_shader();
+	m_shader = make_default_graphics_shader();
 	m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
 	m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 }

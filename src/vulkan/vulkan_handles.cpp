@@ -1288,7 +1288,8 @@ namespace vk
           { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
           { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
           { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-          { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+          { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 },
+          { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1000 } // TODO remove this and get the pool sizes by querying
       };
       void DescriptorPool::create_vk_pool_sizes(VkDescriptorPoolSize*& poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap)
       {

@@ -170,7 +170,7 @@ int main(int argc, char** argv)
 
     DynamicModel quad;
     quad.load_mesh("/default_models/quad/quad.obj");
-    quad.m_children.front().material->m_shader = make_default_shader();
+    quad.m_children.front().material->m_shader = make_default_graphics_shader();
     quad.m_children[0].material->m_diffuse = { 1, 1, 1 };
 
     EntityId top, bottom, left, right;

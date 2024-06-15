@@ -62,6 +62,7 @@ set(
 	${SOURCE_DIR}/vulkan/vulkan_helpers.cpp
 	${SOURCE_DIR}/vulkan/pipeline.cpp
 	${SOURCE_DIR}/vulkan/vulkan_handles.cpp
+	${SOURCE_DIR}/vulkan/raytracing_handles.cpp
 	
 	${SOURCE_DIR}/simple_fluid.cpp
       ${SOURCE_DIR}/spatial_hash_grid.cpp
@@ -101,6 +102,7 @@ set(
 	${INCLUDE_DIR}/vulkan/vulkan_helpers.h
 	${INCLUDE_DIR}/vulkan/pipeline.h
 	${INCLUDE_DIR}/vulkan/vulkan_handles.h
+	${INCLUDE_DIR}/vulkan/raytracing_handles.h
 
 	${INCLUDE_DIR}/simple_fluid.h
       ${INCLUDE_DIR}/spatial_hash_grid.h
