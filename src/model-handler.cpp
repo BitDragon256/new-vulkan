@@ -948,7 +948,7 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 
 void RayTracingGeometryHandler::start()
 {
-
+	get_physical_device_extension_properties(m_vulkanObjects.physicalDevice, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, m_pipelineProperties);
 }
 void RayTracingGeometryHandler::awake(EntityId entity)
 {
@@ -980,11 +980,107 @@ void RayTracingGeometryHandler::record_command_buffer(
 	size_t meshGroupIndex
 )
 {
+	VkCommandBuffer commandBuffer = meshGroup.commandBuffers[frame];
+	vkResetCommandBuffer(commandBuffer, 0);
 
+	// ---------------------------------------
+
+	VkCommandBufferInheritanceInfo inheritanceInfo;
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(
+		*m_vulkanObjects.renderPass,
+		subpass,
+		*m_vulkanObjects.framebuffers[static_cast<uint32_t>(frame)],
+		inheritanceInfo
+	);
+
+	VK_CHECK_ERROR(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
+
+	// ---------------------------------------
+
+	vkCmdBindPipeline(
+		commandBuffer,
+		VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+		meshGroup.pipeline
+	);
+
+	// ---------------------------------------
+
+	vkCmdBindDescriptorSets(
+		commandBuffer,
+		VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+		m_pipelineLayout,
+		0,
+		1,
+		&m_descriptorSet,
+		0,
+		nullptr
+	);
+
+	// ---------------------------------------
+
+	const uint32_t shaderHandleSizeAligned = aligned_size(m_pipelineProperties.shaderGroupHandleSize, m_pipelineProperties.shaderGroupHandleAlignment);
+
+	VkStridedDeviceAddressRegionKHR raygenSBT = {};
+	raygenSBT.deviceAddress = get_buffer_device_address(m_vulkanObjects.device, m_raygenShaderBindingTable);
+	raygenSBT.stride = shaderHandleSizeAligned;
+	raygenSBT.size = shaderHandleSizeAligned;
+
+	VkStridedDeviceAddressRegionKHR missSBT = {};
+	missSBT.deviceAddress = get_buffer_device_address(m_vulkanObjects.device, m_missShaderBindingTable);
+	missSBT.stride = shaderHandleSizeAligned;
+	missSBT.size = shaderHandleSizeAligned;
+
+	VkStridedDeviceAddressRegionKHR hitSBT = {};
+	hitSBT.deviceAddress = get_buffer_device_address(m_vulkanObjects.device, m_hitShaderBindingTable);
+	hitSBT.stride = shaderHandleSizeAligned;
+	hitSBT.size = shaderHandleSizeAligned;
+
+	VkStridedDeviceAddressRegionKHR callableSBT = {};
+
+	// ---------------------------------------
+
+	vkCmdTraceRaysKHR(
+		commandBuffer,
+		&raygenSBT,
+		&missSBT,
+		&hitSBT,
+		&callableSBT,
+		m_vulkanObjects.swapchainExtent->width,
+		m_vulkanObjects.swapchainExtent->height,
+		1
+	);
+	
+	// ---------------------------------------
+
+	VK_CHECK_ERROR(vkEndCommandBuffer(commandBuffer));
 }
 std::vector<VkDescriptorSetLayoutBinding> RayTracingGeometryHandler::other_descriptors()
 {
 
+}
+
+void RayTracingGeometryHandler::create_shader_binding_tables()
+{
+	const uint32_t shaderHandleSize = m_pipelineProperties.shaderGroupHandleSize;
+	const uint32_t shaderHandleSizeAligned = aligned_size(shaderHandleSize, m_pipelineProperties.shaderGroupHandleAlignment);
+	const uint32_t groupCount = m_pipeline.shader_group_size();
+	const uint32_t shaderBindingTableSize = groupCount * shaderHandleSizeAligned;
+
+	std::vector<uint8_t> shaderHandleStorage(shaderBindingTableSize);
+	vkGetRayTracingShaderGroupHandlesKHR(*m_vulkanObjects.device, m_pipeline, 0, groupCount, shaderBindingTableSize, (void*)shaderHandleStorage.data());
+
+	const VkBufferUsageFlags bufferUsageFlags = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	const VkMemoryPropertyFlags memoryUsageFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	m_raygenShaderBindingTable.create(m_vulkanObjects.device, shaderHandleSize, bufferUsageFlags, memoryUsageFlags);
+	m_missShaderBindingTable.create(m_vulkanObjects.device, shaderHandleSize, bufferUsageFlags, memoryUsageFlags);
+	m_hitShaderBindingTable.create(m_vulkanObjects.device, shaderHandleSize, bufferUsageFlags, memoryUsageFlags);
+
+	m_raygenShaderBindingTable.map_memory();
+	m_missShaderBindingTable.map_memory();
+	m_hitShaderBindingTable.map_memory();
+	memcpy(m_raygenShaderBindingTable.m_mappedMemory, shaderHandleStorage.data(), shaderHandleSize);
+	memcpy(m_missShaderBindingTable.m_mappedMemory, shaderHandleStorage.data() + shaderHandleSizeAligned, shaderHandleSize);
+	memcpy(m_hitShaderBindingTable.m_mappedMemory, shaderHandleStorage.data() + shaderHandleSizeAligned * 2, shaderHandleSize);
 }
 
 // ------------------------------------------

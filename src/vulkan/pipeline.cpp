@@ -317,6 +317,12 @@ namespace vk
 
 		VK_CHECK_ERROR(res)
 	}
+	uint32_t RayTracingPipeline::shader_group_size()
+	{
+		NVE_ASSERT(m_creationData.groupCIs.size() > 0) // make sure the shader groups are initialized
+
+		return static_cast<uint32_t>(m_creationData.groupCIs.size());
+	}
 
 	void RayTracingPipeline::set_default_create_info()
 	{

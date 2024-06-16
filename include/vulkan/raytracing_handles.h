@@ -89,7 +89,7 @@ namespace vk
             void create() override;
             void destroy() override;
 
-            void build(const std::vector<AccelerationStructureTriangleMesh>& meshes);
+            void build();
 
             DependencyId dependency_id() override;
 

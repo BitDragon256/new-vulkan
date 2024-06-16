@@ -470,4 +470,39 @@ namespace vk
             static void create_vk_pool_sizes(VkDescriptorPoolSize*& poolSizes, uint32_t& poolSizeCount, const std::unordered_map<VkDescriptorType, uint32_t>& poolSizeMap);
       };
 
+
+      class SimpleBuffer : private Dependency
+      {
+      public:
+
+            void create(
+                  REF(Device) device,
+                  VkDeviceSize size,
+                  VkBufferUsageFlags usage,
+                  VkMemoryPropertyFlags memoryProperties,
+                  VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE
+            );
+            void map_memory();
+            void unmap_memory();
+
+            VkBuffer m_buffer;
+            VkDeviceMemory m_memory;
+            void* m_mappedMemory;
+
+            DependencyId dependency_id() override;
+            operator VkBuffer();
+
+      private:
+
+            VkDeviceSize m_size;
+            VkBufferUsageFlags m_usage;
+            VkMemoryPropertyFlags m_memoryProperties;
+            VkSharingMode m_sharingMode;
+
+            bool m_memoryIsMapped;
+
+            void on_update() override;
+            void on_unresolve() override;
+      };
+
 }; // vk

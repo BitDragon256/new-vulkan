@@ -9,6 +9,10 @@
 #include "math-core.h"
 #include "reference.h"
 
+// debug mode
+#define NVE_DEBUG
+// #undef NVE_DEBUG
+
 // success codes
 #define NVE_SUCCESS 0
 #define NVE_RENDER_EXIT_SUCCESS 100
@@ -22,7 +26,11 @@ typedef uint32_t Index;
 #define VERTEX_ATTRIBUTE_COUNT 5
 
 // assert
+#ifdef NVE_DEBUG
 #define NVE_ASSERT(X) assert(X);
+#else
+#define NVE_ASSERT(X) (void);
+#endif
 
 typedef struct Vertex
 {

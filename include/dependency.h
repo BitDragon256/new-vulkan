@@ -73,6 +73,8 @@ protected:
       virtual void on_update() = 0;
       virtual void on_unresolve() = 0;
 
+      bool dependency_try_update();
+
       std::unordered_map<DependencyId, std::vector<DependencyRef>> m_dependencies;
       std::unordered_map<DependencyId, std::vector<DependencyRef>> m_dependents;
 
@@ -89,6 +91,8 @@ protected:
       {
             return get_dependencies<T>().front();
       }
+
+      bool m_blockUpdate;
 
 private:
 

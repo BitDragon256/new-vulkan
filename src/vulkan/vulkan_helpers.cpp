@@ -398,3 +398,25 @@ void free_device_memory(REF(vk::Device) device, VkDeviceMemory memory)
 {
       vkFreeMemory(*device, memory, nullptr);
 }
+
+void* get_pnext(void* structure)
+{
+      return to_base_structure(structure)->pNext;
+}
+bool pnext_is_null(void* structure)
+{
+      return get_pnext(structure) == nullptr;
+}
+VkStructureType get_structure_type(void* structure)
+{
+      return to_base_structure(structure)->sType;
+}
+VkBaseOutStructure* to_base_structure(void* structure)
+{
+      return reinterpret_cast<VkBaseOutStructure*>(structure);
+}
+
+uint32_t aligned_size(uint32_t value, uint32_t alignment)
+{
+      return (value + alignment - 1) & ~(alignment - 1);
+}

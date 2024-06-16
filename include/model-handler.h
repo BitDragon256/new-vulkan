@@ -270,7 +270,12 @@ public:
 
 protected:
 
-	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) override;
+	void record_command_buffer(
+		uint32_t subpass,
+		size_t frame,
+		const MeshGroup& meshGroup,
+		size_t meshGroupIndex
+	) override;
 	std::vector<VkDescriptorSetLayoutBinding> other_descriptors() override;
 
 private:
@@ -278,7 +283,17 @@ private:
 	Buffer<Transform> m_transformBuffer;
 	bool m_updatedTransformDescriptorSets;
 
+	// shader binding tables
+	vk::SimpleBuffer m_raygenShaderBindingTable;
+	vk::SimpleBuffer m_missShaderBindingTable;
+	vk::SimpleBuffer m_hitShaderBindingTable;
+
+	void create_shader_binding_tables();
+
 	vk::CompleteAccelerationStructure m_accelerationStructure;
+
+	vk::RayTracingPipeline m_pipeline;
+	VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_pipelineProperties;
 
 };
 

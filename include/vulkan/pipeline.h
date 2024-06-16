@@ -144,6 +144,8 @@ namespace vk
 
 		VkRayTracingPipelineCreateInfoKHR m_createInfo;
 
+		uint32_t shader_group_size();
+
 	private:
 
 		RayTracingPipelineCreationData m_creationData;

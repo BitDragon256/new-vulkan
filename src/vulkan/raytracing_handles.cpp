@@ -256,8 +256,25 @@ namespace vk
             add_dependency(commandPool);
             add_dependency(queue);
       }
+      void CompleteAccelerationStructure::set_geometry(
+            const std::vector<RayTracingModel>& models
+      )
+      {
+            auto device = get_dependency<Device>();
 
-      void CompleteAccelerationStructure::build(const std::vector<AccelerationStructureTriangleMesh>& meshes)
+            for (const auto& model : models)
+            {
+                  m_lowlevelAccelerationStructures.push_back(AccelerationStructure());
+                  auto& accelerationStructure = m_lowlevelAccelerationStructures.back();
+
+                  accelerationStructure.initialize(device, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR);
+
+                  std::vector<AccelerationStructureTriangleMesh
+                  accelerationStructure.set_triangle_data()
+            }
+      }
+
+      void CompleteAccelerationStructure::build()
       {
             auto device = get_dependency<Device>();
             auto commandPool = get_dependency<CommandPool>();

@@ -85,3 +85,28 @@ VkDeviceMemory allocate_buffer_memory(REF(vk::Device) device, VkBuffer buffer, V
 VkDeviceAddress get_buffer_device_address(REF(vk::Device) device, VkBuffer buffer);
 
 void free_device_memory(REF(vk::Device) device, VkDeviceMemory memory);
+
+void* get_pnext(void* structure);
+bool pnext_is_null(void* structure);
+VkStructureType get_structure_type(void* structure);
+VkBaseOutStructure* to_base_structure(void* structure);
+template<typename T>
+inline void get_physical_device_extension_properties(REF(vk::PhysicalDevice) physicalDevice, VkStructureType type, T& properties)
+{
+      VkPhysicalDeviceProperties2 allProperties;
+      vkGetPhysicalDeviceProperties2(*physicalDevice, &allProperties);
+
+      void* traversalStructure = (void*) & allProperties;
+
+      while (!pnext_is_null(traversalStructure))
+      {
+            traversalStructure = get_pnext(traversalStructure);
+            if (get_structure_type(traversalStructure) == type)
+            {
+                  properties = *reinterpret_cast<T*>(traversalStructure);
+                  return;
+            }
+      }
+}
+
+uint32_t aligned_size(uint32_t value, uint32_t alignment);

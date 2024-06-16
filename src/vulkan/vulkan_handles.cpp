@@ -1353,6 +1353,70 @@ namespace vk
       }
 
       // ------------------------------
+      // SIMPLE BUFFER
+      // ------------------------------
+
+      void SimpleBuffer::create(
+            REF(Device) device,
+            VkDeviceSize size,
+            VkBufferUsageFlags usage,
+            VkMemoryPropertyFlags memoryProperties,
+            VkSharingMode sharingMode
+      )
+      {
+            NVE_ASSERT(resolved() == false)
+
+            add_dependency(device);
+
+            m_blockUpdate = true;
+
+            m_size = size;
+            m_usage = usage;
+            m_memoryProperties = memoryProperties;
+            m_sharingMode = sharingMode;
+
+            m_memoryIsMapped = false;
+
+            try_update();
+      }
+      void SimpleBuffer::map_memory()
+      {
+            auto device = get_dependency<Device>();
+            VK_CHECK_ERROR(vkMapMemory(*device, m_memory, 0, VK_WHOLE_SIZE, 0, &m_mappedMemory));
+            m_memoryIsMapped = true;
+      }
+      void SimpleBuffer::unmap_memory()
+      {
+            auto device = get_dependency<Device>();
+            vkUnmapMemory(*device, m_memory);
+            m_memoryIsMapped = false;
+      }
+
+      void SimpleBuffer::on_update()
+      {
+            NVE_ASSERT(resolved() == false)
+
+            auto device = get_dependency<Device>();
+
+            m_buffer = make_buffer(device, m_size, m_usage, m_sharingMode);
+            m_memory = allocate_buffer_memory(device, m_buffer, m_memoryProperties);
+            VK_CHECK_ERROR(vkBindBufferMemory(*device, m_buffer, m_memory, 0));
+      }
+      void SimpleBuffer::on_unresolve()
+      {
+            auto device = get_dependency<Device>();
+
+            if (m_memoryIsMapped)
+                  unmap_memory();
+            free_device_memory(device, m_memory);
+            destroy_buffer(device, m_buffer);
+      }
+      SimpleBuffer::operator VkBuffer()
+      {
+            return m_buffer;
+      }
+
+      // ------------------------------
       // DEPENDENCY IDS
       // ------------------------------
       DependencyId Instance::dependency_id() { return "Instance"; }
@@ -1371,5 +1435,6 @@ namespace vk
       DependencyId Semaphore::dependency_id() { return "Semaphore"; }
       DependencyId Fence::dependency_id() { return "Fence"; }
       DependencyId Queue::dependency_id() { return "Queue"; }
+      DependencyId SimpleBuffer::dependency_id() { return "SimpleBuffer"; }
 
 }; // namespace vk

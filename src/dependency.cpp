@@ -3,7 +3,7 @@
 #include "logger.h"
 
 Dependency::Dependency() :
-      m_dependencies{ }, m_dependents{ }, m_resolved{ false }, m_isLoopDependency{ false }
+      m_dependencies{ }, m_dependents{ }, m_resolved{ false }, m_isLoopDependency{ false }, m_blockUpdate{ false }
 {}
 
 bool Dependency::try_update()
@@ -22,13 +22,19 @@ bool Dependency::try_update()
             bool failed = true;
 
             for (auto dep : deps)
-                  failed &= !dep.dependency->try_update();
+                  failed &= !dep.dependency->dependency_try_update();
 
             if (failed)
                   logger::log("\033[F\r" + dependency_id() + " -> " + type + " (failure)");
       }
 
       return true;
+}
+bool Dependency::dependency_try_update()
+{
+      if (m_blockUpdate)
+            return false;
+      return try_update();
 }
 void Dependency::unresolve()
 {
