@@ -17,6 +17,7 @@
 #include "vulkan/vulkan_handles.h"
 #include "vulkan/buffer.h"
 #include "vulkan/pipeline.h"
+#include "vulkan/raytracing_handles.h"
 #include "ecs.h"
 #include "material.h"
 #include "math-core.h"
@@ -249,14 +250,6 @@ private:
 // RAY TRACING GEOMETRY HANDLER
 // ----------------------------------
 
-struct AccelerationStructure
-{
-	VkAccelerationStructureKHR handle;
-	uint64_t deviceAddress = 0;
-	VkDeviceMemory memory;
-	Buffer<int> buffer;
-};
-
 struct RayTracingModel : Model
 {
 
@@ -266,10 +259,26 @@ class RayTracingGeometryHandler : public GeometryHandler, System<RayTracingModel
 {
 public:
 
+	void start() override;
+	void awake(EntityId entity) override;
+	void update(float dt) override;
+
+	std::vector<VkSemaphore> buffer_cpy_semaphores() override;
+	std::vector<VkFence> buffer_cpy_fences() override;
+
+	void cleanup() override;
+
+protected:
+
+	void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) override;
+	std::vector<VkDescriptorSetLayoutBinding> other_descriptors() override;
+
 private:
 
-	AccelerationStructure m_bottomLevelAS;
-	AccelerationStructure m_topLevelAS;
+	Buffer<Transform> m_transformBuffer;
+	bool m_updatedTransformDescriptorSets;
+
+	vk::CompleteAccelerationStructure m_accelerationStructure;
 
 };
 

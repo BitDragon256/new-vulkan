@@ -131,6 +131,8 @@ namespace vk
             Queue m_transferQueue;
             Queue m_computeQueue;
 
+            uint32_t memory_type_index(uint32_t memoryTypeBits, VkMemoryPropertyFlags propertyFlags);
+
             DependencyId dependency_id() override;
       protected:
             void create() override;

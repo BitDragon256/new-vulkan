@@ -9,6 +9,8 @@
 
 #include "logger.h"
 
+#include "vulkan/vulkan_handles.h"
+
 bool is_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     bool suitable{ 1 };
@@ -325,9 +327,9 @@ VkFormat find_depth_format(VkPhysicalDevice physicalDevice) {
 
 
 /*
-* -------------------------------------------------
-*			       OBJECT CREATION
-* -------------------------------------------------
+* --------------------------------
+*          OBJECT CREATION
+* --------------------------------
  */
 VkSemaphore vk_create_semaphore(VkDevice device)
 {
@@ -343,4 +345,56 @@ VkSemaphore vk_create_semaphore(VkDevice device)
 void vk_destroy_semaphore(VkDevice device, VkSemaphore semaphore)
 {
     vkDestroySemaphore(device, semaphore, nullptr);
+}
+
+VkBufferCreateInfo make_buffer_create_info(VkDeviceSize size, VkBufferUsageFlags usage, VkSharingMode sharingMode)
+{
+      VkBufferCreateInfo bufferCI = {};
+      bufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+      bufferCI.pNext = nullptr;
+      bufferCI.flags = 0;
+      bufferCI.size = size;
+      bufferCI.usage = usage;
+      bufferCI.sharingMode = sharingMode;
+
+      return bufferCI;
+}
+VkBuffer make_buffer(REF(vk::Device) device, VkDeviceSize size, VkBufferUsageFlags usage, VkSharingMode sharingMode)
+{
+      auto bufferCI = make_buffer_create_info(size, usage, sharingMode);
+      VkBuffer buffer;
+      VK_CHECK_ERROR( vkCreateBuffer(*device, &bufferCI, nullptr, &buffer) )
+      return buffer;
+}
+void destroy_buffer(REF(vk::Device) device, VkBuffer buffer)
+{
+      vkDestroyBuffer(*device, buffer, nullptr);
+}
+VkDeviceMemory allocate_buffer_memory(REF(vk::Device) device, VkBuffer buffer, VkMemoryPropertyFlags propertyFlags)
+{
+      VkMemoryRequirements memoryRequirements;
+      vkGetBufferMemoryRequirements(*device, buffer, &memoryRequirements);
+
+      VkMemoryAllocateInfo memoryAI = {};
+      memoryAI.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+      memoryAI.pNext = nullptr;
+      memoryAI.allocationSize = memoryRequirements.size;
+      memoryAI.memoryTypeIndex = device->memory_type_index(memoryRequirements.memoryTypeBits, propertyFlags);
+
+      VkDeviceMemory memory;
+      VK_CHECK_ERROR( vkAllocateMemory(*device, &memoryAI, nullptr, &memory) )
+
+      return memory;
+}
+VkDeviceAddress get_buffer_device_address(REF(vk::Device) device, VkBuffer buffer)
+{
+      VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {};
+      bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
+      bufferDeviceAddressInfo.buffer = buffer;
+      return vkGetBufferDeviceAddress(*device, &bufferDeviceAddressInfo);
+}
+
+void free_device_memory(REF(vk::Device) device, VkDeviceMemory memory)
+{
+      vkFreeMemory(*device, memory, nullptr);
 }

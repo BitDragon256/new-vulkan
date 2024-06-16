@@ -316,7 +316,6 @@ namespace vk
 		);
 
 		VK_CHECK_ERROR(res)
-		*/
 	}
 
 	void RayTracingPipeline::set_default_create_info()

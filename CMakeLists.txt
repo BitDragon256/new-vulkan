@@ -102,6 +102,7 @@ set(
 	${INCLUDE_DIR}/vulkan/vulkan_helpers.h
 	${INCLUDE_DIR}/vulkan/pipeline.h
 	${INCLUDE_DIR}/vulkan/vulkan_handles.h
+	${INCLUDE_DIR}/vulkan/vulkan_handles_fwd.h
 	${INCLUDE_DIR}/vulkan/raytracing_handles.h
 
 	${INCLUDE_DIR}/simple_fluid.h

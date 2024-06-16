@@ -946,15 +946,45 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 // RAY TRACING GEOMETRY HANDLER
 // ------------------------------------------
 
-void create_acceleration_structure_buffer(
-	AccelerationStructure& accelerationStructure,
-	VkAccelerationStructureBuildSizesInfoKHR
+void RayTracingGeometryHandler::start()
+{
+
+}
+void RayTracingGeometryHandler::awake(EntityId entity)
+{
+
+}
+void RayTracingGeometryHandler::update(float dt)
+{
+
+}
+
+std::vector<VkSemaphore> RayTracingGeometryHandler::buffer_cpy_semaphores()
+{
+
+}
+std::vector<VkFence> RayTracingGeometryHandler::buffer_cpy_fences()
+{
+
+}
+
+void RayTracingGeometryHandler::cleanup()
+{
+
+}
+
+void RayTracingGeometryHandler::record_command_buffer(
+	uint32_t subpass,
+	size_t frame,
+	const MeshGroup& meshGroup,
+	size_t meshGroupIndex
 )
 {
-	BufferConfig bufferConfig = {};
-	bufferConfig.singleUseStagedBuffer = false;
-	bufferConfig.useStagedBuffer = true;
-	bufferConfig.memoryFlags = 
+
+}
+std::vector<VkDescriptorSetLayoutBinding> RayTracingGeometryHandler::other_descriptors()
+{
+
 }
 
 // ------------------------------------------

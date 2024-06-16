@@ -9,6 +9,9 @@
 
 #include <GLFW/glfw3.h>
 
+#include "reference.h"
+#include "vulkan/vulkan_handles_fwd.h"
+
 #define VK_CHECK_ERROR(res) { vk_check_error(res, __FILE__, __LINE__); }
 inline void vk_check_error(VkResult result, const char* file, int line)
 {
@@ -68,9 +71,17 @@ VkFormat find_supported_format(const std::vector<VkFormat>& candidates, VkImageT
 VkFormat find_depth_format(VkPhysicalDevice physicalDevice);
 
 /*
-* -------------------------------------------------
-*			       OBJECT CREATION
-* -------------------------------------------------
+* ---------------------------------
+*         OBJECT CREATION
+* ---------------------------------
  */
 VkSemaphore vk_create_semaphore(VkDevice device);
 void vk_destroy_semaphore(VkDevice device, VkSemaphore semaphore);
+
+VkBufferCreateInfo make_buffer_create_info(VkDeviceSize size, VkBufferUsageFlags usage, VkSharingMode sharingMode);
+VkBuffer make_buffer(REF(vk::Device) device, VkDeviceSize size, VkBufferUsageFlags usage, VkSharingMode sharingMode);
+void destroy_buffer(REF(vk::Device) device, VkBuffer buffer);
+VkDeviceMemory allocate_buffer_memory(REF(vk::Device) device, VkBuffer buffer, VkMemoryPropertyFlags propertyFlags);
+VkDeviceAddress get_buffer_device_address(REF(vk::Device) device, VkBuffer buffer);
+
+void free_device_memory(REF(vk::Device) device, VkDeviceMemory memory);
