@@ -57,7 +57,7 @@ GizmosHandler::GizmosHandler()
 void GizmosHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* gui)
 {
 	GeometryHandler::initialize(vulkanObjects, gui);
-	m_shader = make_default_graphics_shader();
+	// m_shader = make_default_graphics_shader();
 	m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
 	m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 }
@@ -89,7 +89,7 @@ void GizmosHandler::record_command_buffer(uint32_t subpass, size_t frame, const 
 
 	// ---------------------------------------
 
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *meshGroup.pipeline.get());
 
 	// ---------------------------------------
 

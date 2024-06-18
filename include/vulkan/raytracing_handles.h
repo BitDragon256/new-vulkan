@@ -17,9 +17,11 @@ namespace vk
             VkDeviceSize vertexStride;
 
             VkDeviceOrHostAddressConstKHR indexData;
+            uint32_t indexOffset;
             uint32_t indexCount;
 
             VkDeviceOrHostAddressConstKHR transformData;
+            uint32_t transformOffset;
       } AccelerationStructureTriangleMesh;
 
       typedef struct AccelerationStructureBuffer
@@ -56,7 +58,11 @@ namespace vk
 
       private:
 
+            void set_vulkan_function_pointers();
             PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR;
+            PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR;
+            PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR;
+            PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR;
 
             VkAccelerationStructureKHR m_accelerationStructure;
 
@@ -84,7 +90,7 @@ namespace vk
       {
       public:
             void initialize(REF(Device) device, REF(CommandPool) commandPool, REF(Queue) queue);
-            void set_geometry(const std::vector<RayTracingModel>& models);
+            void add_geometry(const std::vector<AccelerationStructureTriangleMesh>& meshes);
 
             void create() override;
             void destroy() override;
@@ -97,6 +103,9 @@ namespace vk
 
             AccelerationStructure m_toplevelAccelerationStructure;
             std::vector<AccelerationStructure> m_lowlevelAccelerationStructures;
+
+            void set_vulkan_function_pointers();
+            PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR;
 
       };
 } // namespace vk

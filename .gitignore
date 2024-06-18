@@ -6,6 +6,7 @@ external/imgui
 external/mini
 external/stbimage
 external/tinyobjloader
+external/PhysX
 
 .obsidian/
 .vscode/

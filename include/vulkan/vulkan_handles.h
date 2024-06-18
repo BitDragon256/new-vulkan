@@ -118,7 +118,7 @@ namespace vk
       class Device : public VulkanHandle
       {
       public:
-            void initialize(REF(PhysicalDevice) physicalDevice, REF(Surface) surface);
+            void initialize(REF(PhysicalDevice) physicalDevice, REF(Surface) surface, std::vector<const char*> extensions);
             operator VkDevice();
 
             uint32_t graphics_queue_family();
@@ -143,6 +143,8 @@ namespace vk
             QueueFamilyIndices m_queueFamilyIndices;
             
             VkDevice m_device;
+
+            std::vector<const char*> m_extensions;
       };
       class Window : public VulkanHandle
       {

@@ -67,7 +67,11 @@ void Renderer::init(RenderConfig config)
       m_vulkanHandles.instance.initialize(config.vulkanApplicationName, config.vulkanApplicationVersion, "New Vulkan Engine", config.enableValidationLayers);
       m_vulkanHandles.surface.initialize(&m_vulkanHandles.instance, &m_vulkanHandles.window);
       m_vulkanHandles.physicalDevice.initialize(&m_vulkanHandles.instance, &m_vulkanHandles.surface);
-      m_vulkanHandles.device.initialize(&m_vulkanHandles.physicalDevice, &m_vulkanHandles.surface);
+      m_vulkanHandles.device.initialize(
+            &m_vulkanHandles.physicalDevice,
+            &m_vulkanHandles.surface,
+            get_device_extensions()
+      );
       m_vulkanHandles.swapchain.initialize(
             &m_vulkanHandles.device,
             &m_vulkanHandles.physicalDevice,
@@ -765,6 +769,22 @@ void Renderer::initialize_sync_objects()
       {
             semaphore.initialize(&m_vulkanHandles.device);
             semaphore.try_update();
+      }
+}
+
+std::vector<const char*> Renderer::get_device_extensions()
+{
+      std::vector<const char*> deviceExtensions;
+
+      deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+      if (m_config.enableRayTracing)
+      {
+            deviceExtensions.insert(
+                  deviceExtensions.end(),
+                  RAYTRACING_EXTENSIONS.cbegin(),
+                  RAYTRACING_EXTENSIONS.cend()
+            );
       }
 }
 

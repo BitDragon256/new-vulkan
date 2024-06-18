@@ -71,10 +71,11 @@ struct MeshGroup // group with individual shaders
 	std::vector<MeshDataInfo> meshes;
 
 	GraphicsShaderRef shader;
+	RayTracingShader rayTracingShader; // TODO remove this
 	
 	bool reloadMeshBuffers;
 
-	vk::GraphicsPipeline pipeline;
+	vk::PipelineRef pipeline;
 	std::vector<VkCommandBuffer> commandBuffers; // the different command buffers for the different frames
 	VkCommandPool commandPool;
 };
@@ -119,10 +120,11 @@ public:
 
 protected:
 
-	void add_model(Model& model, bool forceNewMeshGroup = false);
+	std::vector<size_t> add_model(Model& model, bool forceNewMeshGroup = false); // adds a model and returns the indices of the MeshGroups of the meshes which are contained in the model
 	void remove_model(Model& model);
 	void add_material(Model& model, Transform& transform, bool newMat);
 	virtual void record_command_buffer(uint32_t subpass, size_t frame, const MeshGroup& meshGroup, size_t meshGroupIndex) = 0;
+	const MeshGroup& get_mesh_group(size_t meshGroupIndex);
 	
 	void update();
 
@@ -139,6 +141,8 @@ protected:
 
 	Profiler m_profiler;
 
+	std::vector<MeshGroup> m_meshGroups;
+
 private:
 
 	MeshGroup* find_group(GraphicsShader& shader, size_t& index);
@@ -150,7 +154,6 @@ private:
 
 	bool m_rendererPipelinesCreated;
 
-	std::vector<MeshGroup> m_meshGroups;
 	std::vector<std::shared_ptr<Material>> m_materials;
 	Buffer<MaterialSSBO> m_materialBuffer;
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
@@ -263,10 +266,14 @@ public:
 	void awake(EntityId entity) override;
 	void update(float dt) override;
 
+	void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
+
 	std::vector<VkSemaphore> buffer_cpy_semaphores() override;
 	std::vector<VkFence> buffer_cpy_fences() override;
 
 	void cleanup() override;
+
+	void build_acceleration_structures(); // TODO: remove this
 
 protected:
 
@@ -280,7 +287,7 @@ protected:
 
 private:
 
-	Buffer<Transform> m_transformBuffer;
+	Buffer<VkTransformMatrixKHR> m_transformBuffer;
 	bool m_updatedTransformDescriptorSets;
 
 	// shader binding tables
@@ -295,7 +302,17 @@ private:
 	vk::RayTracingPipeline m_pipeline;
 	VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_pipelineProperties;
 
+	uint32_t m_meshCount;
+	uint32_t m_indexOffset;
+
+	std::vector<vk::AccelerationStructureTriangleMesh> m_triangleMeshes;
+
+	void set_vulkan_function_pointers();
+	PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR;
+	PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR;
 };
+
+bool operator== (const VkTransformMatrixKHR & a, const VkTransformMatrixKHR & b);
 
 // ---------------------------------
 // HELPER FUNCTIONS

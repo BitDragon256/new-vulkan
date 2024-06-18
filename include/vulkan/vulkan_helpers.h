@@ -25,9 +25,19 @@ bool is_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface);
 uint32_t rate_device_suitability(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 const std::vector<const char*> deviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
 bool check_device_extension_support(VkPhysicalDevice device);
+
+const std::vector<const char*> RAYTRACING_EXTENSIONS = {
+		VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+		VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+		VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+		VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+		VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+		VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+		VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME
+}
 
 //queues
 struct QueueFamilyIndices {
@@ -90,23 +100,7 @@ void* get_pnext(void* structure);
 bool pnext_is_null(void* structure);
 VkStructureType get_structure_type(void* structure);
 VkBaseOutStructure* to_base_structure(void* structure);
-template<typename T>
-inline void get_physical_device_extension_properties(REF(vk::PhysicalDevice) physicalDevice, VkStructureType type, T& properties)
-{
-      VkPhysicalDeviceProperties2 allProperties;
-      vkGetPhysicalDeviceProperties2(*physicalDevice, &allProperties);
+template<typename T> void get_physical_device_extension_properties(REF(vk::PhysicalDevice) physicalDevice, VkStructureType type, T& properties);
 
-      void* traversalStructure = (void*) & allProperties;
-
-      while (!pnext_is_null(traversalStructure))
-      {
-            traversalStructure = get_pnext(traversalStructure);
-            if (get_structure_type(traversalStructure) == type)
-            {
-                  properties = *reinterpret_cast<T*>(traversalStructure);
-                  return;
-            }
-      }
-}
 
 uint32_t aligned_size(uint32_t value, uint32_t alignment);

@@ -80,7 +80,7 @@ struct GraphicsShader_T
 };
 typedef std::shared_ptr<GraphicsShader_T> GraphicsShader;
 typedef std::weak_ptr<GraphicsShader_T> GraphicsShaderRef;
-GraphicsShader make_default_shader();
+GraphicsShader make_default_graphics_shader();
 
 struct RayTracingShader_T
 {
@@ -92,7 +92,6 @@ struct RayTracingShader_T
 };
 typedef REF(RayTracingShader_T) RayTracingShader;
 RayTracingShader make_default_raytracing_shader();
-
 
 class Material
 {

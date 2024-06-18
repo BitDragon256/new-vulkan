@@ -180,7 +180,7 @@ MeshGroup* GeometryHandler::create_mesh_group(GraphicsShader& shader)
 	auto& meshGroup = m_meshGroups.back();
 	if (!shader)
 	{
-		meshGroup.shader = make_default_shader();
+		meshGroup.shader = make_default_graphics_shader();
 		shader = meshGroup.shader.lock();
 	}
 	else
@@ -252,8 +252,28 @@ void GeometryHandler::create_pipeline_create_infos()
 	uint32_t subpass = m_vulkanObjects.firstSubpass;
 	for (MeshGroup& meshGroup : m_meshGroups)
 	{
-		meshGroup.pipeline.initialize(*m_vulkanObjects.device, &m_pipelineLayout, m_vulkanObjects.renderPass, subpass, meshGroup.shader);
-		meshGroup.pipeline.create_create_info();
+		switch (meshGroup.pipeline->m_type)
+		{
+		case vk::GraphicsPipeline_E:
+                  dynamic_cast<vk::GraphicsPipeline*>(meshGroup.pipeline.get())->initialize(
+				*m_vulkanObjects.device,
+				&m_pipelineLayout,
+				m_vulkanObjects.renderPass,
+				subpass,
+				meshGroup.shader
+			);
+			break;
+		case vk::RayTracingPipeline_E:
+			dynamic_cast<vk::RayTracingPipeline*>(meshGroup.pipeline.get())->initialize(
+				*m_vulkanObjects.device,
+				&m_pipelineLayout,
+				meshGroup.rayTracingShader
+                  );
+			break;
+		default:
+			break;
+		}
+		meshGroup.pipeline->create_create_info();
 
 		subpass++;
 	}
@@ -266,7 +286,7 @@ void GeometryHandler::get_pipelines(std::vector<vk::PipelineRef>& pipelines)
 	create_pipeline_create_infos();
 	for (size_t i = 0; i < m_meshGroups.size(); i++)
 	{
-		pipelines.push_back(&m_meshGroups[i].pipeline);
+		pipelines.push_back(m_meshGroups[i].pipeline);
 	}
 }
 
@@ -311,8 +331,10 @@ void GeometryHandler::add_material(Model& model, Transform& transform, bool newM
 		i++;
 	}
 }
-void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
+std::vector<size_t> GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 {
+	std::vector<size_t> meshGroupIndices;
+
 	for (auto& mesh : model.m_children)
 	{
 		size_t index;
@@ -341,7 +363,15 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 
 		meshGroup->reloadMeshBuffers = true;
 		reloadMeshBuffers = true;
+
+		meshGroupIndices.push_back(index);
 	}
+
+	return meshGroupIndices;
+}
+const MeshGroup& GeometryHandler::get_mesh_group(size_t meshGroupIndex)
+{
+	return m_meshGroups[meshGroupIndex];
 }
 void GeometryHandler::remove_model(Model& model)
 {
@@ -578,7 +608,7 @@ void GeometryHandler::cleanup()
 		meshGroup.indexBuffer.destroy();
 		meshGroup.vertexBuffer.destroy();
 
-		meshGroup.pipeline.destroy();
+		meshGroup.pipeline->destroy();
 
 		vkFreeCommandBuffers(*m_vulkanObjects.device, meshGroup.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
 		vkDestroyCommandPool(*m_vulkanObjects.device, meshGroup.commandPool, nullptr);
@@ -632,7 +662,7 @@ void StaticGeometryHandler::load_dummy_model()
 	StaticMesh mesh;
 	mesh.vertices = { NULL_VERTEX, NULL_VERTEX, NULL_VERTEX };
 	mesh.indices = { 0, 1, 2 };
-	mesh.material->m_shader = make_default_shader();
+	mesh.material->m_shader = make_default_graphics_shader();
 	mesh.material->m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
 	mesh.material->m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 
@@ -672,7 +702,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	// ---------------------------------------
 
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *meshGroup.pipeline.get());
 
 	// ---------------------------------------
 
@@ -840,7 +870,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	// ---------------------------------------
 
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshGroup.pipeline);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *meshGroup.pipeline.get());
 
 	// ---------------------------------------
 
@@ -949,23 +979,68 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 void RayTracingGeometryHandler::start()
 {
 	get_physical_device_extension_properties(m_vulkanObjects.physicalDevice, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, m_pipelineProperties);
+
+
 }
 void RayTracingGeometryHandler::awake(EntityId entity)
 {
+	auto& model = m_ecs->get_component<RayTracingModel>(entity);
+	auto& transform = m_ecs->get_component<Transform>(entity);
 
+	GeometryHandler::add_model(model);
+
+	for (auto& mesh : model.m_children)
+	{
+		m_triangleMeshes.push_back(vk::AccelerationStructureTriangleMesh());
+		auto& triangleMesh = m_triangleMeshes.back();
+
+		triangleMesh.vertexCount = static_cast<uint32_t>(mesh.vertices.size());
+		triangleMesh.vertexStride = static_cast<VkDeviceSize>(sizeof(Vertex));
+
+		triangleMesh.indexOffset = m_indexOffset * static_cast<uint32_t>(sizeof(uint32_t));
+		triangleMesh.indexCount = static_cast<uint32_t>(mesh.indices.size());
+
+		triangleMesh.transformOffset = m_meshCount * static_cast<uint32_t>(sizeof(VkTransformMatrixKHR));
+
+		m_meshCount++;
+		m_indexOffset += triangleMesh.indexCount;
+	}
 }
 void RayTracingGeometryHandler::update(float dt)
 {
 
 }
+void RayTracingGeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager)
+{
+	GeometryHandler::initialize(vulkanObjects, guiManager);
+
+	set_vulkan_function_pointers();
+}
+
+void RayTracingGeometryHandler::build_acceleration_structures()
+{
+	for (size_t meshGroupIndex = 0; meshGroupIndex < static_cast<uint32_t>(m_meshCount); meshGroupIndex++)
+	{
+		auto& triangleMesh = m_triangleMeshes[meshGroupIndex];
+		const auto& meshGroup = m_meshGroups[meshGroupIndex];
+
+		triangleMesh.vertexData.deviceAddress = get_buffer_device_address(m_vulkanObjects.device, meshGroup.vertexBuffer.m_buffer);
+		triangleMesh.indexData.deviceAddress = get_buffer_device_address(m_vulkanObjects.device, meshGroup.indexBuffer.m_buffer);
+		triangleMesh.transformData.deviceAddress = get_buffer_device_address(m_vulkanObjects.device, m_transformBuffer.m_buffer);
+	}
+
+	m_accelerationStructure.add_geometry(m_triangleMeshes);
+
+	m_accelerationStructure.build();
+}
 
 std::vector<VkSemaphore> RayTracingGeometryHandler::buffer_cpy_semaphores()
 {
-
+	return {};
 }
 std::vector<VkFence> RayTracingGeometryHandler::buffer_cpy_fences()
 {
-
+	return {};
 }
 
 void RayTracingGeometryHandler::cleanup()
@@ -1000,7 +1075,7 @@ void RayTracingGeometryHandler::record_command_buffer(
 	vkCmdBindPipeline(
 		commandBuffer,
 		VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-		meshGroup.pipeline
+		*meshGroup.pipeline.get()
 	);
 
 	// ---------------------------------------
@@ -1056,7 +1131,7 @@ void RayTracingGeometryHandler::record_command_buffer(
 }
 std::vector<VkDescriptorSetLayoutBinding> RayTracingGeometryHandler::other_descriptors()
 {
-
+	return {};
 }
 
 void RayTracingGeometryHandler::create_shader_binding_tables()
@@ -1081,6 +1156,21 @@ void RayTracingGeometryHandler::create_shader_binding_tables()
 	memcpy(m_raygenShaderBindingTable.m_mappedMemory, shaderHandleStorage.data(), shaderHandleSize);
 	memcpy(m_missShaderBindingTable.m_mappedMemory, shaderHandleStorage.data() + shaderHandleSizeAligned, shaderHandleSize);
 	memcpy(m_hitShaderBindingTable.m_mappedMemory, shaderHandleStorage.data() + shaderHandleSizeAligned * 2, shaderHandleSize);
+}
+
+void RayTracingGeometryHandler::set_vulkan_function_pointers()
+{
+	vkGetRayTracingShaderGroupHandlesKHR = reinterpret_cast<decltype(vkGetRayTracingShaderGroupHandlesKHR)>(vkGetDeviceProcAddr(*m_vulkanObjects.device, "vkGetRayTracingShaderGroupHandlesKHR"));
+	vkCmdTraceRaysKHR = reinterpret_cast<decltype(vkCmdTraceRaysKHR)>(vkGetDeviceProcAddr(*m_vulkanObjects.device, "vkCmdTraceRaysKHR"));
+}
+
+bool operator== (const VkTransformMatrixKHR& a, const VkTransformMatrixKHR& b)
+{
+	for (size_t row = 0; row < 3; row++)
+		for (size_t column = 0; column < 4; column++)
+			if (a.matrix[row][column] != b.matrix[row][column])
+				return false;
+	return true;
 }
 
 // ------------------------------------------
@@ -1276,7 +1366,7 @@ void Model::load_mesh(std::string file)
 		*mesh.material = objMesh.mat;
 		mesh.vertices = objMesh.vertices;
 		mesh.indices = objMesh.indices;
-		mesh.material->m_shader = make_default_shader();
+		mesh.material->m_shader = make_default_graphics_shader();
 		mesh.material->m_diffuse = Color(1.f);
 		meshProfiler.passing_measure("model transfer");
 		meshProfiler.print_last_measure("model transfer");

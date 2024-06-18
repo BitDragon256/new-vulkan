@@ -20,6 +20,8 @@ namespace vk
       {
             auto device = get_dependency<Device>();
 
+            set_vulkan_function_pointers();
+
             VkAccelerationStructureCreateInfoKHR createInfo = {};
             createInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
             createInfo.pNext = nullptr;
@@ -153,9 +155,11 @@ namespace vk
 
                   VkAccelerationStructureBuildRangeInfoKHR rangeInfo = {};
                   rangeInfo.primitiveCount = meshIt->indexCount / 3;
-                  rangeInfo.primitiveOffset = 0;
+                  rangeInfo.primitiveOffset = meshIt->indexOffset; // index offset
                   rangeInfo.firstVertex = 0;
                   rangeInfo.transformOffset = 0;
+
+                  m_rangeInfos.push_back(rangeInfo);
             }
       }
       void AccelerationStructure::set_instance_data(const std::vector<REF(AccelerationStructure)>& accelerationStructures)
@@ -214,6 +218,14 @@ namespace vk
                   &addressInfo
             );
       }
+      void AccelerationStructure::set_vulkan_function_pointers()
+      {
+            auto device = get_dependency<Device>();
+            vkCreateAccelerationStructureKHR = reinterpret_cast<decltype(vkCreateAccelerationStructureKHR)>(vkGetDeviceProcAddr(*device, "vkCreateAccelerationStructureKHR"));
+            vkDestroyAccelerationStructureKHR = reinterpret_cast<decltype(vkDestroyAccelerationStructureKHR)>(vkGetDeviceProcAddr(*device, "vkDestroyAccelerationStructureKHR"));
+            vkGetAccelerationStructureDeviceAddressKHR = reinterpret_cast<decltype(vkGetAccelerationStructureDeviceAddressKHR)>(vkGetDeviceProcAddr(*device, "vkGetAccelerationStructureDeviceAddressKHR"));
+            vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<decltype(vkGetAccelerationStructureBuildSizesKHR)>(vkGetDeviceProcAddr(*device, "vkGetAccelerationStructureBuildSizesKHR"));
+      }
 
       VkAccelerationStructureBuildSizesInfoKHR AccelerationStructure::query_required_size()
       {
@@ -256,22 +268,26 @@ namespace vk
             add_dependency(commandPool);
             add_dependency(queue);
       }
-      void CompleteAccelerationStructure::set_geometry(
-            const std::vector<RayTracingModel>& models
+      void CompleteAccelerationStructure::add_geometry(
+            const std::vector<AccelerationStructureTriangleMesh>& meshes
       )
       {
             auto device = get_dependency<Device>();
 
-            for (const auto& model : models)
-            {
-                  m_lowlevelAccelerationStructures.push_back(AccelerationStructure());
-                  auto& accelerationStructure = m_lowlevelAccelerationStructures.back();
+            m_lowlevelAccelerationStructures.push_back(AccelerationStructure());
+            auto& accelerationStructure = m_lowlevelAccelerationStructures.back();
 
-                  accelerationStructure.initialize(device, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR);
+            accelerationStructure.initialize(device, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR);
 
-                  std::vector<AccelerationStructureTriangleMesh
-                  accelerationStructure.set_triangle_data()
-            }
+            accelerationStructure.set_triangle_data(meshes);
+      }
+      void CompleteAccelerationStructure::create()
+      {
+
+      }
+      void CompleteAccelerationStructure::destroy()
+      {
+
       }
 
       void CompleteAccelerationStructure::build()
@@ -303,6 +319,12 @@ namespace vk
             );
 
             end_single_time_cmd_buffer(commandBuffer, *commandPool, *device, *queue);
+      }
+
+      void CompleteAccelerationStructure::set_vulkan_function_pointers()
+      {
+            auto device = get_dependency<Device>();
+            vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<decltype(vkCmdBuildAccelerationStructuresKHR)>(vkGetDeviceProcAddr(*device, "vkCmdBuildAccelerationStructuresKHR"));
       }
 
       DependencyId CompleteAccelerationStructure::dependency_id()

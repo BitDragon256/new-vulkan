@@ -331,10 +331,12 @@ namespace vk
       // DEVICE
       // --------------------------------
 
-      void Device::initialize(REF(PhysicalDevice) physicalDevice, REF(Surface) surface)
+      void Device::initialize(REF(PhysicalDevice) physicalDevice, REF(Surface) surface, std::vector<const char*> extensions)
       {
             add_dependency(physicalDevice);
             add_dependency(surface);
+
+            m_extensions = extensions;
 
             VulkanHandle::initialize();
       }
@@ -376,8 +378,8 @@ namespace vk
 
             deviceCI.pEnabledFeatures = &physicalDeviceFeatures;
 
-            deviceCI.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-            deviceCI.ppEnabledExtensionNames = deviceExtensions.data();
+            deviceCI.enabledExtensionCount = static_cast<uint32_t>(m_extensions.size());
+            deviceCI.ppEnabledExtensionNames = m_extensions.data();
 
             VkPhysicalDeviceShaderDrawParametersFeatures shaderDrawParametersFeatures = {};
             shaderDrawParametersFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -410,6 +412,26 @@ namespace vk
       uint32_t Device::presentation_queue_family() { return m_queueFamilyIndices.presentationFamily.value(); }
       uint32_t Device::transfer_queue_family() { return m_queueFamilyIndices.transferFamily.value(); }
       uint32_t Device::compute_queue_family() { return m_queueFamilyIndices.computeFamily.value(); }
+
+      uint32_t Device::memory_type_index(uint32_t memoryTypeBits, VkMemoryPropertyFlags propertyFlags)
+      {
+            VkPhysicalDeviceMemoryProperties memoryProperties;
+            vkGetPhysicalDeviceMemoryProperties(*get_dependency<PhysicalDevice>(), &memoryProperties);
+
+            for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
+            {
+                  if ((memoryTypeBits & 1) == 1)
+                  {
+                        if ((memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags)
+                        {
+                              return i;
+                        }
+                  }
+                  memoryTypeBits >>= 1;
+            }
+
+            return 0;
+      }
 
       // --------------------------------
       // WINDOW

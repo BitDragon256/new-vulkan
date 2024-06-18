@@ -416,6 +416,26 @@ VkBaseOutStructure* to_base_structure(void* structure)
       return reinterpret_cast<VkBaseOutStructure*>(structure);
 }
 
+template<typename T>
+void get_physical_device_extension_properties(REF(vk::PhysicalDevice) physicalDevice, VkStructureType type, T& properties)
+{
+      VkPhysicalDeviceProperties2 allProperties;
+      vkGetPhysicalDeviceProperties2(*physicalDevice, &allProperties);
+
+      void* traversalStructure = (void*) & allProperties;
+
+      while (!pnext_is_null(traversalStructure))
+      {
+            traversalStructure = get_pnext(traversalStructure);
+            if (get_structure_type(traversalStructure) == type)
+            {
+                  properties = *reinterpret_cast<T*>(traversalStructure);
+                  return;
+            }
+      }
+}
+template void get_physical_device_extension_properties<VkPhysicalDeviceRayTracingPipelinePropertiesKHR>(REF(vk::PhysicalDevice) physicalDevice, VkStructureType type, VkPhysicalDeviceRayTracingPipelinePropertiesKHR& properties);
+
 uint32_t aligned_size(uint32_t value, uint32_t alignment)
 {
       return (value + alignment - 1) & ~(alignment - 1);

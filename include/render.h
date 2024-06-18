@@ -54,13 +54,16 @@ struct RenderConfig
 	std::string vulkanApplicationName;
 	uint32_t vulkanApplicationVersion;
 
+	bool enableRayTracing;
+
 	RenderConfig() :
 		width{ 600 }, height{ 400 }, title{ "DEFAULT TITLE" },
 		dataMode{ TestTri }, cameraEnabled{ false },
 		clearColor{ 0, 0, 0 },
 		enableValidationLayers{ true },
 		enabledInstanceLayers{ },
-		autoECSUpdate{ true }
+		autoECSUpdate{ true },
+		enableRayTracing{ false }
 	{}
 };
 
@@ -178,6 +181,8 @@ private:
 	VkCommandBuffer current_main_command_buffer();
 
 	void initialize_sync_objects();
+
+	std::vector<const char*> get_device_extensions();
 
 #ifndef NVE_NO_GUI
 	VkCommandBuffer current_imgui_command_buffer();
