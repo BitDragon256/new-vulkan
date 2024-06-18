@@ -170,7 +170,8 @@ int main(int argc, char** argv)
 
     DynamicModel quad;
     quad.load_mesh("/default_models/quad/quad.obj");
-    quad.m_children[0].material.m_diffuse = { 1, 1, 1 };
+    quad.m_children.front().material->m_shader = make_default_shader();
+    quad.m_children[0].material->m_diffuse = { 1, 1, 1 };
 
     EntityId top, bottom, left, right;
     top = renderer.m_ecs.create_entity();
@@ -236,9 +237,8 @@ int main(int argc, char** argv)
         //profiler.start_measure("gui");
 
         // GUI
-        {
-            renderer.draw_engine_gui();
-
+        renderer.draw_engine_gui([&]()
+            {
             ImGui::Begin("General");
 
             // -----------------------------------------------
@@ -358,7 +358,9 @@ int main(int argc, char** argv)
 
             // profiler.end_measure("gui", true);
         }
+        );
 
+        
         profiler.start_measure("ecs");
         if (updateECS || singleUpdateECS)
             renderer.m_ecs.update_systems(1.f / 120.f);

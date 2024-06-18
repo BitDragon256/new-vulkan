@@ -1,7 +1,7 @@
 #include "image.h"
 
 #include "logger.h"
-#include "vulkan_helpers.h"
+#include "vulkan/vulkan_helpers.h"
 
 void VImage::create(
 	VkDevice device,

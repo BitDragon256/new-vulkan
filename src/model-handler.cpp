@@ -91,156 +91,12 @@ VkCommandBufferBeginInfo create_command_buffer_begin_info(VkRenderPass renderPas
 	return commandBufferBI;
 }
 
-VkGraphicsPipelineCreateInfo create_default_pipeline_create_info(PipelineCreationData& pipelineCreationData)
-{
-	VkGraphicsPipelineCreateInfo graphicsPipelineCI = {};
-	graphicsPipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	graphicsPipelineCI.pNext = nullptr;
-	graphicsPipelineCI.flags = 0;
-
-	// ---------------------------------------
-
-	pipelineCreationData.vertexInputState = {};
-	pipelineCreationData.vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	pipelineCreationData.vertexInputState.pNext = nullptr;
-	pipelineCreationData.vertexInputState.flags = 0;
-
-	pipelineCreationData.vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
-	pipelineCreationData.vertexInputState.vertexAttributeDescriptionCount = 0;
-	pipelineCreationData.vertexInputState.vertexAttributeDescriptionCount = pipelineCreationData.vertexAttributeDescriptions.size();
-	pipelineCreationData.vertexInputState.pVertexAttributeDescriptions = pipelineCreationData.vertexAttributeDescriptions.data();
-
-	pipelineCreationData.vertexBindingDescription = Vertex::getBindingDescription();
-	pipelineCreationData.vertexInputState.vertexBindingDescriptionCount = 0;
-	pipelineCreationData.vertexInputState.vertexBindingDescriptionCount = 1;
-	pipelineCreationData.vertexInputState.pVertexBindingDescriptions = &pipelineCreationData.vertexBindingDescription;
-
-	graphicsPipelineCI.pVertexInputState = &pipelineCreationData.vertexInputState;
-
-	// -------------------------------------------
-
-	pipelineCreationData.inputAssemblyState = {};
-	pipelineCreationData.inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	pipelineCreationData.inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	pipelineCreationData.inputAssemblyState.primitiveRestartEnable = VK_FALSE;
-
-	graphicsPipelineCI.pInputAssemblyState = &pipelineCreationData.inputAssemblyState;
-
-	// -------------------------------------------
-
-	pipelineCreationData.viewportState = {};
-	pipelineCreationData.viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	pipelineCreationData.viewportState.viewportCount = 1;
-	pipelineCreationData.viewportState.scissorCount = 1;
-
-	graphicsPipelineCI.pViewportState = &pipelineCreationData.viewportState;
-
-	// -------------------------------------------
-
-	pipelineCreationData.rasterizationState = {};
-	pipelineCreationData.rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	pipelineCreationData.rasterizationState.depthClampEnable = VK_FALSE;
-	pipelineCreationData.rasterizationState.rasterizerDiscardEnable = VK_FALSE;
-	pipelineCreationData.rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-	pipelineCreationData.rasterizationState.lineWidth = 1.0f;
-	pipelineCreationData.rasterizationState.cullMode = VK_CULL_MODE_BACK_BIT;
-	pipelineCreationData.rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
-	pipelineCreationData.rasterizationState.depthBiasEnable = VK_FALSE;
-
-	graphicsPipelineCI.pRasterizationState = &pipelineCreationData.rasterizationState;
-
-	// -------------------------------------------
-
-	pipelineCreationData.multisampleState = {};
-	pipelineCreationData.multisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	pipelineCreationData.multisampleState.sampleShadingEnable = VK_FALSE;
-	pipelineCreationData.multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	graphicsPipelineCI.pMultisampleState = &pipelineCreationData.multisampleState;
-
-	// -------------------------------------------
-	
-	pipelineCreationData.depthStencilState = {};
-	pipelineCreationData.depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	pipelineCreationData.depthStencilState.pNext = nullptr;
-	pipelineCreationData.depthStencilState.flags = 0;
-	pipelineCreationData.depthStencilState.depthTestEnable = VK_TRUE;
-	pipelineCreationData.depthStencilState.depthWriteEnable = VK_TRUE;
-	pipelineCreationData.depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
-	pipelineCreationData.depthStencilState.depthBoundsTestEnable = VK_FALSE;
-	pipelineCreationData.depthStencilState.stencilTestEnable = VK_FALSE;
-
-	graphicsPipelineCI.pDepthStencilState = &pipelineCreationData.depthStencilState;
-
-	// -------------------------------------------
-
-	pipelineCreationData.colorBlendAttachment = {};
-	pipelineCreationData.colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	pipelineCreationData.colorBlendAttachment.blendEnable = VK_TRUE;
-	pipelineCreationData.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-	pipelineCreationData.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	pipelineCreationData.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	pipelineCreationData.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	pipelineCreationData.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	pipelineCreationData.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-	pipelineCreationData.colorBlendState = {};
-	pipelineCreationData.colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	pipelineCreationData.colorBlendState.logicOpEnable = VK_FALSE;
-	pipelineCreationData.colorBlendState.logicOp = VK_LOGIC_OP_COPY;
-	pipelineCreationData.colorBlendState.attachmentCount = 1;
-	pipelineCreationData.colorBlendState.pAttachments = &pipelineCreationData.colorBlendAttachment;
-	pipelineCreationData.colorBlendState.blendConstants[0] = 0.0f;
-	pipelineCreationData.colorBlendState.blendConstants[1] = 0.0f;
-	pipelineCreationData.colorBlendState.blendConstants[2] = 0.0f;
-	pipelineCreationData.colorBlendState.blendConstants[3] = 0.0f;
-
-	graphicsPipelineCI.pColorBlendState = &pipelineCreationData.colorBlendState;
-
-	// -------------------------------------------
-	pipelineCreationData.dynamicStates = {
-	   VK_DYNAMIC_STATE_VIEWPORT,
-	   VK_DYNAMIC_STATE_SCISSOR
-	};
-	pipelineCreationData.dynamicState = {};
-	pipelineCreationData.dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	pipelineCreationData.dynamicState.dynamicStateCount = static_cast<uint32_t>(pipelineCreationData.dynamicStates.size());
-	pipelineCreationData.dynamicState.pDynamicStates = pipelineCreationData.dynamicStates.data();
-
-	graphicsPipelineCI.pDynamicState = &pipelineCreationData.dynamicState;
-
-	// -------------------------------------------
-
-	return graphicsPipelineCI;
-}
-
-void create_pipeline_shader_stages(VkGraphicsPipelineCreateInfo& graphicsPipelineCI, PipelineCreationData& pipelineCreationData, const GraphicsShader& shader)
-{
-	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = shader.vertex.m_module;
-	vertShaderStageInfo.pName = "main";
-
-	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = shader.fragment.m_module;
-	fragShaderStageInfo.pName = "main";
-
-	pipelineCreationData.stages[0] = vertShaderStageInfo;
-	pipelineCreationData.stages[1] = fragShaderStageInfo;
-
-	graphicsPipelineCI.stageCount = 2;
-	graphicsPipelineCI.pStages = pipelineCreationData.stages;
-}
-
 // ------------------------------------------
 // GEOMETRY HANDLER
 // ------------------------------------------
 
-std::set<GraphicsShader*> GeometryHandler::s_destroyedShaders = std::set<GraphicsShader*>();
-GeometryHandler::GeometryHandler() : m_subpassCount{ 0 }
+//std::set<GraphicsShader_T*> GeometryHandler::s_destroyedShaders = std::set<GraphicsShader_T*>();
+GeometryHandler::GeometryHandler() : m_subpassCount{ 0 }, m_pipelineLayout{}
 {}
 
 void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager)
@@ -255,17 +111,12 @@ void GeometryHandler::initialize(GeometryHandlerVulkanObjects vulkanObjects, GUI
 	matBufConf.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	m_materialBuffer.initialize(matBufConf);
 
-	m_texturePool.init(m_vulkanObjects.device, m_vulkanObjects.physicalDevice, m_vulkanObjects.commandPool, m_vulkanObjects.transferQueue);
+	m_texturePool.init(*m_vulkanObjects.device, *m_vulkanObjects.physicalDevice, *m_vulkanObjects.commandPool, *m_vulkanObjects.transferQueue);
 
 	create_descriptor_set();
 	create_pipeline_layout();
 
 	m_guiManager = guiManager;
-}
-void GeometryHandler::update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent)
-{
-	m_vulkanObjects.framebuffers = framebuffers;
-	m_vulkanObjects.swapchainExtent = swapchainExtent;
 }
 void GeometryHandler::set_first_subpass(uint32_t subpass)
 {
@@ -275,8 +126,8 @@ void GeometryHandler::set_first_subpass(uint32_t subpass)
 std::vector<VkSemaphore> GeometryHandler::buffer_cpy_semaphores()
 {
 	// ANCHOR
-	vkQueueWaitIdle(m_vulkanObjects.transferQueue);
-	vkDeviceWaitIdle(m_vulkanObjects.device);
+	vkQueueWaitIdle(*m_vulkanObjects.transferQueue);
+	vkDeviceWaitIdle(*m_vulkanObjects.device);
 	return {};
 
 	std::vector<VkSemaphore> sems = {};
@@ -301,14 +152,14 @@ std::vector<VkFence> GeometryHandler::buffer_cpy_fences()
 	return fences;
 }
 
-MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
+MeshGroup* GeometryHandler::find_group(GraphicsShader& shader, size_t& index)
 {
 	if (!shader)
 	{
 		// automatically assign the first best
 		if (m_meshGroups.size() > 0)
 		{
-			shader = m_meshGroups[0].shader;
+			shader = m_meshGroups[0].shader.lock();
 			return &m_meshGroups[0];
 		}
 		return nullptr;
@@ -317,21 +168,20 @@ MeshGroup* GeometryHandler::find_group(GraphicsShader*& shader, size_t& index)
 	index = 0;
 	while (index < m_meshGroups.size())
 	{
-		if ((*m_meshGroups[index].shader) == (*shader))
+		if ((*m_meshGroups[index].shader.lock()) == (*shader))
 			return &m_meshGroups[index];
 		index++;
 	}
 	return nullptr;
 }
-MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
+MeshGroup* GeometryHandler::create_mesh_group(GraphicsShader& shader)
 {
 	m_meshGroups.push_back(MeshGroup {});
 	auto& meshGroup = m_meshGroups.back();
 	if (!shader)
 	{
-		meshGroup.shader = new GraphicsShader();
-		meshGroup.shader->set_default_shader();
-		shader = meshGroup.shader;
+		meshGroup.shader = make_default_shader();
+		shader = meshGroup.shader.lock();
 	}
 	else
 	{
@@ -346,8 +196,6 @@ MeshGroup* GeometryHandler::push_mesh_group(GraphicsShader*& shader)
 	meshGroup.indexBuffer.initialize(config);
 
 	create_group_command_buffers(meshGroup);
-	//if (m_rendererPipelinesCreated)
-		//create_pipeline(m_meshGroups.size() - 1);
       m_subpassCount++;
 
 	return &meshGroup;
@@ -368,7 +216,7 @@ void GeometryHandler::create_group_command_buffers(MeshGroup& meshGroup)
 	commandPoolCI.pNext = nullptr;
 	commandPoolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	commandPoolCI.queueFamilyIndex = m_vulkanObjects.queueFamilyIndex;
-	vkCreateCommandPool(m_vulkanObjects.device, &commandPoolCI, nullptr, &meshGroup.commandPool);
+	vkCreateCommandPool(*m_vulkanObjects.device, &commandPoolCI, nullptr, &meshGroup.commandPool);
 
 	VkCommandBufferAllocateInfo commandBufferAI = {};
 	commandBufferAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -376,7 +224,7 @@ void GeometryHandler::create_group_command_buffers(MeshGroup& meshGroup)
 	commandBufferAI.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
 	commandBufferAI.commandPool = meshGroup.commandPool;
 	commandBufferAI.commandBufferCount = static_cast<uint32_t>(m_vulkanObjects.framebuffers.size());
-	auto res = vkAllocateCommandBuffers(m_vulkanObjects.device, &commandBufferAI, meshGroup.commandBuffers.data());
+	auto res = vkAllocateCommandBuffers(*m_vulkanObjects.device, &commandBufferAI, meshGroup.commandBuffers.data());
 	logger::log_cond_err(res == VK_SUCCESS, "failed to allocate command buffer for the static geometry handler");
 }
 void GeometryHandler::record_command_buffers(uint32_t frame)
@@ -399,92 +247,42 @@ std::vector<VkCommandBuffer> GeometryHandler::get_command_buffers(uint32_t frame
 	return buffers;
 }
 
-void GeometryHandler::create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos)
+void GeometryHandler::create_pipeline_create_infos()
 {
-	m_pipelineCreationData.resize(m_meshGroups.size());
-
-	size_t index = 0;
 	uint32_t subpass = m_vulkanObjects.firstSubpass;
 	for (MeshGroup& meshGroup : m_meshGroups)
 	{
-		createInfos.push_back(create_pipeline_create_info(subpass, index));
+		meshGroup.pipeline.initialize(*m_vulkanObjects.device, &m_pipelineLayout, m_vulkanObjects.renderPass, subpass, meshGroup.shader);
+		meshGroup.pipeline.create_create_info();
 
-		index++;
 		subpass++;
 	}
 
 	m_subpassCount = m_meshGroups.size();
 	m_rendererPipelinesCreated = true;
 }
-void GeometryHandler::set_pipelines(std::vector<VkPipeline>& pipelines)
+void GeometryHandler::get_pipelines(std::vector<vk::PipelineRef>& pipelines)
 {
+	create_pipeline_create_infos();
 	for (size_t i = 0; i < m_meshGroups.size(); i++)
-		vkDestroyPipeline(m_vulkanObjects.device, m_meshGroups[i].pipeline, nullptr);
-	for (size_t i = 0; i < pipelines.size(); i++)
-		m_meshGroups[i].pipeline = pipelines[i];
-}
-
-VkGraphicsPipelineCreateInfo GeometryHandler::create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex)
-{
-	PipelineCreationData& pipelineCreationData = m_pipelineCreationData[pipelineIndex];
-
-	// ---------------------------------------
-
-	VkGraphicsPipelineCreateInfo graphicsPipelineCI = create_default_pipeline_create_info(pipelineCreationData);
-
-	// ---------------------------------------
-
-	create_pipeline_shader_stages(graphicsPipelineCI, pipelineCreationData, *m_meshGroups[pipelineIndex].shader);
-
-	// ---------------------------------------
-
-	graphicsPipelineCI.layout = m_pipelineLayout;
-
-	// ---------------------------------------
-
-	graphicsPipelineCI.renderPass = *m_vulkanObjects.renderPass;
-	graphicsPipelineCI.subpass = subpass;
-	graphicsPipelineCI.basePipelineHandle = VK_NULL_HANDLE;
-	graphicsPipelineCI.basePipelineIndex = -1;
-
-	// ---------------------------------------
-
-	return graphicsPipelineCI;
+	{
+		pipelines.push_back(&m_meshGroups[i].pipeline);
+	}
 }
 
 void GeometryHandler::create_pipeline_layout()
 {
-	VkPipelineLayoutCreateInfo pipelineLayoutCI = {};
-	pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutCI.pNext = nullptr;
-	pipelineLayoutCI.flags = 0;
+	std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { m_descriptorSetLayout };
 
-	VkPushConstantRange pushConstantRange = {};
-	pushConstantRange.offset = 0;
-	pushConstantRange.size = sizeof(CameraPushConstant);
-	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	VkPushConstantRange cameraPushConstantRange = {};
+	cameraPushConstantRange.offset = 0;
+	cameraPushConstantRange.size = sizeof(CameraPushConstant);
+	cameraPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
-	pipelineLayoutCI.pushConstantRangeCount = 1;
+	std::vector<VkPushConstantRange> pushConstants = { cameraPushConstantRange };
 
-	pipelineLayoutCI.pSetLayouts = &m_descriptorSetLayout;
-	pipelineLayoutCI.setLayoutCount = 1;
-
-	{
-		auto res = vkCreatePipelineLayout(m_vulkanObjects.device, &pipelineLayoutCI, nullptr, &m_pipelineLayout);
-		logger::log_cond_err(res == VK_SUCCESS, "failed to create basic pipeline layout");
-	}
+	m_pipelineLayout.create(descriptorSetLayouts, pushConstants, *m_vulkanObjects.device);
 }
-//void GeometryHandler::create_pipeline(size_t meshGroupIndex)
-//{
-//	m_pipelineCreationData.push_back({});
-//
-//	uint32_t subpass = m_vulkanObjects.firstSubpass + m_subpassCount;
-//	m_subpassCount++;
-//	auto pipelineCI = create_pipeline_create_info(subpass, meshGroupIndex);
-//
-//	vkCreateGraphicsPipelines(m_vulkanObjects.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &m_meshGroups[meshGroupIndex].pipeline);
-//}
 
 void GeometryHandler::add_material(Model& model, Transform& transform, bool newMat)
 {
@@ -520,10 +318,10 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		size_t index;
 		MeshGroup* meshGroup = find_group(mesh.material->m_shader, index);
 		if (!meshGroup || forceNewMeshGroup) // no group found or a new group must be created
-			meshGroup = push_mesh_group(mesh.material->m_shader);
+			meshGroup = create_mesh_group(mesh.material->m_shader);
 
-		if (s_destroyedShaders.contains(meshGroup->shader))
-			s_destroyedShaders.erase(meshGroup->shader);
+		//if (s_destroyedShaders.contains(meshGroup->shader))
+		//	s_destroyedShaders.erase(meshGroup->shader);
 
 		// save mesh
 		size_t meshId = meshGroup->meshes.size();
@@ -531,7 +329,8 @@ void GeometryHandler::add_model(Model& model, bool forceNewMeshGroup)
 		meshGroup->meshes.push_back(MeshDataInfo{
 			meshGroup->vertices.size(),
 			mesh.vertices.size(),
-			meshGroup->indices.size(),			mesh.indices.size(),
+			meshGroup->indices.size(),
+			mesh.indices.size(),
 			index,
 			meshId
 		});
@@ -660,10 +459,10 @@ void GeometryHandler::reload_mesh_group(MeshGroup& meshGroup)
 BufferConfig GeometryHandler::default_buffer_config()
 {
 	BufferConfig config = {};
-	config.device = m_vulkanObjects.device;
-	config.physicalDevice = m_vulkanObjects.physicalDevice;
-	config.stagedBufferTransferCommandPool = m_vulkanObjects.commandPool;
-	config.stagedBufferTransferQueue = m_vulkanObjects.transferQueue;
+	config.device = *m_vulkanObjects.device;
+	config.physicalDevice = *m_vulkanObjects.physicalDevice;
+	config.stagedBufferTransferCommandPool = *m_vulkanObjects.commandPool;
+	config.stagedBufferTransferQueue = *m_vulkanObjects.transferQueue;
 
 	config.useStagedBuffer = true;
 	config.singleUseStagedBuffer = true;
@@ -735,7 +534,7 @@ void GeometryHandler::create_descriptor_set()
 	descriptorSetLayoutCI.pBindings = layoutBindings.data();
 
 	{
-		auto res = vkCreateDescriptorSetLayout(m_vulkanObjects.device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayout);
+		auto res = vkCreateDescriptorSetLayout(*m_vulkanObjects.device, &descriptorSetLayoutCI, nullptr, &m_descriptorSetLayout);
 		logger::log_cond_err(res == VK_SUCCESS, "failed to create static geometry handler descriptor set layout");
 	}
 
@@ -744,12 +543,12 @@ void GeometryHandler::create_descriptor_set()
 	VkDescriptorSetAllocateInfo descriptorSetAI = {};
 	descriptorSetAI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	descriptorSetAI.pNext = nullptr;
-	descriptorSetAI.descriptorPool = m_vulkanObjects.descriptorPool;
+	descriptorSetAI.descriptorPool = *m_vulkanObjects.descriptorPool;
 	descriptorSetAI.descriptorSetCount = 1;
 	descriptorSetAI.pSetLayouts = &m_descriptorSetLayout;
 
 	{
-		auto res = vkAllocateDescriptorSets(m_vulkanObjects.device, &descriptorSetAI, &m_descriptorSet);
+		auto res = vkAllocateDescriptorSets(*m_vulkanObjects.device, &descriptorSetAI, &m_descriptorSet);
 		logger::log_cond_err(res == VK_SUCCESS, "failed to allocate static geometry handler descriptor set");
 	}
 }
@@ -765,7 +564,7 @@ void GeometryHandler::update_descriptor_set()
 	writes.push_back(m_texturePool.get_sampler_descriptor_set_write(m_descriptorSet, GEOMETRY_HANDLER_TEXTURE_SAMPLER_BINDING));
 
 	vkUpdateDescriptorSets(
-		m_vulkanObjects.device,
+		*m_vulkanObjects.device,
 		static_cast<uint32_t>(writes.size()),
 		writes.data(),
 		0, nullptr
@@ -779,25 +578,26 @@ void GeometryHandler::cleanup()
 		meshGroup.indexBuffer.destroy();
 		meshGroup.vertexBuffer.destroy();
 
-		vkDestroyPipeline(m_vulkanObjects.device, meshGroup.pipeline, nullptr);
+		meshGroup.pipeline.destroy();
 
-		vkFreeCommandBuffers(m_vulkanObjects.device, meshGroup.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
-		vkDestroyCommandPool(m_vulkanObjects.device, meshGroup.commandPool, nullptr);
+		vkFreeCommandBuffers(*m_vulkanObjects.device, meshGroup.commandPool, meshGroup.commandBuffers.size(), meshGroup.commandBuffers.data());
+		vkDestroyCommandPool(*m_vulkanObjects.device, meshGroup.commandPool, nullptr);
 
-		if (meshGroup.shader && !s_destroyedShaders.contains(meshGroup.shader))
+		auto shaderPtr = meshGroup.shader.lock();
+		//if (shaderPtr && !s_destroyedShaders.contains(meshGroup.shader))
+		if (shaderPtr)
 		{
-			meshGroup.shader->fragment.destroy();
-			meshGroup.shader->vertex.destroy();
-			s_destroyedShaders.insert(meshGroup.shader);
-			free(meshGroup.shader);
+			shaderPtr->fragment.destroy();
+			shaderPtr->vertex.destroy();
+			//s_destroyedShaders.insert(meshGroup.shader);
 		}
 	}
 
 	m_materialBuffer.destroy();
 
-	vkDestroyPipelineLayout(m_vulkanObjects.device, m_pipelineLayout, nullptr);
-	vkFreeDescriptorSets(m_vulkanObjects.device, m_vulkanObjects.descriptorPool, 1, &m_descriptorSet);
-	vkDestroyDescriptorSetLayout(m_vulkanObjects.device, m_descriptorSetLayout, nullptr);
+	m_pipelineLayout.destroy();
+	vkFreeDescriptorSets(*m_vulkanObjects.device, *m_vulkanObjects.descriptorPool, 1, &m_descriptorSet);
+	vkDestroyDescriptorSetLayout(*m_vulkanObjects.device, m_descriptorSetLayout, nullptr);
 
 	m_texturePool.cleanup();
 }
@@ -832,7 +632,7 @@ void StaticGeometryHandler::load_dummy_model()
 	StaticMesh mesh;
 	mesh.vertices = { NULL_VERTEX, NULL_VERTEX, NULL_VERTEX };
 	mesh.indices = { 0, 1, 2 };
-	mesh.material->m_shader = new GraphicsShader();
+	mesh.material->m_shader = make_default_shader();
 	mesh.material->m_shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
 	mesh.material->m_shader->vertex.load_shader("vertex/static_wmat.vert.spv");
 
@@ -863,7 +663,7 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 	// ---------------------------------------
 
 	VkCommandBufferInheritanceInfo inheritanceInfo;
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, *m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
@@ -878,11 +678,11 @@ void StaticGeometryHandler::record_command_buffer(uint32_t subpass, size_t frame
 
 	set_dynamic_state(
 		commandBuffer,
-		m_vulkanObjects.swapchainExtent,
+		*m_vulkanObjects.swapchainExtent,
 		m_guiManager->viewport({
 			0, 0,
-			static_cast<float>(m_vulkanObjects.swapchainExtent.width),
-			static_cast<float>(m_vulkanObjects.swapchainExtent.height)
+			static_cast<float>(m_vulkanObjects.swapchainExtent->width),
+			static_cast<float>(m_vulkanObjects.swapchainExtent->height)
 		}));
 
 	// ---------------------------------------
@@ -944,6 +744,7 @@ void DynamicGeometryHandler::start()
 	BufferConfig bufferConfig = default_buffer_config();
 	bufferConfig.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	m_transformBuffer.initialize(bufferConfig);
+	m_updatedTransformDescriptorSets = false;
 
 	m_modelCount = 0;
 }
@@ -973,7 +774,7 @@ void DynamicGeometryHandler::update(float dt)
 	PROFILE_END("update base handler");
 
 	// update descriptor set
-	if (updateDescriptorSet)
+	if (updateDescriptorSet || !m_updatedTransformDescriptorSets)
 	{
 		VkWriteDescriptorSet transformBufferWrite = {};
 		transformBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -991,8 +792,10 @@ void DynamicGeometryHandler::update(float dt)
 		transformBufferWrite.pBufferInfo = &transformBufferInfo;
 
 		PROFILE_START("update descriptors");
-		vkUpdateDescriptorSets(m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
+		vkUpdateDescriptorSets(*m_vulkanObjects.device, 1, &transformBufferWrite, 0, nullptr);
 		PROFILE_END("update descriptors");
+
+		m_updatedTransformDescriptorSets = true;
 	}
 	m_profiler.end_label();
 }
@@ -1028,7 +831,7 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 	// ---------------------------------------
 
 	VkCommandBufferInheritanceInfo inheritanceInfo;
-	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
+	VkCommandBufferBeginInfo commandBufferBI = create_command_buffer_begin_info(*m_vulkanObjects.renderPass, subpass, *m_vulkanObjects.framebuffers[static_cast<size_t>(frame)], inheritanceInfo);
 
 	{
 		auto res = vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
@@ -1043,11 +846,11 @@ void DynamicGeometryHandler::record_command_buffer(uint32_t subpass, size_t fram
 
 	set_dynamic_state(
 		commandBuffer,
-		m_vulkanObjects.swapchainExtent,
+		*m_vulkanObjects.swapchainExtent,
 		m_guiManager->viewport({
 			0, 0,
-			static_cast<float>(m_vulkanObjects.swapchainExtent.width),
-			static_cast<float>(m_vulkanObjects.swapchainExtent.height)
+			static_cast<float>(m_vulkanObjects.swapchainExtent->width),
+			static_cast<float>(m_vulkanObjects.swapchainExtent->height)
 		}));
 
 	// ---------------------------------------
@@ -1134,7 +937,7 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 			hashSum ^= (DynamicModelHashSum) (child.vertices[index].pos.x * 23626325 + child.vertices[index].pos.y * 9738346 + child.vertices[index].pos.z * 283756898967) * index + 2355901;
 			hashSum >>= 11;
 		}
-		hashSum ^= (DynamicModelHashSum) child.material->m_shader;
+		hashSum ^= (DynamicModelHashSum) child.material->m_shader.get();
 	}
 	return hashSum;
 }
@@ -1332,7 +1135,19 @@ void Model::load_mesh(std::string file)
 		*mesh.material = objMesh.mat;
 		mesh.vertices = objMesh.vertices;
 		mesh.indices = objMesh.indices;
+		mesh.material->m_shader = make_default_shader();
+		mesh.material->m_diffuse = Color(1.f);
 		meshProfiler.passing_measure("model transfer");
 		meshProfiler.print_last_measure("model transfer");
 	}
+}
+void Model::set_fragment_shader(std::string file)
+{
+	for (auto& mesh : m_children)
+		mesh.material->m_shader->fragment.load_shader(file);
+}
+void Model::set_vertex_shader(std::string file)
+{
+	for (auto& mesh : m_children)
+		mesh.material->m_shader->vertex.load_shader(file);
 }

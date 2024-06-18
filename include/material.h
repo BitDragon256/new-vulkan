@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
 #include <vulkan/vulkan.h>
 #include <tiny_obj_loader.h>
@@ -69,14 +70,16 @@ private:
 	bool m_destroyed;
 };
 
-struct GraphicsShader
+struct GraphicsShader_T
 {
 	Shader fragment;
 	Shader vertex;
 
-	void set_default_shader();
-	bool operator==(const GraphicsShader& other) const;
+	bool operator==(const GraphicsShader_T& other) const;
 };
+typedef std::shared_ptr<GraphicsShader_T> GraphicsShader;
+typedef std::weak_ptr<GraphicsShader_T> GraphicsShaderRef;
+GraphicsShader make_default_shader();
 
 class Material
 {
@@ -88,7 +91,7 @@ public:
 
 	std::string m_texBaseDir;
 
-	GraphicsShader* m_shader;
+	GraphicsShader m_shader;
 
 	Color m_ambient;
 	Color m_diffuse;

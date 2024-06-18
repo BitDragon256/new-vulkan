@@ -2,16 +2,35 @@
 
 #include "pbd.h"
 
+inline float KernelMultiplier = 8.f / PI;
+inline float KernelGradientMultiplier = 48.f / PI;
+inline float TargetPressure = 2.5f;
+inline float PressureMultiplier = .001f;
+inline float KernelRadius = 1.f;
+inline float ParticleRadius = .25f;
+inline float BaseDensity = 1000.f;
+
+inline size_t KernelFunctionIndex = 1;
+inline size_t KernelGradientFunctionIndex = 1;
+inline const char* KernelFunctionNames[] = { "Cubic Spline", "Cubic", "Spiky" };
+
 class SPHConstraint : public Constraint
 {
-      SPHConstraint(std::vector<EntityId> entities);
+public:
+      SPHConstraint(std::vector<EntityId> entities, ECSManager* ecs);
 
       float constraint(InParticles particles) override;
       Vec constraint_gradient(size_t der, InParticles particles) override;
 
 private:
-      float kernel(float distance);
-      Vec kernel_gradient(float distance);
 
-      float m_smoothingLength;
+};
+
+class SPHConstraintGenerator : public ConstraintGenerator
+{
+public:
+      std::vector<Constraint*> create(
+            EntityId particle, std::vector<EntityId> surrounding,
+            ECSManager* ecs
+      ) override;
 };

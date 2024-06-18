@@ -19,3 +19,11 @@ test-models/
 default_models/gizmos/*.blender
 /default_models/gizmos/cylinder.blend
 /default_models/gizmos/cylinder.blend1
+/default_models/cube.blend1
+/default_models/inv_cube.blend1
+/default_models/inv_sphere.blend1
+/default_models/sphere.blend1
+/default_models/cube.blend
+/default_models/inv_cube.blend
+/default_models/inv_sphere.blend
+/default_models/sphere.blend

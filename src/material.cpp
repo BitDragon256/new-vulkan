@@ -5,7 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include "buffer.h"
+#include "vulkan/buffer.h"
 
 // --------------------------------------
 // TEXTURE POOL
@@ -316,6 +316,8 @@ void TexturePool::cleanup()
 
 void Shader::load_shader(std::string file)
 {
+	if (m_module)
+		vkDestroyShaderModule(s_device, m_module, nullptr);
 	m_file = file;
 	m_module = create_shader_module(file, s_device);
 	m_destroyed = false;
@@ -335,12 +337,14 @@ bool Shader::operator==(const Shader& other) const
 
 VkDevice Shader::s_device;
 
-void GraphicsShader::set_default_shader()
+GraphicsShader make_default_shader()
 {
-	fragment.load_shader("fragments/unlit_wmat.frag.spv");
-	vertex.load_shader("vertex/transform_wmat.vert.spv");
+	auto shader = std::make_shared<GraphicsShader_T>();
+	shader->fragment.load_shader("fragments/unlit_wmat.frag.spv");
+	shader->vertex.load_shader("vertex/transform_wmat.vert.spv");
+	return shader;
 }
-bool GraphicsShader::operator==(const GraphicsShader& other) const
+bool GraphicsShader_T::operator==(const GraphicsShader_T& other) const
 {
 	return fragment == other.fragment && vertex == other.vertex;
 }

@@ -1,4 +1,4 @@
-#include "vulkan_helpers.h"
+#include "vulkan/vulkan_helpers.h"
 
 #include <algorithm>
 #include <fstream>
@@ -75,33 +75,32 @@ QueueFamilyIndices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR sur
     uint32_t queueFamilyCount{ 0 };
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+    std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilyProperties.data());
 
-    int i = 0;
-    for (const auto& queueFamily : queueFamilies)
+    uint32_t queueFamilyIndex{ 0 };
+    for (const auto& queueFamilyProperty : queueFamilyProperties)
     {
-        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            indices.graphicsFamily = i;
-        }
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, queueFamilyIndex, surface, &presentSupport);
+
         if (presentSupport)
-        {
-            indices.presentationFamily = i;
-        }
-        if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
-            indices.transferFamily = i;
-        if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-            indices.computeFamily = i;
+            indices.presentationFamily = queueFamilyIndex;
+
+        if (queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            indices.graphicsFamily = queueFamilyIndex;
+
+        if (queueFamilyProperty.queueFlags & VK_QUEUE_TRANSFER_BIT)
+            indices.transferFamily = queueFamilyIndex;
+
+        if (queueFamilyProperty.queueFlags & VK_QUEUE_COMPUTE_BIT)
+            indices.computeFamily = queueFamilyIndex;
 
 
         if (indices.is_complete())
-        {
             break;
-        }
-        i++;
+
+        queueFamilyIndex++;
     }
 
     return indices;
@@ -198,7 +197,6 @@ std::vector<char> read_file(const std::string& filename)
 }
 VkShaderModule create_shader_module(const std::string& file, VkDevice device)
 {
-
     std::string prefix = ROOT_DIRECTORY;
 
     std::vector<char> shaderCode = read_file(prefix + "/shaders/" + file);

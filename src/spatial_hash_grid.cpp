@@ -2,12 +2,14 @@
 
 #include <math.h>
 
+#include <algorithm>
+
 #include "logger.h"
 
 SpatialHashGrid::SpatialHashGrid(float gridSize) :
       m_gridSize{ gridSize }
 {
-      m_buckets.resize(100*100);
+      m_buckets.resize(100*100*10);
 }
 
 size_t SpatialHashGrid::hash_vec(Vector3 v)
@@ -34,14 +36,24 @@ std::vector<EntityId>& SpatialHashGrid::bucket_at(Vector2 pos)
 
 void SpatialHashGrid::surrounding_particles(Vector3 pos, std::vector<EntityId>& particles)
 {
-      for (int dim = 0; dim < 3; dim++)
+      for (int x = -1; x <= 1; x++)
       {
-            for (int sign = -1; sign <= 1; sign += 2)
+            for (int y = -1; y <= 1; y++)
             {
-                  const auto& bucket = bucket_at(pos + Vector3 { (dim == 0) * sign, (dim == 1) * sign, (dim == 2) * sign });
-                  particles.insert(particles.end(), bucket.cbegin(), bucket.cend());
+                  for (int z = -1; z <= 1; z++)
+                  {
+                        const auto& bucket = bucket_at(pos + Vector3 { x, y, z } * m_gridSize);
+                        particles.insert(particles.end(), bucket.cbegin(), bucket.cend());
+                  }
             }
       }
+      //std::set<int> s;
+      //size_t size = particles.size();
+      //for (size_t i = 0; i < size; ++i) s.insert(particles[i]);
+      //particles.assign(s.begin(), s.end());
+
+      std::sort(particles.begin(), particles.end());
+      particles.erase(std::unique(particles.begin(), particles.end()), particles.end());
 }
 void SpatialHashGrid::surrounding_particles(Vector2 pos, std::vector<EntityId>& particles)
 {

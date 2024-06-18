@@ -31,6 +31,7 @@ public:
 	void awake(EntityId entity) override;
 	void update(float dt) override;
 	void remove(EntityId entity) override;
+	void cleanup() override;
 
 protected:
 
@@ -41,5 +42,5 @@ private:
 
 	void add_model(GizmosModel& model, Transform& transform);
 
-	GraphicsShader* m_shader;
+	GraphicsShader m_shader;
 };

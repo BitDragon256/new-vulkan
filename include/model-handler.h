@@ -14,7 +14,9 @@
 #include "logger.h"
 #include "profiler.h"
 
-#include "buffer.h"
+#include "vulkan/vulkan_handles.h"
+#include "vulkan/buffer.h"
+#include "vulkan/pipeline.h"
 #include "ecs.h"
 #include "material.h"
 #include "math-core.h"
@@ -41,6 +43,9 @@ struct Model
 	std::vector<StaticMesh> m_children;
 
 	void load_mesh(std::string file);
+
+	void set_fragment_shader(std::string file);
+	void set_vertex_shader(std::string file);
 };
 struct MeshDataInfo
 {
@@ -64,69 +69,45 @@ struct MeshGroup // group with individual shaders
 
 	std::vector<MeshDataInfo> meshes;
 
-	GraphicsShader* shader;
+	GraphicsShaderRef shader;
 	
 	bool reloadMeshBuffers;
 
-	VkPipeline pipeline;
-	std::vector<VkCommandBuffer> commandBuffers;
+	vk::GraphicsPipeline pipeline;
+	std::vector<VkCommandBuffer> commandBuffers; // the different command buffers for the different frames
 	VkCommandPool commandPool;
 };
 
 struct GeometryHandlerVulkanObjects
 {
-	VkDevice device;
-	VkCommandPool commandPool;
-	VkRenderPass* renderPass; // renderPass can change
+	REF(vk::Device) device;
+	REF(vk::CommandPool) commandPool;
+	REF(vk::RenderPass) renderPass;
 	uint32_t firstSubpass;
 
-	std::vector<VkFramebuffer> framebuffers;
-	VkExtent2D swapchainExtent;
+	std::vector<REF(vk::Framebuffer)> framebuffers;
+	REF(VkExtent2D) swapchainExtent;
 
-	VkPhysicalDevice physicalDevice;
-	VkQueue transferQueue;
+	REF(vk::PhysicalDevice) physicalDevice;
+	REF(vk::Queue) transferQueue;
 	uint32_t queueFamilyIndex;
 	
-	VkDescriptorPool descriptorPool;
+	REF(vk::DescriptorPool) descriptorPool;
 
 	CameraPushConstant* pCameraPushConstant;
-};
-
-struct PipelineCreationData
-{
-	VkPipelineShaderStageCreateInfo			stages[2];
-
-	VkPipelineVertexInputStateCreateInfo	vertexInputState;
-	std::array<VkVertexInputAttributeDescription, VERTEX_ATTRIBUTE_COUNT> vertexAttributeDescriptions;
-	VkVertexInputBindingDescription			vertexBindingDescription;
-
-	VkPipelineInputAssemblyStateCreateInfo	inputAssemblyState;
-	VkPipelineTessellationStateCreateInfo	tessellationState;
-	VkPipelineViewportStateCreateInfo		viewportState;
-	VkPipelineRasterizationStateCreateInfo	rasterizationState;
-	VkPipelineMultisampleStateCreateInfo	multisampleState;
-	VkPipelineDepthStencilStateCreateInfo	depthStencilState;
-
-	VkPipelineColorBlendStateCreateInfo		colorBlendState;
-	VkPipelineColorBlendAttachmentState		colorBlendAttachment;
-
-	VkPipelineDynamicStateCreateInfo		dynamicState;
-	std::vector<VkDynamicState>				dynamicStates;
 };
 
 class GeometryHandler
 {
 public:
-	// void create_command_buffers();
 	void record_command_buffers(uint32_t frame);
 	std::vector<VkCommandBuffer> get_command_buffers(uint32_t frame);
 
-	void create_pipeline_create_infos(std::vector<VkGraphicsPipelineCreateInfo>& createInfos);
-	void set_pipelines(std::vector<VkPipeline>& pipelines);
+	void create_pipeline_create_infos();
+	void get_pipelines(std::vector<vk::PipelineRef>& pipelines);
 
 	GeometryHandler();
 	virtual void initialize(GeometryHandlerVulkanObjects vulkanObjects, GUIManager* guiManager);
-	void update_framebuffers(std::vector<VkFramebuffer> framebuffers, VkExtent2D swapchainExtent);
 	void set_first_subpass(uint32_t subpass);
 
 	uint32_t subpass_count();
@@ -145,8 +126,8 @@ protected:
 	void update();
 
 	GeometryHandlerVulkanObjects m_vulkanObjects;
-	VkPipelineLayout m_pipelineLayout;
 	VkDescriptorSet m_descriptorSet;
+	vk::PipelineLayout m_pipelineLayout;
 
 	BufferConfig default_buffer_config();
 
@@ -159,14 +140,12 @@ protected:
 
 private:
 
-	MeshGroup* find_group(GraphicsShader*& shader, size_t& index);
-	MeshGroup* push_mesh_group(GraphicsShader*& shader);
+	MeshGroup* find_group(GraphicsShader& shader, size_t& index);
+	MeshGroup* create_mesh_group(GraphicsShader& shader);
 
 	void create_group_command_buffers(MeshGroup& meshGroup);
 
-	VkGraphicsPipelineCreateInfo create_pipeline_create_info(uint32_t subpass, size_t pipelineIndex);
 	void create_pipeline_layout();
-	void create_pipeline(size_t meshGroupIndex);
 
 	bool m_rendererPipelinesCreated;
 
@@ -175,8 +154,6 @@ private:
 	Buffer<MaterialSSBO> m_materialBuffer;
 	VkWriteDescriptorSet material_buffer_descriptor_set_write();
 	VkDescriptorBufferInfo m_materialBufferDescriptorInfo;
-
-	std::vector<PipelineCreationData> m_pipelineCreationData;
 
 	bool reloadMeshBuffers;
 
@@ -192,7 +169,7 @@ private:
 
 	TexturePool m_texturePool;
 
-	static std::set<GraphicsShader*> s_destroyedShaders;
+	//static std::set<GraphicsShader_T*> s_destroyedShaders;
 };
 
 struct StaticModel : Model
@@ -262,6 +239,7 @@ private:
 	void add_model(DynamicModel& model, Transform& transform);
 
 	Buffer<Transform> m_transformBuffer;
+	bool m_updatedTransformDescriptorSets;
 
 	std::vector<DynamicModelInfo> m_individualModels;
 	uint32_t m_modelCount;
@@ -274,3 +252,20 @@ private:
 void bake_transform(StaticMesh& mesh, Transform transform);
 VkCommandBufferBeginInfo create_command_buffer_begin_info(VkRenderPass renderPass, uint32_t subpass, VkFramebuffer framebuffer, VkCommandBufferInheritanceInfo& inheritanceI);
 void set_dynamic_state(VkCommandBuffer commandBuffer, VkExtent2D swapChainExtent, std::array<float, 4> viewportSize);
+
+// ---------------------------------
+// DEFAULT MODELS
+// ---------------------------------
+namespace DefaultModel
+{
+	enum DefaultModel
+	{
+		Cube, Sphere, Quad, Triangle
+	};
+}
+inline std::unordered_map<DefaultModel::DefaultModel, std::string> s_defaultModelToPath = {
+	{ DefaultModel::Cube, "/default_models/cube.obj" },
+	{ DefaultModel::Sphere, "/default_models/sphere.obj" },
+	{ DefaultModel::Quad, "/default_models/quad.obj" },
+	{ DefaultModel::Triangle, "/default_models/triangle.obj" }
+};
