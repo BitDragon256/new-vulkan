@@ -24,6 +24,7 @@ public:
 
 	std::stringstream& out_buf();
 	static void print_buf();
+	static std::string flush_buf();
 
 private:
 

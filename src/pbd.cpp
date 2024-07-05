@@ -1,5 +1,6 @@
 #include "pbd.h"
 
+#include <cmath>
 #include <numeric>
 
 // #include <linalg/gsl_linalg.h>
@@ -322,7 +323,7 @@ void PBDSystem::xpbd_solve(float dt)
                         }
 
                         sqrGradientSum += glm::dot(gradientSum, gradientSum);
-                        sqrGradientSum += constraint->m_compliance / std::powf(dt, 2.f);
+                        sqrGradientSum += constraint->m_compliance / std::pow(dt, 2.f);
 
                         if (sqrGradientSum == 0.f)
                               continue;

@@ -1,5 +1,7 @@
 #include "dependency.h"
 
+#include <algorithm>
+
 #include "logger.h"
 
 Dependency::Dependency() :

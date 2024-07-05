@@ -56,6 +56,13 @@ struct CameraPushConstant
 #define VECTOR_BACK Vector3(-1, 0, 0)
 #define VECTOR_LEFT Vector3(0, -1, 0)
 
+#define VECTOR2_UP Vector2(1, 0)
+#define VECTOR2_DOWN Vector2(-1, 0)
+#define VECTOR2_RIGHT Vector2(0, 1)
+#define VECTOR2_LEFT Vector2(0, -1)
+
+#define VECTOR2_ZERO Vector2(0)
+
 #define VECTOR_NULL Vector3(0)
 
 Vector3 vec23(Vector2 vec);

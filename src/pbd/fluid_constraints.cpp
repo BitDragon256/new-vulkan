@@ -3,20 +3,22 @@
 #include <time.h>
 #include <stdlib.h>
 
+#include <cmath>
+
 // ---------------------------------
 // KERNEL FUNCTIONS
 // ---------------------------------
 
 float cubic_spline(float q, float h)
 {
-      float sigma = 1.f / (PI * std::powf(h, 3.f));
+      float sigma = 1.f / (PI * std::pow(h, 3.f));
       float W;
       if (q <= 1)
             W = sigma * (
-                  1.f - 3.f / 2.f * std::powf(q, 2.f) * (1.f - q / 2.f)
+                  1.f - 3.f / 2.f * std::pow(q, 2.f) * (1.f - q / 2.f)
                   );
       else if (q <= 2)
-            W = sigma / 4.f * std::powf(2.f - q, 3.f);
+            W = sigma / 4.f * std::pow(2.f - q, 3.f);
       else
             W = 0;
       return W;
@@ -25,12 +27,12 @@ float cubic_spline(float q, float h)
 Vec cubic_spline_gradient(Vec d, float h)
 {
       float q = glm::length(d);
-      float sigma = 1.f / (PI * std::powf(h, 3.f));
+      float sigma = 1.f / (PI * std::pow(h, 3.f));
       float W;
       if (q <= 1)
             W = sigma * (9.f / 4.f * std::pow(q, 2.f) - 3.f * q);
       else if (q <= 2)
-            W = sigma * 3.f / 4.f * std::powf(2.f - q, 2.f);
+            W = sigma * 3.f / 4.f * std::pow(2.f - q, 2.f);
       else
             W = 0;
       return W * d / q;
@@ -226,7 +228,7 @@ std::vector<Constraint*> SPHConstraintGenerator::create(
 
       auto& pbdParticle = ecs->get_component<PBDParticle>(particle);
 
-      pbdParticle.fluidMass = 0.8f * std::powf(2.f * ParticleRadius, 3.f) * BaseDensity;
+      pbdParticle.fluidMass = 0.8f * std::pow(2.f * ParticleRadius, 3.f) * BaseDensity;
       pbdParticle.density = pbdParticle.fluidMass * kernel(0);
       #pragma omp parallel default(shared)
       {

@@ -42,7 +42,7 @@ namespace logger
       {
             std::cout << "x: " << vec.x << " y: " << vec.y << " z: " << vec.z << '\n';
       }
-      void logger::log_cond(bool cond, std::string str)
+      void log_cond(bool cond, std::string str)
       {
             if (cond)
             {
@@ -50,16 +50,16 @@ namespace logger
             }
       }
 
-      void logger::log_err(std::string err)
+      void log_err(std::string err)
       {
             log(err);
             throw std::runtime_error(err);
       }
-      void logger::log_cond_err(bool cond, std::string err)
+      void log_cond_err(bool cond, std::string err)
       {
             if (!cond)
             {
-                  logger::log_err(err);
+                  log_err(err);
             }
       }
 

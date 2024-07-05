@@ -89,5 +89,13 @@ std::stringstream& Profiler::out_buf()
 }
 void Profiler::print_buf()
 {
-	s_outBufWrites = PROFILER_OUT_BUFFER_WRITES;
+	// s_outBufWrites = PROFILER_OUT_BUFFER_WRITES;
+	std::cout << s_outS.str() << "\n";
+	s_outS.clear();
+}
+std::string Profiler::flush_buf()
+{
+	const std::string res = s_outS.str();
+	s_outS.clear();
+	return res;
 }

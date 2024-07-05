@@ -19,6 +19,7 @@
 #include "vulkan/vulkan_helpers.h"
 #include "material.h"
 
+#define RENDER_PROFILER
 #ifdef RENDER_PROFILER
 #define PROFILE_START(X) m_profiler.start_measure(X);
 #define PROFILE_END(X) m_profiler.end_measure(X, true);

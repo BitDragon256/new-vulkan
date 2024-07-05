@@ -1,7 +1,6 @@
-#include <stdio.h>
-
 #include <chrono>
 #include <functional>
+#include <iostream>
 
 #include <nve.h>
 #include <vulkan/vulkan_handles.h>

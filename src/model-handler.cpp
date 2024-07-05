@@ -937,7 +937,7 @@ DynamicModelHashSum hash_model(const DynamicModel& model)
 			hashSum ^= (DynamicModelHashSum) (child.vertices[index].pos.x * 23626325 + child.vertices[index].pos.y * 9738346 + child.vertices[index].pos.z * 283756898967) * index + 2355901;
 			hashSum >>= 11;
 		}
-		hashSum ^= (DynamicModelHashSum) child.material->m_shader.get();
+		// hashSum ^= (DynamicModelHashSum) child.material->m_shader.get();
 	}
 	return hashSum;
 }
