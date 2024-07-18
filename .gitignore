@@ -6,12 +6,19 @@ external/imgui
 external/mini
 external/stbimage
 external/tinyobjloader
+external/PhysX
+external/gsl
 
 .obsidian/
 .vscode/
 .VSCodeCounter/
-test-models/
 /.vs
+
+.idea/
+cmake-build-debug/
+cmake-build-debug-visual-studio/
+
+test-models/
 /measure01.png
 /measure02.png
 /render_measures.txt

@@ -81,6 +81,8 @@ set(
 	${INCLUDE_DIR}/math-core.h
 	# ${INCLUDE_DIR}/models.h
 	${INCLUDE_DIR}/model-handler.h
+	${INCLUDE_DIR}/model_handler.h
+	${INCLUDE_DIR}/render_task.h
 	${INCLUDE_DIR}/nve_types.h
 	${INCLUDE_DIR}/nve_types_fwd.h
 	${INCLUDE_DIR}/render.h
@@ -96,6 +98,7 @@ set(
 	${INCLUDE_DIR}/thread_pool.h
 	${INCLUDE_DIR}/gizmos.h
 	${INCLUDE_DIR}/component-editor.h
+	${INCLUDE_DIR}/host_buffer.h
 
 	${INCLUDE_DIR}/vulkan/buffer.h
 	${INCLUDE_DIR}/vulkan/vulkan_helpers.h

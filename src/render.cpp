@@ -202,6 +202,11 @@ Camera& Renderer::active_camera()
       return *m_activeCamera;
 }
 
+float Renderer::delta_time() const
+{
+      return m_deltaTime;
+}
+
 int Renderer::get_key(int key)
 {
       return glfwGetKey(m_vulkanHandles.window, key);

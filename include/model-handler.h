@@ -42,9 +42,21 @@ struct Model
 {
 	std::vector<StaticMesh> m_children;
 
+	// returns the first submesh
+	StaticMesh& first();
+	// sets the diffuse color of all submeshes
+	void set_diffuse_color(const Color& color);
+	// returns the diffuse color of the first submesh
+	Color& diffuse_color();
+	// sets the material of all submeshes
+	void set_material(REF(Material) material);
+
+	// generates the mesh from a file
 	void load_mesh(std::string file);
 
+	// sets the fragment shader of all submeshes
 	void set_fragment_shader(std::string file);
+	// sets the vertex shader of all submeshes
 	void set_vertex_shader(std::string file);
 };
 struct MeshDataInfo
