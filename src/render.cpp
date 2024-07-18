@@ -202,7 +202,7 @@ Camera& Renderer::active_camera()
       return *m_activeCamera;
 }
 
-float Renderer::delta_time()
+float Renderer::delta_time() const
 {
       return m_deltaTime;
 }

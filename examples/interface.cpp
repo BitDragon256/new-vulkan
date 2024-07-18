@@ -20,12 +20,8 @@ int main(int argc, char** argv)
       const float speed = 4.f;
 
       float total = 0.f;
-      while (true)
+      while (renderer.render() != NVE_RENDER_EXIT_SUCCESS)
       {
-            auto res = renderer.render();
-            if (res == NVE_RENDER_EXIT_SUCCESS || total >= 10.f)
-                  break;
-
             renderer.active_camera().m_position.x += renderer.delta_time() * speed * (renderer.get_key(GLFW_KEY_W) - renderer.get_key(GLFW_KEY_S));
             renderer.active_camera().m_position.y += renderer.delta_time() * speed * (renderer.get_key(GLFW_KEY_D) - renderer.get_key(GLFW_KEY_A));
             renderer.active_camera().m_position.z += renderer.delta_time() * speed * (renderer.get_key(GLFW_KEY_E) - renderer.get_key(GLFW_KEY_Q));
