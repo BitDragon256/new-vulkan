@@ -4,6 +4,8 @@ project(NewVulkan)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 
+include(FetchContent)
+
 # vulkan
 find_package(Vulkan REQUIRED)
 
@@ -12,7 +14,15 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-add_subdirectory(external/glfw)
+if (NOT EXISTS external/glfw)
+	FetchContent_Declare(
+			glfw
+			GIT_REPOSITORY https://github.com/glfw/glfw.git
+	)
+	FetchContent_MakeAvailable(glfw)
+endif()
+
+# add_subdirectory(external/glfw)
 
 # physx
 # option(PHYSX_BUILD_TYPE "The build type of PhysX, i.e., one of {debug, checked, profile, release}" "Debug")
