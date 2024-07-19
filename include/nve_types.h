@@ -18,7 +18,7 @@
 #define NVE_RENDER_EXIT_SUCCESS 100
 
 // error codes
-#define NVE_FAILURE -1
+#define NVE_FAILURE (-1)
 
 typedef uint32_t Index;
 #define NVE_INDEX_TYPE VK_INDEX_TYPE_UINT32
@@ -69,12 +69,6 @@ struct CameraPushConstant
 Vector3 vec23(Vector2 vec);
 
 #define PI 3.14159265f
-
-struct Mesh
-{
-	std::vector<Vertex> vertices;
-	std::vector<Index> indices;
-};
 
 enum Direction
 {

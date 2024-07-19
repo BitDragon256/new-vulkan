@@ -6,6 +6,8 @@
 #include <nve.h>
 #include <vulkan/vulkan_handles.h>
 
+#include <shader.h>
+
 int main(int argc, char** argv)
 {
       RenderConfig renderConfig;

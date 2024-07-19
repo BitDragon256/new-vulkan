@@ -15,21 +15,19 @@ struct Mesh
 };
 
 // a mesh that has no idea if its vertices and indices changed
-struct StaticMesh : Mesh
+class ImmutableMesh : Mesh
 {
-	REF(Material) material;
-	size_t id; // mesh id to uniquely identify the mesh
+public:
 
-	StaticMesh();
-	bool operator==(const StaticMesh &) const;
+	ImmutableMesh();
 };
 
 // a mesh that checks if its vertices and indices changed
-struct DynamicMesh
+class MutableMesh
 {
-	REF(Material) material;
+public:
 
-	DynamicMesh();
+	MutableMesh();
 	[[nodiscard]] bool changed() const;
 	// tell the mesh that its changing is known (changed is now false)
 	void change_known();
@@ -43,7 +41,9 @@ struct DynamicMesh
 
 	[[nodiscard]] decltype(Mesh::vertices)& vertices();
 	[[nodiscard]] decltype(Mesh::indices)& indices();
+
 private:
+
 	bool m_changed;
 	Mesh m_mesh;
 };
